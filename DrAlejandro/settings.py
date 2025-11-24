@@ -35,6 +35,8 @@ INSTALLED_APPS = [
         #Django
     'db',
     'Index',
+    'login',
+    'colorfield',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

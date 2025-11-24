@@ -21,10 +21,8 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
-    path('', include('Index.urls')),
-
-
+    path('login/', include(('login.urls', 'login'), namespace='login')),
+    path('', include(('Index.urls', 'Index'), namespace='index')),  # app principal en raíz
 
 
 ] + staticfiles_urlpatterns() + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

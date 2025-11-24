@@ -1,0 +1,30 @@
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Socio</th>
+            <th>Estatus</th>
+            <th>Asignado</th>
+            <th>Fecha</th>
+            <th>Editar</th>
+
+        </tr>
+    </thead>
+    <tbody>
+        {% for expediente in expedientes %}
+        <tr style="background-color: {{expediente.estatus.color}};" class="">
+            <td>{{ expediente.id }}</td>
+            <td>{{ expediente.socio.nombre }}</td>
+            <td>{{ expediente.estatus.nombre }}</td>
+            <td>{{ expediente.usuario.username }}</td>
+            <td>{{ expediente.fecha }}</td>
+            <td><a href="" class="btn  rounded rounded-4 bg-quinto text-white">Editar expediente</a></td>
+
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No se encontraron expedientes.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

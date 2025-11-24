@@ -1,0 +1,80 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+<style>
+    .login-card {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 20px;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 420px;
+        animation: floatIn 1s ease forwards;
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    @keyframes floatIn {
+        0% {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .login-logo {
+        max-width: 100px;
+        margin: 0 auto 1rem;
+        display: block;
+    }
+
+    .login-card h2 {
+        font-weight: 600;
+    }
+
+    .btn-pip {
+        background-color: #8B0000;
+        border: none;
+    }
+
+    .btn-pip:hover {
+        background-color: #ffd700;
+        color: black;
+    }
+
+    .login-wrapper {
+        min-height: 80vh;
+    }
+</style>
+
+<div class="container d-flex justify-content-center align-items-center login-wrapper">
+    <div class="login-card border border-4  ">
+        <img src="{% static 'img/Logo.png' %}" alt="Logo" class="login-logo">
+        <h2 class="text-center mb-4 text-primary">Iniciar Sesión</h2>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3 text-tercero">
+                {{ form.username.label_tag }}
+                {{ form.username }}
+            </div>
+            <div class="mb-3 text-tercero">
+                {{ form.password.label_tag }}
+                {{ form.password }}
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-secondary btn-primary text-white">Ingresar</button>
+            </div>
+            {% if msg %}
+            <p class="mt-3 text-danger text-center">{{ msg }}</p>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

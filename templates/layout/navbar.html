@@ -16,7 +16,7 @@
                     margin: 0 8px;
                     padding: 8px 16px;
                     text-decoration: none;
-                    color: #fff;
+                    color: #624949;
                     font-family: 'LTSuperior', sans-serif;
                     font-size: 20px;
                     font-weight: 600;
@@ -36,20 +36,20 @@
 
                     &::before {
                         top: 0;
-                        border-top: 2px solid #fff;
-                        border-bottom: 2px solid #fff;
+                        border-top: 2px solid #03268c;
+                        border-bottom: 2px solid #03268c;
                         transform: scaleY(2);
                     }
 
                     &::after {
                         top: 2px;
-                        background-color: #fff;
+                        background-color: #ffffff;
                         transform: scale(0);
                         z-index: -1;
                     }
 
                     &:hover {
-                        color: #010C80;
+                        color: #ffffff;
 
                         &::before {
                             transform: scaleY(1);
@@ -67,10 +67,10 @@
     }
 </style>
 {% load static %}
-<nav class="navbar navbar-expand-lg navbar-light bg-primary nav-custom">
+<nav class="navbar navbar-expand-lg navbar-light bg-white nav-custom">
     <div class="container my-3">
         <a class="navbar-brand" href="#">
-            <img src="{% static 'img/logo.png' %}" alt="Logo de la clínica" width="50">
+            <img src="{% static 'img/Logo.png' %}" alt="Logo de la clínica" width="200">
         </a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -81,17 +81,41 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item active">
-                    <a class="nav-link fnSuperiorRegular" href="/">Inicio</a>
+                    <a class="nav-link fnSuperiorRegular text-tercero" href="/">Inicio</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fnSuperiorRegular" href="#">Médicos</a>
+                    <a class="nav-link fnSuperiorRegular text-tercero"
+                        href="{% url 'Index:expedientesLayout'%}">Expedientes</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fnSuperiorRegular" href="{% url 'Index:serviciosPage' %}">Servicios</a>
+                    <a class="nav-link fnSuperiorRegular text-tercero" href="">Avances</a>
                 </li>
+                {% if request.user.is_authenticated %}
                 <li class="nav-item">
-                    <a class="nav-link fnSuperiorRegular" href="{% url 'Index:contactPage' %}">Contacto</a>
+                    <a class="nav-link fnSuperiorRegular text-tercero" href="" data-bs-toggle="modal"
+                        data-bs-target="#logoutModal">Cerrar sesión</a>
                 </li>
+                <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered ">
+                        <div class="modal-content">
+                            <div class="modal-header bg-tercero text-white">
+                                <h5 class="modal-title" id="logoutModalLabel">Confirmar cierre de sesión</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                ¿Estás seguro de que deseas cerrar la sesión de <strong>{{ request.user }}</strong>?
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-tercero text-white"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <a href="{% url 'login:logout' %}" class="btn btn-primary">Cerrar Sesión</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </ul>
         </div>
     </div>

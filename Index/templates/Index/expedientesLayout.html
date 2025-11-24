@@ -1,0 +1,16 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container">
+    <div class="row">
+
+        {% include 'Index/filtrosDeExpedientes.html' %}
+    </div>
+    <hr>
+    <div class="row " id="resultados-expedientes">
+        {% include 'Index/tablaExpedientex.html' %}
+    </div>
+</div>
+
+{% endblock %}

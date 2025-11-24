@@ -25,10 +25,10 @@
 
 //Colors
 $primary: #010C80;
-$secondary: #3E5CDB;
-$tercero: #394b99;
+$secondary: #33b9c5;
+$tercero: #2596be;
 $cuarto: #6AA4EE;
-$quinto: #CFCFEA;
+$quinto: #3a2451;
 $corporateNavyBlue900: #19263F;
 $corporateNavyBlue800: #303C52;
 $corporateNavyBlue700: #475165;
@@ -161,6 +161,7 @@ $theme-colors: (
 
 
 .fnSuperiorRegularTitle {
+    //Titulos para mini encabezados (filtros) 
     font-family: 'LTSuperior', sans-serif;
     font-weight: 600;
     font-style: normal;
@@ -169,6 +170,7 @@ $theme-colors: (
 }
 
 .fnSuperiorRegularTitle2 {
+    //Titulos para cada pagina
     font-family: 'LTSuperior', sans-serif;
     font-weight: 600;
     font-style: normal;

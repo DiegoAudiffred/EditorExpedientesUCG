@@ -1,0 +1,122 @@
+<div class="row d-flex align-items-end" id="filtros-expedientes" data-url="{% url 'Index:filtrar_expedientes_ajax' %}">
+    <div class="col-12">
+        <h1 class="text-secondary fnSuperiorRegularTitle2">Filtros para busqueda de expedientes</h1>
+    </div>
+
+    <div class="col-2">
+        <div class="fnSuperiorRegularTitle text-quinto">Estatus:</div>
+        <select name="estatus" id="estatus-select"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
+            <option value="0">Todos</option>
+            {% for option in estatus %}
+            <option value="{{option.id}}">{{option.nombre}}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-2">
+        <div class="fnSuperiorRegularTitle text-quinto">Asignado:</div>
+        <select name="usuarios" id="usuarios-select"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
+            <option value="0">Cualquiera</option>
+            {% for option in usuarios %}
+            <option value="{{option.id}}">{{option.username}}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-3">
+        <div class="fnSuperiorRegularTitle text-quinto">Nombre</div>
+        <input type="text" id="socio-input"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero"
+            placeholder="Buscar por nombre o ID del socio">
+    </div>
+
+    <div class="col-2">
+        <div class="fnSuperiorRegularTitle text-quinto"> Desde:</div>
+        <input type="date" id="fecha-inicio-input" name="fecha_inicio"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
+    </div>
+
+    <div class="col-2">
+        <div class="fnSuperiorRegularTitle text-quinto"> Hasta:</div>
+        <input type="date" id="fecha-fin-input" name="fecha_fin"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
+    </div>
+    <div class="col-1">
+        <button id="boton-reset-datos" class="btn bg-primary text-white rounded rounded-4 py-1 px-1 w-100">
+            Reiniciar
+        </button>
+    </div>
+
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        const filtrosContainer = document.getElementById('filtros-expedientes');
+
+        if (!filtrosContainer) {
+            console.error("Error: No se encontró el contenedor con id 'filtros-expedientes'.");
+            return;
+        }
+
+        const filterUrl = filtrosContainer.dataset.url;
+        console.log("Contenedor:", filtrosContainer);
+        console.log("URL de Filtro:", filterUrl);
+
+        const estatusSelect = document.getElementById('estatus-select');
+        const usuariosSelect = document.getElementById('usuarios-select');
+        const socioInput = document.getElementById('socio-input');
+
+        const fechaInicioInput = document.getElementById('fecha-inicio-input');
+        const fechaFinInput = document.getElementById('fecha-fin-input');
+
+        function ejecutarFiltro() {
+            console.log("¡Filtro disparado!");
+
+            const estatus = estatusSelect.value;
+            const usuarios = usuariosSelect.value;
+            const socio = socioInput.value;
+            const fechaInicio = fechaInicioInput.value;
+            const fechaFin = fechaFinInput.value;
+
+            const params = {
+                'estatus': estatus,
+                'usuarios': usuarios,
+                'socio': socio,
+                'fecha_inicio': fechaInicio,
+                'fecha_fin': fechaFin
+            };
+
+            $.ajax({
+                url: filterUrl,
+                type: 'GET',
+                data: params,
+                success: function (response) {
+                    $('#resultados-expedientes').html(response);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error en la solicitud AJAX:", error);
+                }
+            });
+        }
+
+        if (estatusSelect && usuariosSelect && socioInput && fechaInicioInput && fechaFinInput) {
+            estatusSelect.addEventListener('change', ejecutarFiltro);
+            usuariosSelect.addEventListener('change', ejecutarFiltro);
+
+            fechaInicioInput.addEventListener('change', ejecutarFiltro);
+            fechaFinInput.addEventListener('change', ejecutarFiltro);
+
+            let timeoutId;
+            socioInput.addEventListener('input', function () {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(ejecutarFiltro, 300);
+            });
+        } else {
+            console.error("Error: Faltan elementos de filtro (selects/input). Revisa IDs.");
+        }
+    });
+
+</script>

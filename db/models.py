@@ -1,7 +1,7 @@
 from django.db import models
 
 # Create your models here.
-from datetime import timezone
+from datetime import datetime, timezone
 import decimal
 import math
 import urllib
@@ -12,6 +12,7 @@ from django.db.models.deletion import CASCADE
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Q
 from django.utils import timezone
+from colorfield.fields import ColorField
 
 
 
@@ -22,23 +23,21 @@ class UserManager(BaseUserManager):
 
     use_in_migrations = True
 
-    def _create_user(self, email, password, **extra_fields):
+    def _create_user(self,  password, **extra_fields):
         """Create and save a User with the given email and password."""
-        if not email:
-            raise ValueError('The given email must be set')
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+
+        user = self.model( **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, password=None, **extra_fields):
         """Create and save a regular User with the given email and password."""
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
-        return self._create_user(email, password, **extra_fields)
+        return self._create_user( password, **extra_fields)
 
-    def create_superuser(self, email, password, **extra_fields):
+    def create_superuser(self, password, **extra_fields):
         """Create and save a SuperUser with the given email and password."""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -48,46 +47,108 @@ class UserManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
 
-        return self._create_user(email, password, **extra_fields)
+        return self._create_user(password, **extra_fields)
 
 
 
+
+"""Formatodevariables 
+1.-camelCase
+2.-singular
+3.-espanol
+"""
 class User(AbstractUser):
 
-    username = None
-    email = models.EmailField('Correo electrónico', unique=True, blank=True, null=True)
-    first_name = models.CharField("Nombre", max_length=200, null=True, blank=True,unique=True,default="Empleado")
-    phone_number = models.CharField("Teléfono", max_length=15, unique=True, null=True)
-    url = models.ImageField(upload_to="uploads/gallery/",null=True, blank=True)
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['phone_number']
+    username = models.CharField('Usuario',max_length=20, unique=True, blank=True, null=True)
+    
+    # CAMBIO CLAVE AQUÍ: Lista vacía.
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = [] 
 
     objects = UserManager()
     is_active= models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.username
+    
+class Socio(models.Model):
+    #id por default
+    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    #numRegistro = models.IntegerField("Num Registros":default=1)
+    def __str__(self):
+        return self.nombre
+    
+class Estado(models.Model):
+    nombre = models.CharField("Nombre", max_length=30, unique=True, null=True)
+    
+    color = ColorField(
+        default='#FFFFFF', 
+        verbose_name="Color de Identificación" # Nombre amigable en el Admin
+    )
 
     def __str__(self):
-        return self.first_name
+        return self.nombre
 
-class Doctor(models.Model):
-    name = models.CharField("Nombre", max_length=200, null=True, blank=True,unique=True)
-    phone_number = models.CharField("Teléfono", max_length=15, unique=True, null=True)
-    email= models.EmailField('Correo electrónico', unique=True, blank=True, null=True)
-    photo = models.ImageField(upload_to="uploads/gallery/",null=True, blank=True)
-    puesto = models.TextField('Puesto',max_length=20,null=True,blank=True)
 
     def __str__(self):
-        return self.name
+        return self.nombre    
+    
+class Expediente(models.Model):
+    socio = models.ForeignKey(
+        Socio,
+        on_delete=models.CASCADE, 
+        null=False, 
+        blank=False,
+  
+    )
+    estatus = models.ForeignKey(Estado,on_delete=models.CASCADE)
+    usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
+    fecha = models.DateField(auto_now_add=True, blank=True)
+class ApartadoA(models.Model):
+    expediente = models.OneToOneField(
+        Expediente, 
+        on_delete=models.CASCADE, 
+        primary_key=True 
+    )
+    respuesta_a1 = models.CharField(max_length=255)
+    respuesta_a2 = models.IntegerField()
 
-class Contacto(models.Model):
-    name = models.CharField("Nombre", max_length=200, null=True, blank=True,unique=False)
-    phone_number = models.CharField("Teléfono", max_length=15, unique=False, null=True)
-    email= models.EmailField('Correo electrónico', unique=False, blank=True, null=True)
-    descripción = models.TextField('Descripcion',max_length=500,null=True,blank=True)
+    def __str__(self):
+        return f"Apartado A de Expediente #{self.expediente.pk}"
+    
+class ApartadoB(models.Model):
+    expediente = models.ForeignKey(
+        Expediente, 
+        on_delete=models.CASCADE,
 
-class Service(models.Model):
-    name = models.CharField("Nombre", max_length=20, null=True, blank=True,unique=False)
-    descripction = models.CharField("Descripction", max_length=50, unique=False, null=True)
-    image1 = models.ImageField(upload_to="uploads/gallery/",null=True, blank=True)
-    image2 = models.ImageField(upload_to="uploads/gallery/",null=True, blank=True)
+        related_name='apartados_b_set' 
+    )
+    tipo = models.CharField(max_length=50)
+    detalle = models.TextField()
+
+    def __str__(self):
+        return f"Apartado B ({self.tipo}) de Expediente #{self.expediente.pk}"
+
+class ApartadoC(models.Model):
+    expediente = models.ForeignKey(
+        Expediente, 
+        on_delete=models.CASCADE,
+        related_name='apartados_c_set'
+    )
+    fecha = models.DateField()
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def __str__(self):
+        return f"Apartado C (Monto: {self.monto}) de Expediente #{self.expediente.pk}"
+
+class ApartadoD(models.Model):
+    expediente = models.OneToOneField(
+        Expediente, 
+        on_delete=models.CASCADE, 
+        primary_key=True
+    )
+    respuesta_d1 = models.TextField()
+
+    def __str__(self):
+        return f"Apartado D de Expediente #{self.expediente.pk}"
     

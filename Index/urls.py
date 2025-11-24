@@ -9,10 +9,8 @@ urlpatterns = [
 
 
     path("",views.index,name='index'),
-    path("contacto/",views.contactPage,name='contactPage'),
-    path('upload-info/', views.uploadInfo, name='uploadInfo'),
-    path('iniciarsesion/', views.iniciarsesion, name='iniciarsesion'),
-    path('servicios/', views.serviciosPage, name='serviciosPage'),
-
+    path("expedientes/",views.expedientesLayout,name='expedientesLayout'),
+    #path('expedientes/', views.lista_expedientes, name='lista_expedientes'),
+    path('expedientes/filtrar/', views.filtrar_expedientes_ajax, name='filtrar_expedientes_ajax'),
 
 ] 
