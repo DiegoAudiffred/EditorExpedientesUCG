@@ -37,8 +37,7 @@
                 <div id="rep-list" class="col-12"></div>
 
                 <div class="col-3">
-                    <button type="button"
-                        class="btn btn-secondary my-3 fnSuperiorRegularTitle3 text-white  mx-3 py-0 px-3"
+                    <button type="button" class="btn btn-secondary my-3  text-white  mx-3 py-0 px-3"
                         onclick="agregarRep()">
                         <p class="fnSuperiorRegularTitle3 m-0">Agregar
                             representante</p>
@@ -49,16 +48,20 @@
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header">Obligados solidarios y garantes</div>
-            <div class="card-body">
+        <div class="mb-4">
+            <div class="fnSuperiorRegularTitle text-quinto r">Obligados solidarios y garantes</div>
+            <div class="row border border-3 border-quinto rounded rounded-3">
 
-                <div id="obl-list"></div>
+                <div id="obl-list" class="col-12"></div>
+                <div class="col-3">
+                    <button type="button" class="btn btn-secondary my-3 text-white  mx-3 py-0 px-3"
+                        onclick="agregarObl()">
+                        <p class="fnSuperiorRegularTitle3 m-0">Agregar
+                            obligado</p>
+                    </button>
 
-                <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="agregarObl()">Agregar
-                    obligado</button>
-
-                {{ obl_form.obligados }}
+                    {{ obl_form.obligados }}
+                </div>
             </div>
         </div>
 

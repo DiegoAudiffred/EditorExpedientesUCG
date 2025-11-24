@@ -8,6 +8,7 @@ from db.models import *
 from django.contrib.auth import authenticate,login,logout
 # Create your views here.
 from django.contrib.auth.decorators import user_passes_test,login_required
+from django.core.paginator import Paginator
 
 from django.shortcuts import render
 from django.db.models import Q
@@ -25,7 +26,7 @@ def index(request):
 
 @login_required(login_url='/login/')    
 def expedientesLayout(request):
-    expedientes = Expediente.objects.all()
+    expedientes = Expediente.objects.all().order_by('-id')
     estatus = Estado.objects.all()
     usuarios = User.objects.all()
     
@@ -41,24 +42,24 @@ def filtrar_expedientes_ajax(request):
     estatus_id = request.GET.get('estatus', '0')
     usuario_id = request.GET.get('usuarios', '0')
     socio_query = request.GET.get('socio', '').strip()
-    
-    # NUEVOS PARÁMETROS DE FECHA
+
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
+    page_number = request.GET.get('page', 1)
+
     expedientes = Expediente.objects.all()
-    
+
     if estatus_id != '0':
         expedientes = expedientes.filter(estatus_id=estatus_id)
-        
-    if usuario_id != '0':
 
-        expedientes = expedientes.filter(usuario_id=usuario_id) 
+    if usuario_id != '0':
+        expedientes = expedientes.filter(usuario_id=usuario_id)
 
     if socio_query:
         expedientes = expedientes.filter(
-            Q(socio__nombre__icontains=socio_query) |  
-            Q(socio__id__icontains=socio_query)        
+            Q(socio__nombre__icontains=socio_query) |
+            Q(socio__id__icontains=socio_query)
         ).distinct()
 
     if fecha_inicio and fecha_fin:
@@ -68,8 +69,17 @@ def filtrar_expedientes_ajax(request):
     elif fecha_fin:
         expedientes = expedientes.filter(fecha__lte=fecha_fin)
 
+    expedientes = expedientes.order_by('-id')
 
-    context = {'expedientes': expedientes}
+    paginator = Paginator(expedientes, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'expedientes': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator
+    }
+
     return render(request, 'Index/tablaExpedientex.html', context)
 
 @login_required(login_url='/login/')    
@@ -156,59 +166,58 @@ def expediente_crear(request):
         rep_form = RepresentantesForm(request.POST)
         obl_form = ObligadosForm(request.POST)
 
-        if exp_form.is_valid():
-                expediente = exp_form.save(commit=False)
+        if exp_form.is_valid() and rep_form.is_valid() and obl_form.is_valid():
 
-                # estatus fijo en primera opción
-                expediente.estatus_id = 1#Estado.objects.get(id=1)
-                expediente.save()
+            expediente = exp_form.save(commit=False)
+            expediente.estatus_id = 1
+            expediente.save()
 
-                # Secciones fijas
-                SECCIONES = SeccionesExpediente.SECCIONES
+            SECCIONES = SeccionesExpediente.SECCIONES
 
-                for tipo, titulo in SECCIONES:
+            for tipo, titulo in SECCIONES:
 
-                    # Secciones normales sin repetición
-                    if tipo not in ['B', 'C']:
-                        SeccionesExpediente.objects.create(
-                            expediente=expediente,
-                            tipoDeSeccion=tipo
-                        )
-                        continue
+                if tipo not in ['B', 'C']:
+                    SeccionesExpediente.objects.create(
+                        expediente=expediente,
+                        tipoDeSeccion=tipo
+                    )
+                    continue
 
-                    # Secciones con nombre personalizado
-                    if tipo == 'B':
-                        lista = rep_form.cleaned_data.get('representantes', '')
-                    else:
-                        lista = obl_form.cleaned_data.get('obligados', '')
+                if tipo == 'B':
+                    lista = rep_form.cleaned_data.get('representantes', '')
+                else:
+                    lista = obl_form.cleaned_data.get('obligados', '')
 
-                    nombres = [x.strip() for x in lista.split("||") if x.strip()]
+                nombres = [x.strip() for x in lista.split("||") if x.strip()]
+                if not nombres:
+                    nombres = [""]
 
-                    if not nombres:
-                        nombres = [""]
+                for nombre in nombres:
+                    titulo_final = titulo if nombre == "" else f"{titulo} - {nombre}"
+                    SeccionesExpediente.objects.create(
+                        expediente=expediente,
+                        tipoDeSeccion=tipo,
+                        tituloSeccion=titulo_final
+                    )
 
-                    for nombre in nombres:
-                        titulo_final = titulo if nombre == "" else f"{titulo} - {nombre}"
+            return redirect('Index:expedientesLayout')
 
-                        SeccionesExpediente.objects.create(
-                            expediente=expediente,
-                            tipoDeSeccion=tipo,
-                            tituloSeccion=titulo_final
-                        )
-
-                #return redirect('expediente_editar', expediente_id=expediente.id)
-
-    else:
-        exp_form = ExpedienteCrearForm()
-        rep_form = RepresentantesForm()
-        obl_form = ObligadosForm()
+        return render(
+            request,
+            'Index/crearExpediente.html',
+            {
+                'exp_form': exp_form,
+                'rep_form': rep_form,
+                'obl_form': obl_form,
+            }
+        )
 
     return render(
         request,
         'Index/crearExpediente.html',
         {
-            'exp_form': exp_form,
-            'rep_form': rep_form,
-            'obl_form': obl_form,
+            'exp_form': ExpedienteCrearForm(),
+            'rep_form': RepresentantesForm(),
+            'obl_form': ObligadosForm(),
         }
     )
