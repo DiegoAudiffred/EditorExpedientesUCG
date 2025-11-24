@@ -158,6 +158,14 @@ $theme-colors: (
         -1px -1px rgb(255, 255, 255);
 }
 
+.fnSuperiorRegularTitle3 {
+    //Titulos para mini encabezados (filtros) 
+    font-family: 'LTSuperior', sans-serif;
+    font-weight: 600;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 40px;
+}
 
 
 .fnSuperiorRegularTitle {
@@ -184,22 +192,7 @@ $theme-colors: (
     font-weight: 700;
 }
 
-//Titles
-.fnTexto_Salsa {
-    font-family: 'Salsa-Regular', sans-serif;
-    font-style: normal;
-    font-weight: 700;
-    font-size: 15px;
-    line-height: 20px;
-}
 
-.fnTexto_Ravioli {
-    font-family: 'VanillaRavioli_Demo', ;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 15px;
-    line-height: 20px;
-}
 
 .fnTexto_Bold_Encabezado_005 {
     font-family: 'Manrope-Bold', sans-serif;

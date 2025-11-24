@@ -5,7 +5,7 @@
             <th>Socio</th>
             <th>Estatus</th>
             <th>Asignado</th>
-            <th>Fecha</th>
+            <th>Fecha de creación</th>
             <th>Editar</th>
 
         </tr>
@@ -18,7 +18,8 @@
             <td>{{ expediente.estatus.nombre }}</td>
             <td>{{ expediente.usuario.username }}</td>
             <td>{{ expediente.fecha }}</td>
-            <td><a href="" class="btn  rounded rounded-4 bg-quinto text-white">Editar expediente</a></td>
+            <td><a href="{% url 'Index:expediente_editar' expediente.id %}"
+                    class="btn  rounded rounded-4 bg-tercero text-white"> Editar expediente</a></td>
 
         </tr>
         {% empty %}

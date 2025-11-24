@@ -57,11 +57,12 @@ class UserManager(BaseUserManager):
 2.-singular
 3.-espanol
 """
+
+
 class User(AbstractUser):
 
     username = models.CharField('Usuario',max_length=20, unique=True, blank=True, null=True)
     
-    # CAMBIO CLAVE AQUÍ: Lista vacía.
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 
 
@@ -83,72 +84,72 @@ class Estado(models.Model):
     
     color = ColorField(
         default='#FFFFFF', 
-        verbose_name="Color de Identificación" # Nombre amigable en el Admin
+        verbose_name="Color de Identificación" 
     )
 
     def __str__(self):
         return self.nombre
 
 
-    def __str__(self):
-        return self.nombre    
-    
 class Expediente(models.Model):
-    socio = models.ForeignKey(
-        Socio,
-        on_delete=models.CASCADE, 
-        null=False, 
-        blank=False,
-  
-    )
+    socio = models.ForeignKey(Socio,on_delete=models.CASCADE,null=False,blank=False)
     estatus = models.ForeignKey(Estado,on_delete=models.CASCADE)
     usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
-class ApartadoA(models.Model):
-    expediente = models.OneToOneField(
-        Expediente, 
-        on_delete=models.CASCADE, 
-        primary_key=True 
-    )
-    respuesta_a1 = models.CharField(max_length=255)
-    respuesta_a2 = models.IntegerField()
+
+class SeccionesExpediente(models.Model):
+    SECCIONES = [
+        ('A', 'Solicitante'),
+        ('B', 'Representante legal'),
+        ('C', 'Obligado solidario y garantes'),
+        ('I', 'Actividades vulnerables'),
+        ('II','Informacion Financiera'),
+        ('III','Estudio de Crédito'),
+        ('IV','Información de garantias'),
+        ('V','Contratos'),
+        ('VI','Seguimiento')
+    ]
+
+    expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
+    tipoDeSeccion = models.CharField(max_length=3, choices=SECCIONES)
+    tituloSeccion = models.CharField(max_length=100, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.tituloSeccion = dict(self.SECCIONES).get(self.tipoDeSeccion, '')
+        super().save(*args, **kwargs)
+
+
+class ApartadoCatalogo(models.Model):
+    SECCIONES = [
+        ('A', 'A'),
+        ('B', 'B'),
+        ('C', 'C'),
+        ('I', 'I'),
+        ('II','II'),
+        ('III','III'),
+        ('IV','IV'),
+        ('V','V'),
+        ('VI','VI')
+    ]
+
+    tipoDeSeccion = models.CharField(max_length=3, choices=SECCIONES)
+    clave = models.CharField(max_length=10)
+    descripcion = models.TextField()
+
+    class Meta:
+        unique_together = ('tipoDeSeccion', 'clave')
 
     def __str__(self):
-        return f"Apartado A de Expediente #{self.expediente.pk}"
-    
-class ApartadoB(models.Model):
-    expediente = models.ForeignKey(
-        Expediente, 
-        on_delete=models.CASCADE,
+        return f"{self.tipoDeSeccion} - {self.clave}"
 
-        related_name='apartados_b_set' 
-    )
-    tipo = models.CharField(max_length=50)
-    detalle = models.TextField()
+
+class RegistroSeccion(models.Model):
+    seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
+    apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
+    fecha = models.DateField(null=True, blank=True)
+    estatus = models.CharField(max_length=20, null=True, blank=True)
+    comentario = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f"Apartado B ({self.tipo}) de Expediente #{self.expediente.pk}"
+        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave}"
 
-class ApartadoC(models.Model):
-    expediente = models.ForeignKey(
-        Expediente, 
-        on_delete=models.CASCADE,
-        related_name='apartados_c_set'
-    )
-    fecha = models.DateField()
-    monto = models.DecimalField(max_digits=10, decimal_places=2)
-    
-    def __str__(self):
-        return f"Apartado C (Monto: {self.monto}) de Expediente #{self.expediente.pk}"
-
-class ApartadoD(models.Model):
-    expediente = models.OneToOneField(
-        Expediente, 
-        on_delete=models.CASCADE, 
-        primary_key=True
-    )
-    respuesta_d1 = models.TextField()
-
-    def __str__(self):
-        return f"Apartado D de Expediente #{self.expediente.pk}"
-    

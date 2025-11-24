@@ -1,0 +1,112 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+{% block body %}
+<div class="container py-4">
+
+    <h4 class="mb-3 fnSuperiorRegularTitle2 text-secondary">Crear expediente</h4>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-4 ">
+            <div class="fnSuperiorRegularTitle text-quinto ">Datos del expediente</div>
+            <div class=" row  border border-3 border-quinto  rounded rounded-4">
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Socio</label>
+                    {{ exp_form.socio }}
+                </div>
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Usuario asignado</label>
+                    {{ exp_form.usuario }}
+                </div>
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Estatus</label>
+                    <input type="text" class="form-control" value="Nuevo" disabled>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <div class="fnSuperiorRegularTitle text-quinto ">Representantes legales</div>
+            <div class="row border border-3 border-quinto rounded rounded-3">
+
+                <div id="rep-list" class="col-12"></div>
+
+                <div class="col-3">
+                    <button type="button"
+                        class="btn btn-secondary my-3 fnSuperiorRegularTitle3 text-white  mx-3 py-0 px-3"
+                        onclick="agregarRep()">
+                        <p class="fnSuperiorRegularTitle3 m-0">Agregar
+                            representante</p>
+                    </button>
+
+                    {{ rep_form.representantes }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">Obligados solidarios y garantes</div>
+            <div class="card-body">
+
+                <div id="obl-list"></div>
+
+                <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="agregarObl()">Agregar
+                    obligado</button>
+
+                {{ obl_form.obligados }}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-primary">Crear expediente</button>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+    let reps = [];
+    let obls = [];
+
+    function render() {
+        const repList = document.getElementById("rep-list");
+        repList.innerHTML = reps.map((x, i) => `
+        <div class="input-group m-3">
+            <input type="text" class="form-control" value="${x}" onchange="reps[${i}]=this.value">
+            <button class="btn btn-danger" onclick="reps.splice(${i},1); render();">X</button>
+        </div>
+    `).join("");
+
+        const oblList = document.getElementById("obl-list");
+        oblList.innerHTML = obls.map((x, i) => `
+        <div class="input-group m-3">
+            <input type="text" class="form-control" value="${x}" onchange="obls[${i}]=this.value">
+            <button class="btn btn-danger" onclick="obls.splice(${i},1); render();">X</button>
+        </div>
+    `).join("");
+
+        document.getElementsByName("representantes")[0].value = reps.join("||");
+        document.getElementsByName("obligados")[0].value = obls.join("||");
+    }
+
+    function agregarRep() {
+        reps.push("");
+        render();
+    }
+
+    function agregarObl() {
+        obls.push("");
+        render();
+    }
+
+    render();
+</script>
+
+
+{% endblock %}

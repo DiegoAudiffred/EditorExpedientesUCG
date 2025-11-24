@@ -40,6 +40,14 @@
   text-shadow: 2px 0 0 rgb(255, 255, 255), -2px 0 0 rgb(255, 255, 255), 0 2px 0 rgb(255, 255, 255), 0 -2px 0 rgb(255, 255, 255), 1px 2px rgb(255, 255, 255), -1px 1px rgb(255, 255, 255), 1px -1px rgb(255, 255, 255), -1px -1px rgb(255, 255, 255);
 }
 
+.fnSuperiorRegularTitle3 {
+  font-family: "LTSuperior", sans-serif;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 40px;
+}
+
 .fnSuperiorRegularTitle {
   font-family: "LTSuperior", sans-serif;
   font-weight: 600;
@@ -59,22 +67,6 @@
 .fnSuperiorBold {
   font-family: "LTSuperior", sans-serif;
   font-weight: 700;
-}
-
-.fnTexto_Salsa {
-  font-family: "Salsa-Regular", sans-serif;
-  font-style: normal;
-  font-weight: 700;
-  font-size: 15px;
-  line-height: 20px;
-}
-
-.fnTexto_Ravioli {
-  font-family: "VanillaRavioli_Demo";
-  font-style: italic;
-  font-weight: 700;
-  font-size: 15px;
-  line-height: 20px;
 }
 
 .fnTexto_Bold_Encabezado_005 {
