@@ -4,7 +4,57 @@
 
 
 <div class="container py-4">
-    <h4 class="mb-3">Expediente #{{ expediente.pk }}</h4>
+    {% if expediente.eliminado == False %}
+  <h2>
+    #{{ expediente.pk }} 
+    Estatus actual:
+    <span style="background-color: {{ expediente.estatus.color }};"
+          class="rounded rounded-3 px-3 fw-bold">
+        {{ expediente.estatus }} 
+    </span>
+<span           data-bs-toggle="modal" style=" cursor: pointer;"
+          data-bs-target="#statusModal">    <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M8.29289 3.70711L1 11V15H5L12.2929 7.70711L8.29289 3.70711Z" fill="#010C80"></path> <path d="M9.70711 2.29289L13.7071 6.29289L15.1716 4.82843C15.702 4.29799 16 3.57857 16 2.82843C16 1.26633 14.7337 0 13.1716 0C12.4214 0 11.702 0.297995 11.1716 0.828428L9.70711 2.29289Z" fill="#010C80"></path> </g></svg>
+</span>
+</h2>
+
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-tercero text-white">
+                <h5 class="modal-title" id="statusModalLabel">Cambiar status del expediente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{% url 'Index:expediente_cambiar_status' expediente.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+
+                    <label class="form-label fw-bold">Nuevo Estatus:</label>
+                    <select name="estatus" class="form-select">
+                        {% for estado in estados %}
+                            <option value="{{ estado.id }}" style="background-color: {{ estado.color }};"
+                                    {% if estado.id == expediente.estatus_id %}selected{% endif %}>
+                                {{ estado.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+      
+    <h4 class="mb-3">Expediente del socio: <b>{{expediente.socio}}</b></h4>
 
     <form method="post" novalidate>
         {% csrf_token %}
@@ -42,24 +92,26 @@
                                     {% with apartado=fila.apartado registro=fila.registro %}
                                     <tr>
                                         <td class="align-middle">{{ apartado.clave }}</td>
-                                        <td class="align-middle">{{ apartado.descripcion|linebreaksbr }}</td>
+                                        <td class="align-middle">{{ apartado.descripcion|linebreaksbr }} </td>
                                         <td>
-                                            <input class="form-control form-control-sm" type="date"
-                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
-                                                value="{{ registro.fecha|default_if_none:'' }}">
+                                           <input type="date" class="form-control form-control-sm"
+       name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
+value="{{ fila.fecha_html }}"
+       onblur="if(!this.value) this.value='';">
+
                                         </td>
                                         <td>
                                             <select class="form-select form-select-sm"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-estatus">
-                                                <option value="" {% if not registro or registro.estatus=='' %}selected{%
+                                                <option value="" {% if not registro or registro.estatus == '' %}selected{%
                                                     endif %}>--</option>
-                                                <option value="ok" {% if registro and registro.estatus=='ok'
+                                                <option value="ok" {% if registro and registro.estatus == 'ok'
                                                     %}selected{% endif %}>ok</option>
-                                                <option value="pendiente" {% if registro and
-                                                    registro.estatus=='pendiente' %}selected{% endif %}>pendiente
+                                                <option value="pendiente" {% if registro and registro.estatus == 'pendiente' %}selected{% endif %}>pendiente
                                                 </option>
-                                                <option value="rechazado" {% if registro and
-                                                    registro.estatus=='rechazado' %}selected{% endif %}>rechazado
+                                                <option value="rechazado" {% if registro and registro.estatus == 'rechazado' %}selected{% endif %}>rechazado
+                                                </option>
+                                                   <option value="N/A" {% if registro and registro.estatus == 'N/A' %}selected{% endif %}>N/A
                                                 </option>
                                             </select>
                                         </td>
@@ -84,11 +136,45 @@
             </div>
             {% endfor %}
         </div>
-
-        <div class="d-flex justify-content-end">
+   <div class="d-flex justify-content-end">
+                                <a class="btn btn-error mx-2" data-bs-toggle="modal"
+                        data-bs-target="#deleteModal" >Eliminar Expediente</a>
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered ">
+                        <div class="modal-content">
+                            <div class="modal-header bg-tercero text-white">
+                                <h5 class="modal-title" id="deleteModalLabel">Confirmar cierre de sesión</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                ¿Estás seguro de que deseas borrar el expediente #{{ expediente.pk }} ?
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-tercero text-white"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <a href="{% url 'Index:expediente_eliminar' expediente.id %}" class="btn btn-primary">Eliminar Expediente</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             <button class="btn btn-primary" type="submit">Guardar</button>
+
         </div>
+
     </form>
+    {% else %}
+    <div class="row">
+        <div class="col-12 text-center fnSuperiorRegularTitle">
+            Parece que el contenido que buscas ya no esta disponible, contacta a un administrador para más información
+        </div>
+        <div class="col-12 text-center">
+            <img src="{% static 'img/404.png' %}" style="width: max-content; height: auto;" alt="">
+        </div>
+
+    </div>
+    {% endif %}
 </div>
 
 

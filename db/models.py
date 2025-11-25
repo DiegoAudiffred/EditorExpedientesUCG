@@ -75,7 +75,6 @@ class User(AbstractUser):
 class Socio(models.Model):
     #id por default
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    #numRegistro = models.IntegerField("Num Registros":default=1)
     def __str__(self):
         return self.nombre
     
@@ -96,7 +95,7 @@ class Expediente(models.Model):
     estatus = models.ForeignKey(Estado,on_delete=models.CASCADE)
     usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
-
+    eliminado = models.BooleanField(default=False)
 class SeccionesExpediente(models.Model):
     SECCIONES = [
         ('A', 'Solicitante'),
@@ -115,10 +114,13 @@ class SeccionesExpediente(models.Model):
     tituloSeccion = models.CharField(max_length=100, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        self.tituloSeccion = dict(self.SECCIONES).get(self.tipoDeSeccion, '')
+        if not self.tituloSeccion:
+            self.tituloSeccion = dict(self.SECCIONES).get(self.tipoDeSeccion, '')
         super().save(*args, **kwargs)
 
 
+    def __str__(self):
+        return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.tituloSeccion} - {self.expediente}"
 class ApartadoCatalogo(models.Model):
     SECCIONES = [
         ('A', 'A'),

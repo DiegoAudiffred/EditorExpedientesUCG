@@ -26,7 +26,7 @@ def index(request):
 
 @login_required(login_url='/login/')    
 def expedientesLayout(request):
-    expedientes = Expediente.objects.all().order_by('-id')
+    expedientes = Expediente.objects.all().order_by('-id').filter(eliminado = False)
     estatus = Estado.objects.all()
     usuarios = User.objects.all()
     
@@ -69,7 +69,7 @@ def filtrar_expedientes_ajax(request):
     elif fecha_fin:
         expedientes = expedientes.filter(fecha__lte=fecha_fin)
 
-    expedientes = expedientes.order_by('-id')
+    expedientes = expedientes.order_by('-id').filter(eliminado = False)
 
     paginator = Paginator(expedientes, 10)
     page_obj = paginator.get_page(page_number)
@@ -82,63 +82,84 @@ def filtrar_expedientes_ajax(request):
 
     return render(request, 'Index/tablaExpedientex.html', context)
 
+
 @login_required(login_url='/login/')    
-def expediente_editar(request, expediente_id):
-    expediente = get_object_or_404(Expediente, pk=expediente_id)
+
+def expediente_editar(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    if expediente.estatus_id == 1:
+        expediente.estatus_id = 2
+        expediente.save()
+
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+    estados = Estado.objects.all()
 
     if request.method == "POST":
-        # Guardado simple: los inputs vienen con nombre patrón:
-        # registro-<seccion_id>-<apartado_id>-fecha
-        # registro-<seccion_id>-<apartado_id>-estatus
-        # registro-<seccion_id>-<apartado_id>-comentario
         post = request.POST
-        updates = []
         for key, value in post.items():
-                if not key.startswith("registro-"):
-                    continue
-                # key example: registro-5-12-fecha
-                parts = key.split('-', 3)
-                if len(parts) != 4:
-                    continue
-                _, seccion_id_s, apartado_id_s, field = parts
-                try:
-                    seccion_id = int(seccion_id_s)
-                    apartado_id = int(apartado_id_s)
-                except ValueError:
-                    continue
-                # ensure the seccion belongs to this expediente
-                try:
-                    seccion = SeccionesExpediente.objects.get(pk=seccion_id, expediente=expediente)
-                except SeccionesExpediente.DoesNotExist:
-                    continue
+            if not key.startswith("registro-"):
+                continue
+            parts = key.split('-', 3)
+            if len(parts) != 4:
+                continue
+            _, seccion_id_s, apartado_id_s, field = parts
+            try:
+                seccion_id = int(seccion_id_s)
+                apartado_id = int(apartado_id_s)
+            except:
+                continue
 
-                apartado = ApartadoCatalogo.objects.filter(pk=apartado_id, tipoDeSeccion=seccion.tipoDeSeccion).first()
-                if not apartado:
-                    continue
+            try:
+                seccion = SeccionesExpediente.objects.get(pk=seccion_id, expediente=expediente)
+            except:
+                continue
 
-                registro, created = RegistroSeccion.objects.get_or_create(
+            apartado = ApartadoCatalogo.objects.filter(pk=apartado_id, tipoDeSeccion=seccion.tipoDeSeccion).first()
+            if not apartado:
+                continue
+
+            regs = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado)
+            if regs.exists():
+                registro = regs.first()
+                if regs.count() > 1:
+                    regs.exclude(pk=registro.pk).delete()
+            else:
+                registro = RegistroSeccion.objects.create(
                     seccion=seccion,
                     apartado=apartado,
-                    defaults={'fecha': None, 'estatus': '', 'comentario': ''}
+                    fecha=None,
+                    estatus='',
+                    comentario=''
                 )
 
-                # set the right field
-                val = value.strip()
-                if field == "fecha":
-                    registro.fecha = val or None
-                elif field == "estatus":
-                    registro.estatus = val
-                elif field == "comentario":
-                    registro.comentario = val
-                registro.save()
-                updates.append(registro)
+            val = value.strip()
 
-        messages.success(request, "Registros guardados.")
-        return redirect(reverse('expediente_editar', args=[expediente.pk]))
+            if field == "fecha":
+                if val:
+                    parsed = None
+                    try:
+                        parsed = datetime.strptime(val, "%Y-%m-%d").date()
+                    except:
+                        try:
+                            parsed = datetime.strptime(val, "%d de %B de %Y").date()
+                        except:
+                            parsed = None
+                    registro.fecha = parsed
+                else:
+                    registro.fecha = None
 
-    # GET -> preparar datos para plantilla
+            elif field == "estatus":
+                registro.estatus = val
+
+            elif field == "comentario":
+                registro.comentario = val
+
+            registro.save()
+
+        return redirect(reverse('Index:expediente_editar', args=[expediente.pk]))
+
     context = {
+        'estados': estados,
         'expediente': expediente,
         'secciones': [],
     }
@@ -148,17 +169,31 @@ def expediente_editar(request, expediente_id):
         filas = []
         for apartado in apartados:
             registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            fecha_html = ""
+            if registro and registro.fecha:
+                original = str(registro.fecha)
+                try:
+                    fecha_html = datetime.strptime(original, "%Y-%m-%d").strftime("%Y-%m-%d")
+                except:
+                    try:
+                        fecha_html = datetime.strptime(original, "%d de %B de %Y").strftime("%Y-%m-%d")
+                    except:
+                        fecha_html = ""
             filas.append({
                 'apartado': apartado,
                 'registro': registro,
+                'fecha_html': fecha_html,
             })
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
         })
 
-    return render(request, 'db/expediente_editar.html', context)
+    return render(request, 'Index/editarExpediente.html', context)
 
+
+
+@login_required(login_url='/login/')    
 def expediente_crear(request):
 
     if request.method == "POST":
@@ -188,7 +223,11 @@ def expediente_crear(request):
                 else:
                     lista = obl_form.cleaned_data.get('obligados', '')
 
-                nombres = [x.strip() for x in lista.split("||") if x.strip()]
+                print(lista)
+                
+                lista_raw = lista.strip().strip("|")
+                nombres = [x.strip() for x in lista_raw.split("||") if x.strip()]
+
                 if not nombres:
                     nombres = [""]
 
@@ -221,3 +260,25 @@ def expediente_crear(request):
             'obl_form': ObligadosForm(),
         }
     )
+
+
+
+@login_required(login_url='/login/')    
+def expediente_eliminar(request,id):
+    expediente = Expediente.objects.get(id=id)
+    expediente.eliminado = True
+    expediente.save()
+    return redirect('Index:expedientesLayout')
+
+@login_required(login_url='/login/')    
+def expediente_cambiar_status(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+
+    if request.method == "POST":
+        nuevo_estatus_id = request.POST.get("estatus")
+
+        if nuevo_estatus_id:
+            expediente.estatus_id = nuevo_estatus_id
+            expediente.save()
+
+    return redirect('Index:expediente_editar', id=expediente.id)

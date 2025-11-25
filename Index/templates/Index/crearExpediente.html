@@ -77,25 +77,35 @@
     let reps = [];
     let obls = [];
 
+    function syncHidden() {
+        document.getElementsByName("representantes")[0].value = reps.join("||");
+        document.getElementsByName("obligados")[0].value = obls.join("||");
+    }
+
     function render() {
         const repList = document.getElementById("rep-list");
         repList.innerHTML = reps.map((x, i) => `
-        <div class="input-group m-3">
-            <input type="text" class="form-control" value="${x}" onchange="reps[${i}]=this.value">
-            <button class="btn btn-danger" onclick="reps.splice(${i},1); render();">X</button>
-        </div>
-    `).join("");
+            <div class="input-group m-3">
+                <input type="text" class="form-control"
+                       value="${x}"
+                       oninput="reps[${i}]=this.value; syncHidden();">
+                <button class="btn btn-danger"
+                        onclick="reps.splice(${i},1); render();">X</button>
+            </div>
+        `).join("");
 
         const oblList = document.getElementById("obl-list");
         oblList.innerHTML = obls.map((x, i) => `
-        <div class="input-group m-3">
-            <input type="text" class="form-control" value="${x}" onchange="obls[${i}]=this.value">
-            <button class="btn btn-danger" onclick="obls.splice(${i},1); render();">X</button>
-        </div>
-    `).join("");
+            <div class="input-group m-3">
+                <input type="text" class="form-control"
+                       value="${x}"
+                       oninput="obls[${i}]=this.value; syncHidden();">
+                <button class="btn btn-danger"
+                        onclick="obls.splice(${i},1); render();">X</button>
+            </div>
+        `).join("");
 
-        document.getElementsByName("representantes")[0].value = reps.join("||");
-        document.getElementsByName("obligados")[0].value = obls.join("||");
+        syncHidden();
     }
 
     function agregarRep() {
@@ -110,6 +120,7 @@
 
     render();
 </script>
+
 
 
 {% endblock %}
