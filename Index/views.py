@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate,login,logout
 # Create your views here.
 from django.contrib.auth.decorators import user_passes_test,login_required
 from django.core.paginator import Paginator
-
+from django.contrib import messages # <--- ¡Asegúrate de importar esto!
 from django.shortcuts import render
 from django.db.models import Q
 
@@ -93,70 +93,85 @@ def expediente_editar(request, id):
 
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
-
     if request.method == "POST":
         post = request.POST
+        
+        # 1. Agrupar los datos para no guardar 3 veces la misma fila
+        # Estructura: { (seccion_id, apartado_id): { 'fecha': val, 'estatus': val, 'comentario': val } }
+        datos_agrupados = {}
+
         for key, value in post.items():
             if not key.startswith("registro-"):
                 continue
+            
+            # Desarmamos la llave: registro-IDSECCION-IDAPARTADO-CAMPO
             parts = key.split('-', 3)
             if len(parts) != 4:
                 continue
+            
             _, seccion_id_s, apartado_id_s, field = parts
+            
             try:
-                seccion_id = int(seccion_id_s)
-                apartado_id = int(apartado_id_s)
-            except:
+                ids_tuple = (int(seccion_id_s), int(apartado_id_s))
+            except ValueError:
                 continue
 
+            # Inicializamos el diccionario para esta fila si no existe
+            if ids_tuple not in datos_agrupados:
+                datos_agrupados[ids_tuple] = {}
+
+            # Guardamos el valor limpio
+            datos_agrupados[ids_tuple][field] = value.strip()
+
+        # 2. Procesar y guardar CADA FILA una sola vez
+        for (seccion_id, apartado_id), campos in datos_agrupados.items():
+            
+            # Validamos que existan los padres
             try:
                 seccion = SeccionesExpediente.objects.get(pk=seccion_id, expediente=expediente)
-            except:
+                # Filtramos el apartado también por el tipo de sección para mayor seguridad
+                apartado = ApartadoCatalogo.objects.filter(pk=apartado_id, tipoDeSeccion=seccion.tipoDeSeccion).first()
+            except (SeccionesExpediente.DoesNotExist, ValueError):
                 continue
-
-            apartado = ApartadoCatalogo.objects.filter(pk=apartado_id, tipoDeSeccion=seccion.tipoDeSeccion).first()
+            
             if not apartado:
                 continue
 
-            regs = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado)
-            if regs.exists():
-                registro = regs.first()
-                if regs.count() > 1:
-                    regs.exclude(pk=registro.pk).delete()
-            else:
-                registro = RegistroSeccion.objects.create(
-                    seccion=seccion,
-                    apartado=apartado,
-                    fecha=None,
-                    estatus='',
-                    comentario=''
-                )
+            # --- LÓGICA SEGURA: Update or Create ---
+            # Esto busca el registro exacto. Si no existe, lo crea.
+            registro, created = RegistroSeccion.objects.get_or_create(
+                seccion=seccion,
+                apartado=apartado,
+                defaults={ 'estatus': '', 'comentario': '', 'fecha': None }
+            )
 
-            val = value.strip()
+            # Actualizamos los valores que vienen del formulario
+            if 'estatus' in campos:
+                registro.estatus = campos['estatus']
+            
+            if 'comentario' in campos:
+                registro.comentario = campos['comentario']
 
-            if field == "fecha":
-                if val:
-                    parsed = None
+            if 'fecha' in campos:
+                val_fecha = campos['fecha']
+                if val_fecha:
                     try:
-                        parsed = datetime.strptime(val, "%Y-%m-%d").date()
-                    except:
+                        registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
+                    except ValueError:
+                        # Intento secundario por si el formato varía
                         try:
-                            parsed = datetime.strptime(val, "%d de %B de %Y").date()
-                        except:
-                            parsed = None
-                    registro.fecha = parsed
+                            registro.fecha = datetime.strptime(val_fecha, "%d de %B de %Y").date()
+                        except ValueError:
+                            registro.fecha = None
                 else:
                     registro.fecha = None
 
-            elif field == "estatus":
-                registro.estatus = val
-
-            elif field == "comentario":
-                registro.comentario = val
-
+            # 3. Guardado Atómico (Una sola vez)
             registro.save()
 
+        messages.success(request, 'Datos guardados con éxito.')
         return redirect(reverse('Index:expediente_editar', args=[expediente.pk]))
+
 
     context = {
         'estados': estados,

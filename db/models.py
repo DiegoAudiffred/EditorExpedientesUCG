@@ -74,7 +74,9 @@ class User(AbstractUser):
     
 class Socio(models.Model):
     #id por default
+    idKepler = models.CharField("KeplerID",max_length=4,null=True)
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    tipoPersona = models.CharField("Tipo",max_length=1,null=True)
     def __str__(self):
         return self.nombre
     
@@ -144,7 +146,6 @@ class ApartadoCatalogo(models.Model):
     def __str__(self):
         return f"{self.tipoDeSeccion} - {self.clave}"
 
-
 class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
@@ -152,6 +153,9 @@ class RegistroSeccion(models.Model):
     estatus = models.CharField(max_length=20, null=True, blank=True)
     comentario = models.TextField(null=True, blank=True)
 
+    class Meta:
+        # ESTO EVITA DUPLICADOS Y ERRORES DE LÓGICA
+        unique_together = ('seccion', 'apartado') 
+
     def __str__(self):
         return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave}"
-
