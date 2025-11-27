@@ -399,8 +399,15 @@ def obtener_socio_data(request, socio_id):
     except Socio.DoesNotExist:
         return JsonResponse({'error': 'Socio no encontrado'}, status=404)
     
-
+@login_required(login_url='/login/')    
 def avances(request):
+    usuarios = User.objects.all()
+    dictExpedientes = {}
+    for us in usuarios:
+        numExpedientes = Expediente.objects.filter(usuario=us).count()
+        expedientesCompletados = Expediente.objects.filter(estatus=3,usuario=us).count()
+        print(f"Num de expedientes de {us} es {numExpedientes} y completados {expedientesCompletados}")
+    print(dictExpedientes)
     context = {}
     return render(request,'Index/avancesLayout.html',context)   
 
