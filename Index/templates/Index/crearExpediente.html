@@ -13,8 +13,24 @@
             <div class=" row  border border-3 border-quinto  rounded rounded-4">
 
                 <div class="col-md-4 my-3">
-                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Socio</label>
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Socio Existente</label>
                     {{ exp_form.socio }}
+                    {% if exp_form.socio.errors %}<div class="text-danger small">{{ exp_form.socio.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">O escribir nuevo nombre</label>
+                    {{ exp_form.socio_manual_nombre }}
+                    {% if exp_form.socio_manual_nombre.errors %}<div class="text-danger small">{{
+                        exp_form.socio_manual_nombre.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Tipo de Persona (F/M)</label>
+                    {{ exp_form.socio_manual_tipo }}
+                    {% if exp_form.socio_manual_tipo.errors %}<div class="text-danger small">{{
+                        exp_form.socio_manual_tipo.errors }}</div>{% endif %}
                 </div>
 
                 <div class="col-md-4 my-3">
@@ -87,10 +103,10 @@
         repList.innerHTML = reps.map((x, i) => `
             <div class="input-group m-3">
                 <input type="text" class="form-control"
-                       value="${x}"
-                       oninput="reps[${i}]=this.value; syncHidden();">
+                        value="${x}"
+                        oninput="reps[${i}]=this.value; syncHidden();">
                 <button class="btn btn-danger"
-                        onclick="reps.splice(${i},1); render();">X</button>
+                         onclick="reps.splice(${i},1); render();">X</button>
             </div>
         `).join("");
 
@@ -98,10 +114,10 @@
         oblList.innerHTML = obls.map((x, i) => `
             <div class="input-group m-3">
                 <input type="text" class="form-control"
-                       value="${x}"
-                       oninput="obls[${i}]=this.value; syncHidden();">
+                        value="${x}"
+                        oninput="obls[${i}]=this.value; syncHidden();">
                 <button class="btn btn-danger"
-                        onclick="obls.splice(${i},1); render();">X</button>
+                         onclick="obls.splice(${i},1); render();">X</button>
             </div>
         `).join("");
 
@@ -120,7 +136,6 @@
 
     render();
 </script>
-
 
 
 {% endblock %}

@@ -88,10 +88,10 @@
                         href="{% url 'Index:expedientesLayout'%}">Expedientes</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fnSuperiorRegular text-tercero text-decoration-line-through" href="">Avances</a>
+                    <a class="nav-link fnSuperiorRegular text-tercero" href="/">Avances</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fnSuperiorRegular text-tercero text-decoration-line-through" href="">Ajustes</a>
+                    <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:editar_layout'%}">Ajustes</a>
                 </li>
                 {% if request.user.is_authenticated %}
                 <li class="nav-item">

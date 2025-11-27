@@ -15,6 +15,7 @@ urlpatterns = [
     path("expedientes/editarExpediente/<int:id>/",views.expediente_editar,name='expediente_editar'),
     path('expediente/crear/', views.expediente_crear, name='expediente_crear'),
     path('expediente/eliminar/<int:id>/', views.expediente_eliminar, name='expediente_eliminar'),
-    path('expediente/cambiar-status/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
+    path('expediente/cambiarStatus/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
+    path('editar/', views.editar_layout, name='editar_layout'),
 
 ] 

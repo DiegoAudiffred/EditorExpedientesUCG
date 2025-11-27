@@ -3,7 +3,7 @@ from urllib import request
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from Index.forms import ExpedienteCrearForm, ObligadosForm, RepresentantesForm
+from Index.forms import *
 from db.models import *
 from django.contrib.auth import authenticate,login,logout
 # Create your views here.
@@ -123,13 +123,10 @@ def expediente_editar(request, id):
             # Guardamos el valor limpio
             datos_agrupados[ids_tuple][field] = value.strip()
 
-        # 2. Procesar y guardar CADA FILA una sola vez
         for (seccion_id, apartado_id), campos in datos_agrupados.items():
             
-            # Validamos que existan los padres
             try:
                 seccion = SeccionesExpediente.objects.get(pk=seccion_id, expediente=expediente)
-                # Filtramos el apartado también por el tipo de sección para mayor seguridad
                 apartado = ApartadoCatalogo.objects.filter(pk=apartado_id, tipoDeSeccion=seccion.tipoDeSeccion).first()
             except (SeccionesExpediente.DoesNotExist, ValueError):
                 continue
@@ -137,15 +134,13 @@ def expediente_editar(request, id):
             if not apartado:
                 continue
 
-            # --- LÓGICA SEGURA: Update or Create ---
-            # Esto busca el registro exacto. Si no existe, lo crea.
+
             registro, created = RegistroSeccion.objects.get_or_create(
                 seccion=seccion,
                 apartado=apartado,
                 defaults={ 'estatus': '', 'comentario': '', 'fecha': None }
             )
 
-            # Actualizamos los valores que vienen del formulario
             if 'estatus' in campos:
                 registro.estatus = campos['estatus']
             
@@ -158,7 +153,6 @@ def expediente_editar(request, id):
                     try:
                         registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
                     except ValueError:
-                        # Intento secundario por si el formato varía
                         try:
                             registro.fecha = datetime.strptime(val_fecha, "%d de %B de %Y").date()
                         except ValueError:
@@ -166,7 +160,6 @@ def expediente_editar(request, id):
                 else:
                     registro.fecha = None
 
-            # 3. Guardado Atómico (Una sola vez)
             registro.save()
 
         messages.success(request, 'Datos guardados con éxito.')
@@ -208,7 +201,8 @@ def expediente_editar(request, id):
 
 
 
-@login_required(login_url='/login/')    
+
+@login_required(login_url='/login/')
 def expediente_crear(request):
 
     if request.method == "POST":
@@ -217,45 +211,55 @@ def expediente_crear(request):
         obl_form = ObligadosForm(request.POST)
 
         if exp_form.is_valid() and rep_form.is_valid() and obl_form.is_valid():
+            
+            try:
+                    
+                   socio_existente = exp_form.cleaned_data.get('socio')
+                   nombre_manual = exp_form.cleaned_data.get('socio_manual_nombre')
+                   tipo_manual = exp_form.cleaned_data.get('socio_manual_tipo')
+                   socio_a_asignar = None
+                   if socio_existente:
+                       socio_a_asignar = socio_existente
+                   elif nombre_manual and tipo_manual:
+          
+                       socio_a_asignar = Socio.objects.create(
+                           nombre=nombre_manual,
+                           tipoPersona=tipo_manual 
+                       )
+                   else:
 
-            expediente = exp_form.save(commit=False)
-            expediente.estatus_id = 1
-            expediente.save()
-
-            SECCIONES = SeccionesExpediente.SECCIONES
-
-            for tipo, titulo in SECCIONES:
-
-                if tipo not in ['B', 'C']:
-                    SeccionesExpediente.objects.create(
-                        expediente=expediente,
-                        tipoDeSeccion=tipo
-                    )
-                    continue
-
-                if tipo == 'B':
-                    lista = rep_form.cleaned_data.get('representantes', '')
-                else:
-                    lista = obl_form.cleaned_data.get('obligados', '')
-
-                print(lista)
+                       raise Exception("Debe proporcionar un Socio existente o crear uno nuevo.")
+                   
+                   expediente = exp_form.save(commit=False)
+                   expediente.socio = socio_a_asignar
+                   expediente.estatus_id = 1
+                   expediente.save()
+                   SECCIONES = SeccionesExpediente.SECCIONES
+                   for tipo, titulo in SECCIONES:
+                       if tipo not in ['B', 'C']:
+                           SeccionesExpediente.objects.create(
+                               expediente=expediente,
+                               tipoDeSeccion=tipo
+                           )
+                           continue
+                       lista = rep_form.cleaned_data.get('representantes', '') if tipo == 'B' else obl_form.cleaned_data.get('obligados', '')
+                       lista_raw = lista.strip().strip("|")
+                       nombres = [x.strip() for x in lista_raw.split("||") if x.strip()]
+                       if not nombres:
+                           nombres = [""]
+                       for nombre in nombres:
+                           titulo_final = titulo if nombre == "" else f"{titulo} - {nombre}"
+                           SeccionesExpediente.objects.create(
+                               expediente=expediente,
+                               tipoDeSeccion=tipo,
+                               tituloSeccion=titulo_final
+                           )
+                   return redirect('Index:expedientesLayout')
+            except Exception as e:
+                # Manejar error de base de datos o de lógica
+                print(f"Error al crear expediente o socio: {e}")
+                exp_form.add_error(None, f"Error al procesar la solicitud: {e}")
                 
-                lista_raw = lista.strip().strip("|")
-                nombres = [x.strip() for x in lista_raw.split("||") if x.strip()]
-
-                if not nombres:
-                    nombres = [""]
-
-                for nombre in nombres:
-                    titulo_final = titulo if nombre == "" else f"{titulo} - {nombre}"
-                    SeccionesExpediente.objects.create(
-                        expediente=expediente,
-                        tipoDeSeccion=tipo,
-                        tituloSeccion=titulo_final
-                    )
-
-            return redirect('Index:expedientesLayout')
-
         return render(
             request,
             'Index/crearExpediente.html',
@@ -285,7 +289,7 @@ def expediente_eliminar(request,id):
     expediente.save()
     return redirect('Index:expedientesLayout')
 
-@login_required(login_url='/login/')    
+@login_required(login_url='/login/')
 def expediente_cambiar_status(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
 
@@ -296,4 +300,47 @@ def expediente_cambiar_status(request, id):
             expediente.estatus_id = nuevo_estatus_id
             expediente.save()
 
+    # CORRECCIÓN: Usar el nombre de la URL ('name') configurado en urls.py
+    # Reemplaza 'editarExpediente' si tu nombre de URL es diferente.
     return redirect('Index:expediente_editar', id=expediente.id)
+@login_required(login_url='/login/')    
+def editar_layout(request):
+    if request.method == 'POST':
+        formset = EstadoFormSet(request.POST)
+        
+        print("\n--- INICIO DE VALIDACIÓN POST ---")
+        print(f"Datos recibidos en POST: {request.POST}")
+
+        if formset.is_valid():
+            print("VALIDACIÓN EXITOSA: formset.is_valid() = True")
+            
+            try:
+                formset.save()
+                print("GUARDADO EXITOSO EN DB.")
+                
+                return redirect('Index:editar_layout') 
+            
+            except Exception as e:
+                print(f"!!! ERROR DE BASE DE DATOS DURANTE EL GUARDADO: {e}")
+                formset.non_field_errors = [f"Error de base de datos: {e}"] 
+                
+        else:
+            print("!!! VALIDACIÓN FALLIDA: formset.is_valid() = False")
+            
+            for form in formset:
+                if form.errors:
+                    print(f"ERROR EN FORMULARIO {form.prefix}:")
+                    print(form.errors)
+            
+            if formset.non_field_errors():
+                print(f"ERROR GENERAL (NON_FIELD_ERRORS): {formset.non_field_errors()}")
+            
+    else:
+        formset = EstadoFormSet(queryset=Estado.objects.all())
+        #formsetSocios = EditarSocio(queryset=Socio.objects.all())
+
+    context = {
+        'formset': formset,
+        #'formsetSocios':formsetSocios,
+    }
+    return render(request, 'Index/ajustes.html', context)

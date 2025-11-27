@@ -74,7 +74,6 @@ class User(AbstractUser):
     
 class Socio(models.Model):
     #id por default
-    idKepler = models.CharField("KeplerID",max_length=4,null=True)
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
     tipoPersona = models.CharField("Tipo",max_length=1,null=True)
     def __str__(self):
