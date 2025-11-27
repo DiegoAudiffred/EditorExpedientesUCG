@@ -37,9 +37,9 @@
     <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar estados</h1>
 
     <form method="post">
+        <input type="hidden" name="form_name" value="estado_form"> {{ formset.management_form }}
         {% csrf_token %}
 
-        {{ formset.management_form }}
 
         <div class="row mb-3">
 
@@ -50,30 +50,30 @@
             {% endif %}
 
             {# Encabezados de Columna #}
-            <div class="col-3 fnSuperiorRegularTitle3"><label>Nombre</label></div>
-            <div class="col-3 fnSuperiorRegularTitle3"><label>Color</label></div>
-            <div class="col-2 fnSuperiorRegularTitle3"><label>Picker</label></div>
+            <div class="col-md-8 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Nombre</label></div>
+            <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Color</label></div>
+            <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Picker</label></div>
             <!--             <div class="col-1 fnSuperiorRegularTitle3"><label>Eliminar</label></div>
  -->
-            <div class="col-3"></div> {# Espacio libre restante #}
+            <div class="col-6"></div> {# Espacio libre restante #}
 
             {% for form in formset %}
 
             {# Columna 1: Nombre (3 cols) #}
-            <div class="col-3">
+            <div class="col-md-7 col-12 text-center">
                 {{ form.nombre }}
                 {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors }}</div>{% endif %}
             </div>
 
             {# Columna 2 y 3: Color y Picker (3 cols + 2 cols) #}
-            <div class="col-3">
+            <div class="col-md-3 col-10 text-center">
                 <div class="d-flex align-items-center">
                     {{ form.color }}
                     {% if form.color.errors %}<div class="text-danger small">{{ form.color.errors }}</div>{% endif %}
                 </div>
             </div>
 
-            <div class="col-2">
+            <div class="col-md-2 col-2 text-center">
                 <div class="color-picker-anchor " data-input-id="{{ form.color.id_for_label }}"></div>
             </div>
 
@@ -86,21 +86,74 @@
             </div> -->
 
             {{ form.id }}
-            <div class="col-3"></div> {# Columna vacía para llenar la fila #}
 
             {% endfor %}
         </div>
-        <button type="submit" class="btn btn-primary">Guardar todos</button>
+        <button type="submit" class="btn btn-primary col-12">Guardar Estados</button>
     </form>
 </div>
 
-<div class="container">
-    <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar usuarios</h1>
+<div class="container my-4">
+    <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar Socio</h1>
 
-    <div>
+    <form method="post" id="form-editar-socio">
+        {% csrf_token %}
+        <input type="hidden" name="form_name" value="socio_form"> <input type="hidden" name="socio_id"
+            id="socio-id-input" value="">
 
-    </div>
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formSocios.socio_selector.id_for_label }}">Socio a
+                Editar</label>
+            {{ formSocios.socio_selector }}
+        </div>
+
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formSocios.nombre.id_for_label }}">Nombre</label>
+            {{ formSocios.nombre }}
+            {% if formSocios.nombre.errors %}<div class="text-danger small">{{ formSocios.nombre.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formSocios.tipoPersona.id_for_label }}">Tipo de
+                Persona</label>
+            {{ formSocios.tipoPersona }}
+            {% if formSocios.tipoPersona.errors %}<div class="text-danger small">{{ formSocios.tipoPersona.errors }}
+            </div>{% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary col-12">Guardar Socio</button>
+    </form>
 </div>
+
+<script>
+    function cargarSocio(socioId) {
+        const nombreInput = document.getElementById('{{ formSocios.nombre.id_for_label }}');
+        const tipoPersonaSelect = document.getElementById('{{ formSocios.tipoPersona.id_for_label }}');
+        const socioIdInput = document.getElementById('socio-id-input');
+
+        socioIdInput.value = socioId;
+
+        if (!socioId) {
+            nombreInput.value = '';
+            tipoPersonaSelect.value = '';
+            return;
+        }
+
+        fetch(`/obtener-socio-data/${socioId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('No se pudo obtener el socio');
+                }
+                return response.json();
+            })
+            .then(data => {
+                nombreInput.value = data.nombre;
+                tipoPersonaSelect.value = data.tipoPersona;
+            })
+            .catch(error => console.error('Error al cargar datos del socio:', error));
+    }
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

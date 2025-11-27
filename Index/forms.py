@@ -55,25 +55,6 @@ class ExpedienteCrearForm(forms.ModelForm):
 
         return cleaned_data
     
-#class EditarSocio(forms.Form):
-#    TIPO_CHOICES = [
-#        ('F', 'Física'),
-#        ('M', 'Moral'),
-#    ]
-#    tipo_Persona = forms.ChoiceField(
-#        label="Tipo de Persona",
-#        choices=TIPO_CHOICES,
-#        required=False,
-#        widget=forms.Select(attrs={'class': 'form-control'})
-#    )
-#    class Meta:
-#        model = Socio
-#        fields = ['nombre'] 
-#
-#        widgets = {
-#            'usuario': forms.Select(attrs={'class': 'form-control'}),  
-#
-#        }
 
 class RepresentantesForm(forms.Form):
     representantes = forms.CharField(
@@ -95,5 +76,46 @@ class ModificarEstados(forms.ModelForm):
             'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'color': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 rounded-circle'}),
         }
+
+class ModificarEstados(forms.ModelForm):
+    class Meta:
+        model = Estado
+        fields = ['nombre', 'color'] 
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
+            'color': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 rounded-circle'}),
+        }
+
+
+
+class EditarSocio(forms.ModelForm):
+    TIPO_CHOICES = [
+        ('F', 'Física'),
+        ('M', 'Moral'),
+    ]
+    
+    socio_selector = forms.ModelChoiceField(
+        queryset=Socio.objects.all(),
+        label="Socio a Editar",
+        empty_label="--- Seleccione un Socio ---",
+        widget=forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2', 'onchange': 'cargarSocio(this.value)'})
+    )
+
+    tipoPersona = forms.ChoiceField(
+        label="Tipo de Persona",
+        choices=TIPO_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'})
+    )
+    
+    class Meta:
+        model = Socio
+        fields = ['nombre', 'tipoPersona'] 
+        
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
+        }
+
+# La creación del formset debe funcionar correctamente con el cambio
+#SociosoFormSet = forms.modelformset_factory(Socio, form=EditarSocio, extra=1, can_delete=True)
 
 EstadoFormSet = forms.modelformset_factory(Estado, form=ModificarEstados, extra=1, can_delete=True)

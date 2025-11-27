@@ -1,6 +1,6 @@
 from pyexpat.errors import messages
 from urllib import request
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from Index.forms import *
@@ -303,44 +303,89 @@ def expediente_cambiar_status(request, id):
     # CORRECCIÓN: Usar el nombre de la URL ('name') configurado en urls.py
     # Reemplaza 'editarExpediente' si tu nombre de URL es diferente.
     return redirect('Index:expediente_editar', id=expediente.id)
+
 @login_required(login_url='/login/')    
 def editar_layout(request):
-    if request.method == 'POST':
-        formset = EstadoFormSet(request.POST)
-        
-        print("\n--- INICIO DE VALIDACIÓN POST ---")
-        print(f"Datos recibidos en POST: {request.POST}")
+    
+    # Inicialización para GET o POST con errores
+    formset = EstadoFormSet(queryset=Estado.objects.all())
+    formSocios = EditarSocio()
 
-        if formset.is_valid():
-            print("VALIDACIÓN EXITOSA: formset.is_valid() = True")
+    if request.method == 'POST':
+        
+        form_name = request.POST.get('form_name')
+
+        if form_name == 'estado_form':
+            # Lógica para el Formulario de ESTADOS (Formset)
+            formset = EstadoFormSet(request.POST)
             
-            try:
-                formset.save()
-                print("GUARDADO EXITOSO EN DB.")
+            print("\n--- INICIO DE VALIDACIÓN POST ESTADO ---")
+            print(f"Datos recibidos en POST: {request.POST}")
+
+            if formset.is_valid():
+                print("VALIDACIÓN EXITOSA ESTADO: formset.is_valid() = True")
+                try:
+                    formset.save()
+                    print("GUARDADO EXITOSO EN DB (Estados).")
+                    return redirect('Index:editar_layout') 
+                except Exception as e:
+                    print(f"!!! ERROR DE BASE DE DATOS DURANTE EL GUARDADO DE ESTADOS: {e}")
+                    formset.non_field_errors = [f"Error de base de datos: {e}"] 
+            else:
+                print("!!! VALIDACIÓN FALLIDA ESTADO: formset.is_valid() = False")
+                # Lógica de impresión de errores (la que ya tenías)
+                for form in formset:
+                    if form.errors:
+                        print(f"ERROR EN FORMULARIO {form.prefix}:")
+                        print(form.errors)
+                if formset.non_field_errors():
+                    print(f"ERROR GENERAL ESTADO: {formset.non_field_errors()}")
+
+        elif form_name == 'socio_form':
+            # Lógica para el Formulario de SOCIOS (Formulario Singular)
+            socio_id = request.POST.get('socio_id')
+            
+            if socio_id:
+                instance = get_object_or_404(Socio, pk=socio_id)
+                formSocios = EditarSocio(request.POST, instance=instance)
+            else:
+                formSocios = EditarSocio(request.POST) 
                 
-                return redirect('Index:editar_layout') 
+            print("\n--- INICIO DE VALIDACIÓN POST SOCIO ---")
             
-            except Exception as e:
-                print(f"!!! ERROR DE BASE DE DATOS DURANTE EL GUARDADO: {e}")
-                formset.non_field_errors = [f"Error de base de datos: {e}"] 
-                
-        else:
-            print("!!! VALIDACIÓN FALLIDA: formset.is_valid() = False")
-            
-            for form in formset:
-                if form.errors:
-                    print(f"ERROR EN FORMULARIO {form.prefix}:")
-                    print(form.errors)
-            
-            if formset.non_field_errors():
-                print(f"ERROR GENERAL (NON_FIELD_ERRORS): {formset.non_field_errors()}")
-            
-    else:
-        formset = EstadoFormSet(queryset=Estado.objects.all())
-        #formsetSocios = EditarSocio(queryset=Socio.objects.all())
+            if formSocios.is_valid():
+                try:
+                    formSocios.save()
+                    print("GUARDADO EXITOSO EN DB (Socio).")
+                    return redirect('Index:editar_layout')
+                except Exception as e:
+                    print(f"!!! ERROR DE BASE DE DATOS DURANTE EL GUARDADO DE SOCIO: {e}")
+                    
+            else:
+                print("!!! VALIDACIÓN FALLIDA SOCIO:")
+                print(formSocios.errors)
+        
+        # Si no es POST de ninguno, o si hubo errores, el flujo continúa para renderizar
 
     context = {
         'formset': formset,
-        #'formsetSocios':formsetSocios,
+        'formSocios': formSocios,
     }
     return render(request, 'Index/ajustes.html', context)
+
+
+def obtener_socio_data(request, socio_id):
+    try:
+        socio = Socio.objects.get(pk=socio_id)
+        data = {
+            'nombre': socio.nombre,
+            'tipoPersona': socio.tipoPersona, 
+        }
+        return JsonResponse(data)
+    except Socio.DoesNotExist:
+        return JsonResponse({'error': 'Socio no encontrado'}, status=404)
+    
+
+def avances(request):
+    context = {}
+    return render(request,'Index/avancesLayout.html',context)   
