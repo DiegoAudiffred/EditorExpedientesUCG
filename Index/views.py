@@ -93,6 +93,7 @@ def expediente_editar(request, id):
 
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
+    usuarios = User.objects.all()
     if request.method == "POST":
         post = request.POST
         
@@ -168,6 +169,7 @@ def expediente_editar(request, id):
 
     context = {
         'estados': estados,
+        'usuarios':usuarios,
         'expediente': expediente,
         'secciones': [],
     }
@@ -200,7 +202,20 @@ def expediente_editar(request, id):
     return render(request, 'Index/editarExpediente.html', context)
 
 
+@login_required(login_url='/login/')
+def expediente_cambiar_usuario(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
 
+    if request.method == "POST":
+        nuevo_usuarios_id = request.POST.get("usuario")
+
+        if nuevo_usuarios_id:
+            expediente.usuario_id = nuevo_usuarios_id
+            expediente.save()
+
+    # CORRECCIÓN: Usar el nombre de la URL ('name') configurado en urls.py
+    # Reemplaza 'editarExpediente' si tu nombre de URL es diferente.
+    return redirect('Index:expediente_editar', id=expediente.id)
 
 @login_required(login_url='/login/')
 def expediente_crear(request):
@@ -279,7 +294,6 @@ def expediente_crear(request):
             'obl_form': ObligadosForm(),
         }
     )
-
 
 
 @login_required(login_url='/login/')    
@@ -389,3 +403,4 @@ def obtener_socio_data(request, socio_id):
 def avances(request):
     context = {}
     return render(request,'Index/avancesLayout.html',context)   
+

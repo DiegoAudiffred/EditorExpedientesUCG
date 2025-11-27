@@ -98,28 +98,47 @@
         document.getElementsByName("obligados")[0].value = obls.join("||");
     }
 
+    function cargarSocio(socioId) {
+
+        const socioIdInput = document.getElementById('id_socio');
+        const tipoPersonaSelect = document.getElementById('id_socio_manual_tipo');
+
+        var socioId = socioIdInput.value
+        if (!socioId) {
+            tipoPersonaSelect.value = '';
+            return;
+        }
+
+        fetch(`/obtener-socio-data/${socioId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('No se pudo obtener el socio');
+                }
+                return response.json();
+            })
+            .then(data => {
+                tipoPersonaSelect.value = data.tipoPersona;
+            })
+            .catch(error => console.error('Error al cargar datos del socio:', error));
+    }
+
+
     function render() {
         const repList = document.getElementById("rep-list");
         repList.innerHTML = reps.map((x, i) => `
-            <div class="input-group m-3">
-                <input type="text" class="form-control"
-                        value="${x}"
-                        oninput="reps[${i}]=this.value; syncHidden();">
-                <button class="btn btn-danger"
-                         onclick="reps.splice(${i},1); render();">X</button>
-            </div>
-        `).join("");
+<div class="input-group m-3">
+    <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
+    <button class="btn btn-danger" onclick="reps.splice(${i},1); render();">X</button>
+</div>
+`).join("");
 
         const oblList = document.getElementById("obl-list");
         oblList.innerHTML = obls.map((x, i) => `
-            <div class="input-group m-3">
-                <input type="text" class="form-control"
-                        value="${x}"
-                        oninput="obls[${i}]=this.value; syncHidden();">
-                <button class="btn btn-danger"
-                         onclick="obls.splice(${i},1); render();">X</button>
-            </div>
-        `).join("");
+<div class="input-group m-3">
+    <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
+    <button class="btn btn-danger" onclick="obls.splice(${i},1); render();">X</button>
+</div>
+`).join("");
 
         syncHidden();
     }

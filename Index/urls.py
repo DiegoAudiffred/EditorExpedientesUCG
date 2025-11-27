@@ -16,8 +16,9 @@ urlpatterns = [
     path('expediente/crear/', views.expediente_crear, name='expediente_crear'),
     path('expediente/eliminar/<int:id>/', views.expediente_eliminar, name='expediente_eliminar'),
     path('expediente/cambiarStatus/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
+    path('expediente/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
     path('editar/', views.editar_layout, name='editar_layout'),
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
-        path('avances/', views.avances, name='avances'),
+    path('avances/', views.avances, name='avances'),
 
 ] 

@@ -6,7 +6,7 @@ class ExpedienteCrearForm(forms.ModelForm):
     socio = forms.ModelChoiceField(
         queryset=Socio.objects.all(), 
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-control','onclick':'cargarSocio(this)'}),
         empty_label="--- Seleccionar Socio Existente ---"
     )
 
