@@ -1,6 +1,22 @@
 from django import forms
 from db.models import *
+from django import forms
+from django.contrib.auth.forms import UserChangeForm
 
+class UserAdminForm(UserChangeForm):
+    # Sobrescribimos el campo 'password' para que no se muestre como 'set password'
+    # y lo definimos como no requerido en este formulario de edición simple.
+    password = None 
+
+    class Meta:
+        model = User
+        # Define los campos que el administrador PUEDE modificar
+        fields = ('username', 'first_name', 'last_name', 'email', 'roles', 'is_active')
+        
+    # Opcional: Sobrescribe el método save para permitir el cambio de contraseña
+    # Si quieres cambiar la contraseña, necesitarás un campo de formulario
+    # aparte y usar 'usuario.set_password(nueva_contraseña)'.
+    # Para este ejemplo, solo permitimos edición de datos y roles.
 
 class ExpedienteCrearForm(forms.ModelForm):
     socio = forms.ModelChoiceField(
@@ -119,3 +135,4 @@ class EditarSocio(forms.ModelForm):
 #SociosoFormSet = forms.modelformset_factory(Socio, form=EditarSocio, extra=1, can_delete=True)
 
 EstadoFormSet = forms.modelformset_factory(Estado, form=ModificarEstados, extra=1, can_delete=True)
+

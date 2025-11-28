@@ -1,19 +1,115 @@
 {% extends 'layout/layout.html' %}
 {% load static %}
+
 {% block body %}
-<div class="container">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container mt-4">
+    <h2 class="mb-4">Progreso de Expedientes por Usuario</h2>
     <div class="row">
-        <div class="col-12 text-center">
-            <img src="{% static 'img/404.png' %}" style="width: max-content; height: 400px;" alt="">
+        {% for username, data in data_por_usuario.items %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h4>{{ username }} - Avance: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50  %} 
+                        bg-yellow {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
+                </div>
+                <div class="card-body d-flex flex-column align-items-center">
 
+                    <div style="max-width: 250px; max-height: 250px; margin-bottom: 15px;">
+                        <canvas id="chart-{{ username }}"></canvas>
+                    </div>
+                    <p class="mt-3 text-center">
+                        Expedientes Completados: <strong>{{ data.completados }}</strong> de <strong>{{ data.total }}</strong>
+                    </p>
+                </div>
+            </div>
         </div>
-        <div class="col-12 text-center fnSuperiorRegularTitle2">
-            Aca abra algo pronto, espero...
-                      <img src="{% static 'img/oia-uia.gif' %}" style="width: max-content; height: 400px;" alt="">
-  
-        </div>
+        {% endfor %}
     </div>
-
 </div>
+
+{{ data_por_usuario|json_script:"user-data" }}
+
+<script>
+    const dataElement = document.getElementById('user-data');
+    if (!dataElement) {
+        console.error("No se encontró el elemento 'user-data'. Asegúrate de que el diccionario 'data_por_usuario' no esté vacío.");
+    }
+
+    const dataUsuarios = JSON.parse(dataElement.textContent);
+
+    function createProgressChart(canvasId, completados, pendientes, username) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completados', 'Pendientes'],
+                datasets: [{
+                    data: [completados, pendientes],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.8)', // Verde (Success)
+                        'rgba(255, 193, 7, 0.8)'  // Amarillo (Warning)
+                    ],
+                    borderColor: ['#fff', '#fff'],
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Permite que el div de 250px controle el tamaño
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    title: {
+                        display: false, // Ocultamos el título ya que lo tenemos en la tarjeta
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += context.parsed;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Iteramos sobre los datos para crear cada gráfico
+    for (const username in dataUsuarios) {
+        if (dataUsuarios.hasOwnProperty(username)) {
+            const data = dataUsuarios[username];
+            
+            // Creamos el gráfico solo si hay expedientes (el total es mayor a 0)
+            if (data.total > 0) {
+                const canvasId = `chart-${username}`;
+                createProgressChart(canvasId, data.completados, data.pendientes, username);
+            } else {
+                // Opcional: Si no hay datos, mostramos un mensaje en la consola
+                console.log(`No hay expedientes para el usuario: ${username}. No se dibujó el gráfico.`);
+                // Opcional: Puedes dibujar un gráfico vacío o reemplazar el canvas con un mensaje aquí
+                const canvas = document.getElementById(`chart-${username}`);
+                if (canvas) {
+                    const cardBody = canvas.closest('.card-body');
+                    if (cardBody) {
+                        cardBody.innerHTML = '<p class="text-muted text-center">Aún no hay expedientes registrados.</p>';
+                    }
+                }
+            }
+        }
+    }
+</script>
 
 {% endblock %}

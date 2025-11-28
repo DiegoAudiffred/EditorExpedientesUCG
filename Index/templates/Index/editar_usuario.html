@@ -1,0 +1,17 @@
+{% extends 'layout/layout.html' %}
+
+{% block body %}
+
+<div class="container mt-5">
+    <h1>Editar Usuario: {{ usuario.username }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }} 
+        <button type="submit" class="btn btn-success">Guardar Cambios</button>
+        <a href="{% url 'Index:administrador' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+    
+    <h3 class="mt-4">Cambiar Contraseña</h3>
+</div>
+
+{% endblock %}

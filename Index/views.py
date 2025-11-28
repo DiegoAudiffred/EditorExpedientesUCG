@@ -13,6 +13,8 @@ from django.contrib import messages # <--- ¡Asegúrate de importar esto!
 from django.shortcuts import render
 from django.db.models import Q
 
+def is_admin(user):
+    return user.roles == 'Administrador'
 
 @login_required(login_url='/login/')    
 def index(request):
@@ -83,29 +85,26 @@ def filtrar_expedientes_ajax(request):
     return render(request, 'Index/tablaExpedientex.html', context)
 
 
-@login_required(login_url='/login/')    
-
+@login_required(login_url='/login/')
 def expediente_editar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
-    if expediente.estatus_id == 1:
-        expediente.estatus_id = 2
-        expediente.save()
+    
+    #if expediente.estatus_id == 1:
+    #    expediente.estatus_id = 2
+    #    expediente.save()
 
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
     usuarios = User.objects.all()
+    
     if request.method == "POST":
         post = request.POST
-        
-        # 1. Agrupar los datos para no guardar 3 veces la misma fila
-        # Estructura: { (seccion_id, apartado_id): { 'fecha': val, 'estatus': val, 'comentario': val } }
         datos_agrupados = {}
 
         for key, value in post.items():
             if not key.startswith("registro-"):
                 continue
             
-            # Desarmamos la llave: registro-IDSECCION-IDAPARTADO-CAMPO
             parts = key.split('-', 3)
             if len(parts) != 4:
                 continue
@@ -117,11 +116,9 @@ def expediente_editar(request, id):
             except ValueError:
                 continue
 
-            # Inicializamos el diccionario para esta fila si no existe
             if ids_tuple not in datos_agrupados:
                 datos_agrupados[ids_tuple] = {}
 
-            # Guardamos el valor limpio
             datos_agrupados[ids_tuple][field] = value.strip()
 
         for (seccion_id, apartado_id), campos in datos_agrupados.items():
@@ -134,7 +131,6 @@ def expediente_editar(request, id):
             
             if not apartado:
                 continue
-
 
             registro, created = RegistroSeccion.objects.get_or_create(
                 seccion=seccion,
@@ -154,18 +150,14 @@ def expediente_editar(request, id):
                     try:
                         registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
                     except ValueError:
-                        try:
-                            registro.fecha = datetime.strptime(val_fecha, "%d de %B de %Y").date()
-                        except ValueError:
-                            registro.fecha = None
+                        registro.fecha = None
                 else:
                     registro.fecha = None
-
+            
             registro.save()
 
         messages.success(request, 'Datos guardados con éxito.')
         return redirect(reverse('Index:expediente_editar', args=[expediente.pk]))
-
 
     context = {
         'estados': estados,
@@ -173,35 +165,44 @@ def expediente_editar(request, id):
         'expediente': expediente,
         'secciones': [],
     }
+    totalRegistros = 0
+    totalRegistrosLlenos = 0
 
     for seccion in secciones:
         apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
         filas = []
         for apartado in apartados:
-            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            totalRegistros += 1
+
+            registro, created = RegistroSeccion.objects.get_or_create(
+                seccion=seccion,
+                apartado=apartado,
+                defaults={ 'estatus': '', 'comentario': '', 'fecha': None } 
+            )
+            
+            if registro.estatus != "": 
+                totalRegistrosLlenos += 1
+
             fecha_html = ""
-            if registro and registro.fecha:
-                original = str(registro.fecha)
-                try:
-                    fecha_html = datetime.strptime(original, "%Y-%m-%d").strftime("%Y-%m-%d")
-                except:
-                    try:
-                        fecha_html = datetime.strptime(original, "%d de %B de %Y").strftime("%Y-%m-%d")
-                    except:
-                        fecha_html = ""
-            filas.append({
+            if registro.fecha:
+                fecha_html = registro.fecha.strftime("%Y-%m-%d")
+
+            fila_data = {
                 'apartado': apartado,
                 'registro': registro,
                 'fecha_html': fecha_html,
-            })
+            }
+            filas.append(fila_data)
+            
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
         })
+        
+    context['totalRegistros']=totalRegistros
+    context['totalRegistrosLlenos']=totalRegistrosLlenos
 
     return render(request, 'Index/editarExpediente.html', context)
-
-
 @login_required(login_url='/login/')
 def expediente_cambiar_usuario(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -216,6 +217,24 @@ def expediente_cambiar_usuario(request, id):
     # CORRECCIÓN: Usar el nombre de la URL ('name') configurado en urls.py
     # Reemplaza 'editarExpediente' si tu nombre de URL es diferente.
     return redirect('Index:expediente_editar', id=expediente.id)
+
+@login_required(login_url='/login/')
+def expediente_llenar(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+    print(request.method)
+    for seccion in secciones:
+        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        for apartado in apartados:
+            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            if registro:
+                if not registro.estatus:
+                    registro.estatus = 'N/A'
+                else:
+                    registro.estatus = registro.estatus
+                registro.save()
+    return redirect('Index:expediente_editar', id=expediente.id)
+
 
 @login_required(login_url='/login/')
 def expediente_crear(request):
@@ -398,16 +417,65 @@ def obtener_socio_data(request, socio_id):
         return JsonResponse(data)
     except Socio.DoesNotExist:
         return JsonResponse({'error': 'Socio no encontrado'}, status=404)
-    
-@login_required(login_url='/login/')    
+
+@login_required(login_url='/login/')
 def avances(request):
     usuarios = User.objects.all()
-    dictExpedientes = {}
+    data_por_usuario = {}
+    
     for us in usuarios:
-        numExpedientes = Expediente.objects.filter(usuario=us).count()
-        expedientesCompletados = Expediente.objects.filter(estatus=3,usuario=us).count()
-        print(f"Num de expedientes de {us} es {numExpedientes} y completados {expedientesCompletados}")
-    print(dictExpedientes)
-    context = {}
-    return render(request,'Index/avancesLayout.html',context)   
+        numExpedientes = Expediente.objects.filter(usuario=us,eliminado=False).count()
+        expedientesCompletados = Expediente.objects.filter(estatus=3, usuario=us).count()
+        
+        if numExpedientes > 0:
+            porcentaje_completado = (expedientesCompletados / numExpedientes) * 100
+        else:
+            porcentaje_completado = 0
+            
+        data_por_usuario[us.username] = {
+            'completados': expedientesCompletados,
+            'pendientes': numExpedientes - expedientesCompletados,
+            'total': numExpedientes,
+            'porcentaje': round(porcentaje_completado, 2)
+        }
+        
+    context = {
+        'data_por_usuario': data_por_usuario
+    }
+    
+    return render(request, 'Index/avancesLayout.html', context)
+
+@login_required(login_url='/login/')
+#@user_passes_test(is_admin)
+def administrador(request):
+
+    usuarios = User.objects.all().order_by('username')
+    
+    context = {
+        "usuarios": usuarios,
+        "current_user_id": request.user.id
+    }
+    return render(request, "Index/administradorPage.html", context)
+
+
+@login_required(login_url='/login/')
+#@user_passes_test(is_admin)
+def editar_usuario(request, user_id):
+    usuario = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        form = UserAdminForm(request.POST, instance=usuario)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Usuario {usuario.username} actualizado correctamente.")
+            return redirect('Index:administrador') # Redirige a la lista de usuarios
+    else:
+        form = UserAdminForm(instance=usuario)
+        
+    context = {
+        'form': form,
+        'usuario': usuario
+    }
+    return render(request, "Index/editar_usuario.html", context)
+
 

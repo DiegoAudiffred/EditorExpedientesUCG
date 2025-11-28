@@ -104,8 +104,8 @@
 
         <ul class="nav nav-tabs mb-3" id="seccionTabs" role="tablist">
             {% for item in secciones %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {% if forloop.first %}active{% endif %}" id="tab-{{ item.seccion.pk }}"
+            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-secondary  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start" role="presentation">
+                <button class="nav-link {% if forloop.first %}active{% endif %} text-quinto" id="tab-{{ item.seccion.pk }} "
                     data-bs-toggle="tab" data-bs-target="#seccion-{{ item.seccion.pk }}" type="button" role="tab">
                     {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }})
                 </button>
@@ -115,8 +115,12 @@
 
         <div class="tab-content">
             {% for item in secciones %}
+                    
             <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="seccion-{{ item.seccion.pk }}"
                 role="tabpanel">
+                    <h2>                    {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }})
+ </h2>
+ <hr>
                 <div class="card mb-3">
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -174,10 +178,13 @@
             </div>
             {% endfor %}
         </div>
+    <h4> Total de registros llenados: {{totalRegistrosLlenos}} de {{totalRegistros}}</h4>
 
         <div class="d-flex justify-content-end">
             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
-            <a class="btn btn-secondary mx-2 text-white">Exportar a Excel</a>
+            <a class="btn btn-secondary mx-2 text-white">Exportar a PDF</a>
+            <a class="btn btn-green mx-2 text-white">Exportar a Excel</a>
+            <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
                 aria-hidden="true">
@@ -290,4 +297,5 @@
         }
     });
 </script>
+
 {% endblock %}

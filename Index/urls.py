@@ -20,5 +20,8 @@ urlpatterns = [
     path('editar/', views.editar_layout, name='editar_layout'),
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     path('avances/', views.avances, name='avances'),
+    path('admin-usuarios/', views.administrador, name='administrador'),
+    path('admin-usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
+    path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
 
 ] 

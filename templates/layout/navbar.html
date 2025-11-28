@@ -93,6 +93,9 @@
                 <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:editar_layout'%}">Ajustes</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:administrador'%}">Administrador</a>
+                </li>
                 {% if request.user.is_authenticated %}
                 <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="" data-bs-toggle="modal"

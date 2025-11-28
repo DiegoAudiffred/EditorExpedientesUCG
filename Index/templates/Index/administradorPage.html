@@ -1,0 +1,54 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+
+<div class="container mt-5">
+    <h1>👤 Panel de Administración de Usuarios</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Último Login</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in usuarios %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td><span class="badge bg-primary">{{ user.roles }}</span></td>
+
+                <td>
+                    {% if user.last_login %}
+                        {{ user.last_login|date:"d M Y H:i" }}
+                        {% comment %} Heurística simple para "conectado": si el login fue en la última hora {% endcomment %}
+                        {% if user.last_login > "now"|date:"Y-m-d H:i"|add:"-60 minutes" and user.id != current_user_id %}
+                             <span class="badge bg-warning text-dark">Conectado (Reciente)</span>
+                        {% endif %}
+                    {% else %}
+                        Nunca
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'Index:editar_usuario' user.id %}" class="btn btn-sm btn-secondary me-2 text-white w-100">Editar</a>
+                    
+
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

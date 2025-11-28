@@ -60,11 +60,20 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+    ROLES = (
+        ('Ejecutivo de Negocios', 'Ejecutivo de Negocios'), #Sonia,Omar etc
+        ('Ejecutivo de servicios', 'Ejecutivo de servicios'), #Andres,Maru
+        ('Administrador', 'Administrador'), #Servilleta 
+        ('Credito', 'Credito'), #Pao,etc
+        ('Juridico', 'Juridico'), #Los de la 41 xd
+        ('Visitante', 'Visitante'), #Los de la 41 xd
 
+    )
     username = models.CharField('Usuario',max_length=20, unique=True, blank=True, null=True)
     
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 
+    roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Visitante')
 
     objects = UserManager()
     is_active= models.BooleanField(default=True)
@@ -78,6 +87,7 @@ class Socio(models.Model):
     tipoPersona = models.CharField("Tipo",max_length=1,null=True)
     def __str__(self):
         return self.nombre
+    
     
 class Estado(models.Model):
     nombre = models.CharField("Nombre", max_length=30, unique=True, null=True)
