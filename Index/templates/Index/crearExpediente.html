@@ -56,7 +56,15 @@
                     <button type="button" class="btn btn-secondary my-3  text-white  mx-3 py-0 px-3"
                         onclick="agregarRep()">
                         <p class="fnSuperiorRegularTitle3 m-0">Agregar
-                            representante</p>
+                            representante <span><svg width="28px" height="28px" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"></path>
+                                    </g>
+                                </svg></span> </p>
                     </button>
 
                     {{ rep_form.representantes }}
@@ -73,7 +81,15 @@
                     <button type="button" class="btn btn-secondary my-3 text-white  mx-3 py-0 px-3"
                         onclick="agregarObl()">
                         <p class="fnSuperiorRegularTitle3 m-0">Agregar
-                            obligado</p>
+                            obligado <span><svg width="28px" height="28px" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round"></path>
+                                    </g>
+                                </svg></span> </p>
                     </button>
 
                     {{ obl_form.obligados }}
@@ -93,19 +109,20 @@
     let reps = [];
     let obls = [];
 
+    const socioSelect = document.getElementById('id_socio');
+    const nombreManualInput = document.getElementById('id_socio_manual_nombre');
+    const tipoManualSelect = document.getElementById('id_socio_manual_tipo');
+
     function syncHidden() {
         document.getElementsByName("representantes")[0].value = reps.join("||");
         document.getElementsByName("obligados")[0].value = obls.join("||");
     }
 
     function cargarSocio(socioId) {
-
-        const socioIdInput = document.getElementById('id_socio');
-        const tipoPersonaSelect = document.getElementById('id_socio_manual_tipo');
-
-        var socioId = socioIdInput.value
         if (!socioId) {
-            tipoPersonaSelect.value = '';
+            tipoManualSelect.value = '';
+            tipoManualSelect.disabled = false;
+            nombreManualInput.disabled = false;
             return;
         }
 
@@ -117,11 +134,39 @@
                 return response.json();
             })
             .then(data => {
-                tipoPersonaSelect.value = data.tipoPersona;
+                tipoManualSelect.value = data.tipoPersona;
+                tipoManualSelect.disabled = true;
             })
             .catch(error => console.error('Error al cargar datos del socio:', error));
     }
 
+    function handleSocioSelectChange() {
+        const selectedValue = socioSelect.value;
+        if (selectedValue && selectedValue !== '') {
+            nombreManualInput.value = '';
+            tipoManualSelect.disabled = true;
+            nombreManualInput.disabled = true;
+            cargarSocio(selectedValue);
+        } else {
+            tipoManualSelect.disabled = false;
+            nombreManualInput.disabled = false;
+            tipoManualSelect.value = '';
+        }
+    }
+
+    function handleManualInputChange() {
+        const manualName = nombreManualInput.value.trim();
+        if (manualName !== '') {
+            socioSelect.value = '';
+            tipoManualSelect.disabled = false;
+        }
+        handleSocioSelectChange();
+    }
+
+    socioSelect.addEventListener('change', handleSocioSelectChange);
+    nombreManualInput.addEventListener('input', handleManualInputChange);
+
+    handleSocioSelectChange();
 
     function render() {
         const repList = document.getElementById("rep-list");

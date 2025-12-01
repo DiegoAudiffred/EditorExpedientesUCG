@@ -69,6 +69,7 @@ class User(AbstractUser):
         ('Visitante', 'Visitante'), #Los de la 41 xd
 
     )
+
     username = models.CharField('Usuario',max_length=20, unique=True, blank=True, null=True)
     
     USERNAME_FIELD = 'username'
@@ -76,7 +77,7 @@ class User(AbstractUser):
     roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Visitante')
 
     objects = UserManager()
-    is_active= models.BooleanField(default=True)
+    is_active= models.BooleanField('Habilitar Usuario',default=True)
 
     def __str__(self):
         return self.username

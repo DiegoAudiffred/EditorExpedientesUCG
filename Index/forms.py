@@ -4,19 +4,43 @@ from django import forms
 from django.contrib.auth.forms import UserChangeForm
 
 class UserAdminForm(UserChangeForm):
-    # Sobrescribimos el campo 'password' para que no se muestre como 'set password'
-    # y lo definimos como no requerido en este formulario de edición simple.
+
     password = None 
 
     class Meta:
         model = User
         # Define los campos que el administrador PUEDE modificar
-        fields = ('username', 'first_name', 'last_name', 'email', 'roles', 'is_active')
+        fields = ('username', 'roles', 'is_active')
         
-    # Opcional: Sobrescribe el método save para permitir el cambio de contraseña
-    # Si quieres cambiar la contraseña, necesitarás un campo de formulario
-    # aparte y usar 'usuario.set_password(nueva_contraseña)'.
-    # Para este ejemplo, solo permitimos edición de datos y roles.
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
+            'roles': forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary my-1'}),
+
+        }
+
+class UserPasswordForm(forms.Form):
+    nueva_contrasena = forms.CharField(
+        widget=forms.PasswordInput(
+            attrs={'class': 'form-control border border-3 border-primary my-2'}
+        ),
+        label="Nueva Contraseña"
+    )
+    confirmar_contrasena = forms.CharField(
+        widget=forms.PasswordInput(
+            attrs={'class': 'form-control border border-3 border-primary my-2'}
+        ),
+        label="Confirmar Contraseña"
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        nueva_contrasena = cleaned_data.get("nueva_contrasena")
+        confirmar_contrasena = cleaned_data.get("confirmar_contrasena")
+
+        if nueva_contrasena and confirmar_contrasena and nueva_contrasena != confirmar_contrasena:
+            raise forms.ValidationError("Las contraseñas no coinciden.")
+        return cleaned_data    
 
 class ExpedienteCrearForm(forms.ModelForm):
     socio = forms.ModelChoiceField(

@@ -20,8 +20,15 @@ urlpatterns = [
     path('editar/', views.editar_layout, name='editar_layout'),
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     path('avances/', views.avances, name='avances'),
+    
     path('admin-usuarios/', views.administrador, name='administrador'),
+    path('admin-usuarios/alta/', views.alta_usuario, name='alta_usuario'),
     path('admin-usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
+    path('admin-usuarios/editar_usuario_datos/<int:user_id>/', views.editar_usuario_datos, name='editar_usuario_datos'),
+    path('admin-usuarios/editarcontrasena/<int:user_id>/', views.editar_usuario_contrasena, name='editar_usuario_contrasena'),
+
+
+
     path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
 
 ] 

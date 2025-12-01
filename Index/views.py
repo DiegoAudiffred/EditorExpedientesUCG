@@ -16,6 +16,9 @@ from django.db.models import Q
 def is_admin(user):
     return user.roles == 'Administrador'
 
+def is_active_user(user):
+    return user.is_active == 'True'
+
 @login_required(login_url='/login/')    
 def index(request):
 
@@ -449,33 +452,57 @@ def avances(request):
 #@user_passes_test(is_admin)
 def administrador(request):
 
+ 
+    form = UserAdminForm()
     usuarios = User.objects.all().order_by('username')
-    
     context = {
         "usuarios": usuarios,
-        "current_user_id": request.user.id
+        "current_user_id": request.user.id,
+        "form":form,
     }
     return render(request, "Index/administradorPage.html", context)
 
+@login_required(login_url='/login/')
+def alta_usuario(request):
+    if request.method == 'POST':
+        form = UserAdminForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('Index:administrador')    
 
 @login_required(login_url='/login/')
 #@user_passes_test(is_admin)
 def editar_usuario(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
-    
+    form = UserAdminForm(instance=usuario)
+    formpassowrd = UserPasswordForm()
+    context = {
+        'form': form,
+        'usuario': usuario,
+        'formpassowrd':formpassowrd
+    }
+    return render(request, "Index/editar_usuario.html", context)
+
+def editar_usuario_datos(request, user_id):
+    usuario = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
         form = UserAdminForm(request.POST, instance=usuario)
         if form.is_valid():
             form.save()
             messages.success(request, f"Usuario {usuario.username} actualizado correctamente.")
             return redirect('Index:administrador') # Redirige a la lista de usuarios
-    else:
-        form = UserAdminForm(instance=usuario)
         
-    context = {
-        'form': form,
-        'usuario': usuario
-    }
-    return render(request, "Index/editar_usuario.html", context)
-
-
+def editar_usuario_contrasena(request, user_id):
+    usuario = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        form = UserPasswordForm(request.POST) 
+        
+        if form.is_valid():
+            nueva_contrasena = form.cleaned_data['nueva_contrasena']
+            
+            usuario.set_password(nueva_contrasena)
+            usuario.save()
+            
+            messages.success(request, f"Contraseña del usuario {usuario.username} actualizada correctamente.")
+            return redirect('Index:administrador')

@@ -4,14 +4,50 @@
 {% block body %}
 
 <div class="container mt-5">
-    <h1>👤 Panel de Administración de Usuarios</h1>
-    
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
+    <div class="row">
+        <div class="col-10">
+            <h1 class="fnSuperiorRegularTitle2 text-secondary">Panel de Administración de Usuarios</h1>
+
+        </div>
+
+        <div class="col-2">
+            <a href="" class="btn btn-primary rounded rounded-pill px-3 w-100" data-bs-toggle="modal"
+                data-bs-target="#exampleModal">Crear Usuario</a>
+            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+                aria-hidden="true">
+                <form action="{% url 'Index:alta_usuario' %}" method="post">
+                    {% csrf_token %}
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-secondary">
+                                <h1 class="modal-title fs-5 " id="exampleModalLabel">Crear Nuevo Usuario</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                {{form}}
+
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary text-white"
+                                    data-bs-dismiss="modal">Cerrar</button>
+                                <button class="btn btn-primary" type="submit">Dar de alta</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
             </div>
-        {% endfor %}
+
+        </div>
+    </div>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
     {% endif %}
 
     <table class="table table-striped">
@@ -20,29 +56,42 @@
                 <th>Usuario</th>
                 <th>Rol</th>
                 <th>Último Login</th>
+                <th>Estatus</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for user in usuarios %}
-            <tr>
-                <td>{{ user.username }}</td>
+            <tr class="{% if user.is_active %} bg-tercero {% else %} bg-corporateGray900 {% endif %}">
+                <td class="text-white fw-bold text-truncate">{{ user.username }}</td>
                 <td><span class="badge bg-primary">{{ user.roles }}</span></td>
 
-                <td>
+                <td class="text-white fw-bold">
                     {% if user.last_login %}
-                        {{ user.last_login|date:"d M Y H:i" }}
-                        {% comment %} Heurística simple para "conectado": si el login fue en la última hora {% endcomment %}
-                        {% if user.last_login > "now"|date:"Y-m-d H:i"|add:"-60 minutes" and user.id != current_user_id %}
-                             <span class="badge bg-warning text-dark">Conectado (Reciente)</span>
-                        {% endif %}
+                    {{ user.last_login|date:"d M Y H:i" }}
+                    {% comment %} Heurística simple para "conectado": si el login fue en la última hora {% endcomment %}
+                    {% if user.last_login > "now"|date:"Y-m-d H:i"|add:"-60 minutes" and user.id != current_user_id %}
+                    <span class="badge bg-warning text-dark">Conectado (Reciente)</span>
+                    {% endif %}
                     {% else %}
-                        Nunca
+                    Nunca
+                    {% endif %}
+                </td>
+                <td class=" fw-bold                    {% if user.is_active %}
+                    text-green
+                    {% else %}
+                    text-red
+                    {% endif %}">
+                    {% if user.is_active %}
+                    Activo
+                    {% else %}
+                    Inactivo
                     {% endif %}
                 </td>
                 <td>
-                    <a href="{% url 'Index:editar_usuario' user.id %}" class="btn btn-sm btn-secondary me-2 text-white w-100">Editar</a>
-                    
+                    <a href="{% url 'Index:editar_usuario' user.id %}"
+                        class="btn btn-sm btn-secondary me-2 text-primary w-100 fw-bold border border-3 border-quinto">Editar</a>
+
 
                 </td>
             </tr>

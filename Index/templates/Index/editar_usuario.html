@@ -2,16 +2,29 @@
 
 {% block body %}
 
-<div class="container mt-5">
-    <h1>Editar Usuario: {{ usuario.username }}</h1>
-    <form method="post">
+<div class="container my-5">
+    <h1 class="mb-3 fnSuperiorRegularTitle2 text-secondary">Editar al Usuario: {{ usuario.username }}</h1>
+    <h3 class="fnSuperiorRegularTitle">Cambiar rol</h3>
+
+    <form action="{% url 'Index:editar_usuario_datos' usuario.id %}" method="post">
         {% csrf_token %}
-        {{ form.as_p }} 
-        <button type="submit" class="btn btn-success">Guardar Cambios</button>
-        <a href="{% url 'Index:administrador' %}" class="btn btn-secondary">Cancelar</a>
+        {{ form.as_p }}
+
+        <div class="d-flex justify-content-start mt-3">
+            <a href="{% url 'Index:administrador' %}" class="btn btn-secondary me-2 text-white">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Datos</button>
+        </div>
     </form>
-    
-    <h3 class="mt-4">Cambiar Contraseña</h3>
+
+    <h3 class="mt-4 fnSuperiorRegularTitle">Cambiar Contraseña</h3>
+    <form action="{% url 'Index:editar_usuario_contrasena' usuario.id %}" method="post">
+        {% csrf_token %}
+        {{formpassowrd.as_p}}
+        <div class="d-flex justify-content-start mt-3">
+            <a href="{% url 'Index:administrador' %}" class="btn btn-secondary me-2 text-white">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Contraseña</button>
+        </div>
+    </form>
 </div>
 
 {% endblock %}
