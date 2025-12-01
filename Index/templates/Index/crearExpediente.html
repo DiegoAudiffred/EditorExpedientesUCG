@@ -40,7 +40,7 @@
 
                 <div class="col-md-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Estatus</label>
-                    <input type="text" class="form-control" value="Nuevo" disabled>
+                    <input type="text" class="form-control bg-grayBorder" value="Nuevo" disabled>
                 </div>
 
             </div>
@@ -118,11 +118,21 @@
         document.getElementsByName("obligados")[0].value = obls.join("||");
     }
 
+    function aplicarEstiloDeshabilitado(element, deshabilitar) {
+        if (deshabilitar) {
+            element.classList.add('bg-grayBorder');
+        } else {
+            element.classList.remove('bg-grayBorder');
+        }
+    }
+
     function cargarSocio(socioId) {
         if (!socioId) {
             tipoManualSelect.value = '';
             tipoManualSelect.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
             nombreManualInput.disabled = false;
+            aplicarEstiloDeshabilitado(nombreManualInput, false);
             return;
         }
 
@@ -136,6 +146,7 @@
             .then(data => {
                 tipoManualSelect.value = data.tipoPersona;
                 tipoManualSelect.disabled = true;
+                aplicarEstiloDeshabilitado(tipoManualSelect, true);
             })
             .catch(error => console.error('Error al cargar datos del socio:', error));
     }
@@ -145,11 +156,15 @@
         if (selectedValue && selectedValue !== '') {
             nombreManualInput.value = '';
             tipoManualSelect.disabled = true;
+            aplicarEstiloDeshabilitado(tipoManualSelect, true);
             nombreManualInput.disabled = true;
+            aplicarEstiloDeshabilitado(nombreManualInput, true);
             cargarSocio(selectedValue);
         } else {
             tipoManualSelect.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
             nombreManualInput.disabled = false;
+            aplicarEstiloDeshabilitado(nombreManualInput, false);
             tipoManualSelect.value = '';
         }
     }
@@ -159,6 +174,7 @@
         if (manualName !== '') {
             socioSelect.value = '';
             tipoManualSelect.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
         }
         handleSocioSelectChange();
     }

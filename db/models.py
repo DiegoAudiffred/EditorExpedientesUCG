@@ -145,10 +145,11 @@ class ApartadoCatalogo(models.Model):
         ('V','V'),
         ('VI','VI')
     ]
-
-    tipoDeSeccion = models.CharField(max_length=3, choices=SECCIONES)
+    AREAS = [('Fisicas','Fisicas'),('Ambas','Ambas'),('Morales','Morales')] 
+    tipoDeSeccion = models.CharField(max_length=7, choices=SECCIONES)
     clave = models.CharField(max_length=10)
     descripcion = models.TextField()
+    areaDondeAplica = models.CharField(max_length=8, choices=AREAS,null=True,blank=True) 
 
     class Meta:
         unique_together = ('tipoDeSeccion', 'clave')
