@@ -506,8 +506,18 @@ def editar_usuario_datos(request, user_id):
         if form.is_valid():
             form.save()
             messages.success(request, f"Usuario {usuario.username} actualizado correctamente.")
-            return redirect('Index:administrador') # Redirige a la lista de usuarios
-        
+            return redirect('Index:administrador')
+        else:
+
+            formpassowrd = UserPasswordForm()
+            context = {
+                'form': form,
+                'usuario': usuario,
+                'formpassowrd':formpassowrd
+            }
+            return render(request, "Index/editar_usuario.html", context)
+
+
 def editar_usuario_contrasena(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     
@@ -522,3 +532,12 @@ def editar_usuario_contrasena(request, user_id):
             
             messages.success(request, f"Contraseña del usuario {usuario.username} actualizada correctamente.")
             return redirect('Index:administrador')
+        else:
+            # Si falla la validación de contraseña, renderizamos la página con el error.
+            form_datos = UserAdminForm(instance=usuario)
+            context = {
+                'form': form_datos,
+                'usuario': usuario,
+                'formpassowrd':form
+            }
+            return render(request, "Index/editar_usuario.html", context)

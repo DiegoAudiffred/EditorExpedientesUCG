@@ -70,7 +70,7 @@ class User(AbstractUser):
 
     )
 
-    username = models.CharField('Usuario',max_length=20, unique=True, blank=True, null=True)
+    username = models.CharField('Usuario',max_length=20, unique=True, blank=False, null=False,default="Nuevo")
     
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 

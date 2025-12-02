@@ -17,6 +17,13 @@ class UserAdminForm(UserChangeForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary my-1'}),
 
         }
+        def __init__(self, *args, **kwargs):
+            super(UserAdminForm, self).__init__(*args, **kwargs)
+            self.fields['username'].required = True
+            self.fields['roles'].required = True
+            self.fields['is_active'].required = True
+
+
 class UserAdminPassForm(UserChangeForm):
 
     nueva_contrasena = forms.CharField(
@@ -43,13 +50,20 @@ class UserAdminPassForm(UserChangeForm):
             'roles': forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary my-1'}),
         }
+        def __init__(self, *args, **kwargs):
+            super(UserAdminPassForm, self).__init__(*args, **kwargs)
+            self.fields['username'].required = True
+            self.fields['roles'].required = True
+            self.fields['is_active'].required = True
+            self.fields['nueva_contrasena'].required = True
+            self.fields['confirmar_contrasena'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
         nueva_contrasena = cleaned_data.get("nueva_contrasena")
         confirmar_contrasena = cleaned_data.get("confirmar_contrasena")
         if nueva_contrasena == "" and confirmar_contrasena == "":
-            raise forms.ValidationError("Las contraseñas no pueden quedar vaciasy.")
+            raise forms.ValidationError("Las contraseñas no pueden quedar vacias.")
 
         if nueva_contrasena and nueva_contrasena != confirmar_contrasena:
             raise forms.ValidationError("Las contraseñas no coinciden.")

@@ -33,7 +33,6 @@
                                 </div>
                                 {% endif %}
 
-                                {# **Itera sobre cada campo para mostrar errores individuales** #}
                                 {% for field in form %}
                                 <div class="mb-3">
                                     <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
@@ -79,8 +78,9 @@
         </thead>
         <tbody>
             {% for user in usuarios %}
-            <tr class="{% if user.is_active %} bg-tercero {% else %} bg-corporateGray900 {% endif %}">
-                <td class="text-white fw-bold text-truncate">{{ user.username }}</td>
+            <tr
+                class="{% if user.is_active %} {% if current_user_id == user.id %}  bg-quinto {% else %}  bg-tercero {% endif %} {% else %} bg-corporateGray900 {% endif %}">
+                <td class="text-white fw-bold text-truncate">{{ user.username }} </td>
                 <td><span class="badge bg-primary">{{ user.roles }}</span></td>
 
                 <td class="text-white fw-bold">
