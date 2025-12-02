@@ -341,6 +341,7 @@ def expediente_cambiar_status(request, id):
     return redirect('Index:expediente_editar', id=expediente.id)
 
 @login_required(login_url='/login/')    
+@login_required(login_url='/login/')    
 def editar_layout(request):
     
     # Inicialización para GET o POST con errores
@@ -352,56 +353,47 @@ def editar_layout(request):
         form_name = request.POST.get('form_name')
 
         if form_name == 'estado_form':
-            # Lógica para el Formulario de ESTADOS (Formset)
             formset = EstadoFormSet(request.POST)
             
-            print("\n--- INICIO DE VALIDACIÓN POST ESTADO ---")
-            print(f"Datos recibidos en POST: {request.POST}")
-
             if formset.is_valid():
-                print("VALIDACIÓN EXITOSA ESTADO: formset.is_valid() = True")
                 try:
                     formset.save()
-                    print("GUARDADO EXITOSO EN DB (Estados).")
+                    messages.success(request, "Estados actualizados correctamente.")
                     return redirect('Index:editar_layout') 
                 except Exception as e:
-                    print(f"!!! ERROR DE BASE DE DATOS DURANTE EL GUARDADO DE ESTADOS: {e}")
-                    formset.non_field_errors = [f"Error de base de datos: {e}"] 
+                    messages.error(request, f"Error de base de datos al guardar Estados: {e}")
             else:
-                print("!!! VALIDACIÓN FALLIDA ESTADO: formset.is_valid() = False")
-                # Lógica de impresión de errores (la que ya tenías)
-                for form in formset:
-                    if form.errors:
-                        print(f"ERROR EN FORMULARIO {form.prefix}:")
-                        print(form.errors)
-                if formset.non_field_errors():
-                    print(f"ERROR GENERAL ESTADO: {formset.non_field_errors()}")
-
+                # Si falla, el formset con errores se pasa al context automáticamente
+                messages.error(request, "Error de validación en los Estados. Revisa los campos marcados.")
+        
         elif form_name == 'socio_form':
-            # Lógica para el Formulario de SOCIOS (Formulario Singular)
             socio_id = request.POST.get('socio_id')
             
             if socio_id:
-                instance = get_object_or_404(Socio, pk=socio_id)
+                try:
+                    instance = get_object_or_404(Socio, pk=socio_id)
+                except Exception:
+                    messages.error(request, "Socio no encontrado para la edición.")
+                    return redirect('Index:editar_layout')
+                
                 formSocios = EditarSocio(request.POST, instance=instance)
             else:
-                formSocios = EditarSocio(request.POST) 
+                # Esto es una edición, no debería haber alta de socio aquí sin ID
+                formSocios = EditarSocio(request.POST)
                 
-            print("\n--- INICIO DE VALIDACIÓN POST SOCIO ---")
-            
             if formSocios.is_valid():
                 try:
                     formSocios.save()
-                    print("GUARDADO EXITOSO EN DB (Socio).")
+                    messages.success(request, "Socio actualizado correctamente.")
                     return redirect('Index:editar_layout')
                 except Exception as e:
-                    print(f"!!! ERROR DE BASE DE DATOS DURANTE EL GUARDADO DE SOCIO: {e}")
-                    
+                    messages.error(request, f"Error de base de datos al guardar Socio: {e}")
             else:
-                print("!!! VALIDACIÓN FALLIDA SOCIO:")
-                print(formSocios.errors)
-        
-        # Si no es POST de ninguno, o si hubo errores, el flujo continúa para renderizar
+                # Si falla, el formSocios con errores se pasa al context.
+                messages.error(request, "Error de validación al editar Socio. Revisa los campos marcados.")
+                
+        # Si el POST falla, o no es un formulario reconocido, se vuelve a renderizar
+        # con los formularios que contienen los errores.
 
     context = {
         'formset': formset,

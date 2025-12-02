@@ -174,25 +174,16 @@ class ObligadosForm(forms.Form):
         widget=forms.HiddenInput()
     )
 
-class ModificarEstados(forms.ModelForm):
-    class Meta:
-        model = Estado
-        fields = ['nombre', 'color'] 
-        widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
-            'color': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 rounded-circle'}),
-        }
+
 
 class ModificarEstados(forms.ModelForm):
     class Meta:
         model = Estado
         fields = ['nombre', 'color'] 
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
+            'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 '}), 
             'color': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 rounded-circle'}),
         }
-
-
 
 class EditarSocio(forms.ModelForm):
     TIPO_CHOICES = [

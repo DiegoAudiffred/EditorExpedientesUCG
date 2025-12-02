@@ -6,23 +6,18 @@
 <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.es5.min.js"></script>
 
 <style>
-    /* 1. Selector más específico para anular las propiedades originales de Pickr */
     .pickr .pcr-button {
         height: 2.5em;
         /* Nuevo valor */
         width: 2.5em;
         /* Nuevo valor */
         margin-top: 0.5em;
-        /*border-radius: 50%;
-*/
 
     }
 
-    /* 2. Mantener tus estilos adicionales (como el borde que añadiste) */
     .pcr-button {
         border: 4px solid var(--bs-primary, #0d6efd) !important;
         border-radius: 50%;
-        /* Eliminamos height: 38px; para dejar que 3em tome control */
     }
 
     /* Estilo para hacer el checkbox más grande */
@@ -35,7 +30,13 @@
 
 <div class="container my-5">
     <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar estados</h1>
-
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert-{{ message.tags }} fnSuperiorRegularTitle">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
     <form method="post">
         <input type="hidden" name="form_name" value="estado_form"> {{ formset.management_form }}
         {% csrf_token %}
@@ -52,21 +53,23 @@
             {# Encabezados de Columna #}
             <div class="col-md-7 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Nombre</label></div>
             <div class="col-md-3 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Color</label></div>
-            <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block text-center"><label>Picker</label></div>
+            <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block text-center"><label>Picker</label>
+            </div>
             <!--             <div class="col-1 fnSuperiorRegularTitle3"><label>Eliminar</label></div>
  -->
-            <div class="col-6"></div> 
+            <div class="col-6"></div>
 
             {% for form in formset %}
 
-            <div class="col-md-7 col-12 text-center">
-                {{ form.nombre }}
+            <div class="col-md-7 col-12 text-center ">
+                <div class="fnSuperiorRegularTitle2">{{ form.nombre }}</div>
                 {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors }}</div>{% endif %}
             </div>
 
             <div class="col-md-3 col-10 text-center">
                 <div class="d-flex align-items-center">
                     {{ form.color }}
+
                     {% if form.color.errors %}<div class="text-danger small">{{ form.color.errors }}</div>{% endif %}
                 </div>
             </div>
