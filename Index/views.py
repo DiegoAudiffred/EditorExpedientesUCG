@@ -344,9 +344,11 @@ def expediente_cambiar_status(request, id):
 @login_required(login_url='/login/')    
 def editar_layout(request):
     
-    # Inicialización para GET o POST con errores
     formset = EstadoFormSet(queryset=Estado.objects.all())
     formSocios = EditarSocio()
+    
+    formApartado = ModificarApartado()
+    formSelectorApartado = SelectorApartadoForm()
 
     if request.method == 'POST':
         
@@ -363,7 +365,6 @@ def editar_layout(request):
                 except Exception as e:
                     messages.error(request, f"Error de base de datos al guardar Estados: {e}")
             else:
-                # Si falla, el formset con errores se pasa al context automáticamente
                 messages.error(request, "Error de validación en los Estados. Revisa los campos marcados.")
         
         elif form_name == 'socio_form':
@@ -378,7 +379,6 @@ def editar_layout(request):
                 
                 formSocios = EditarSocio(request.POST, instance=instance)
             else:
-                # Esto es una edición, no debería haber alta de socio aquí sin ID
                 formSocios = EditarSocio(request.POST)
                 
             if formSocios.is_valid():
@@ -389,17 +389,48 @@ def editar_layout(request):
                 except Exception as e:
                     messages.error(request, f"Error de base de datos al guardar Socio: {e}")
             else:
-                # Si falla, el formSocios con errores se pasa al context.
                 messages.error(request, "Error de validación al editar Socio. Revisa los campos marcados.")
+        
+        elif form_name == 'apartado_form':
+            apartado_id = request.POST.get('apartado_id')
+            
+            if apartado_id:
+                try:
+                    instance = get_object_or_404(ApartadoCatalogo, pk=apartado_id)
+                    formApartado = ModificarApartado(request.POST, instance=instance)
+                except Exception:
+                    messages.error(request, "Apartado de Catálogo no encontrado para la edición.")
+                    return redirect('Index:editar_layout')
+            else:
+                formApartado = ModificarApartado(request.POST) 
                 
-        # Si el POST falla, o no es un formulario reconocido, se vuelve a renderizar
-        # con los formularios que contienen los errores.
-
+            if formApartado.is_valid():
+                try:
+                    formApartado.save()
+                    messages.success(request, "Apartado de Catálogo guardado correctamente.")
+                    return redirect('Index:editar_layout')
+                except Exception as e:
+                    messages.error(request, f"Error de base de datos al guardar Apartado: {e}")
+            else:
+                messages.error(request, "Error de validación al editar/crear Apartado. Revisa los campos marcados.")
+                
     context = {
         'formset': formset,
         'formSocios': formSocios,
+        'formApartado': formApartado,
+        'formSelectorApartado': formSelectorApartado,
     }
     return render(request, 'Index/ajustes.html', context)
+
+def obtener_apartado_data(request, apartado_id):
+    apartado = get_object_or_404(ApartadoCatalogo, pk=apartado_id)
+    data = {
+        'tipoDeSeccion': apartado.tipoDeSeccion,
+        'clave': apartado.clave,
+        'descripcion': apartado.descripcion,
+        'areaDondeAplica': apartado.areaDondeAplica,
+    }
+    return JsonResponse(data)
 
 
 def obtener_socio_data(request, socio_id):
@@ -413,29 +444,47 @@ def obtener_socio_data(request, socio_id):
     except Socio.DoesNotExist:
         return JsonResponse({'error': 'Socio no encontrado'}, status=404)
 
-@login_required(login_url='/login/')
+@login_required(login_url='/login/')    
 def avances(request):
     usuarios = User.objects.all()
+    estados = Estado.objects.all().order_by('id')
     data_por_usuario = {}
     
     for us in usuarios:
-        numExpedientes = Expediente.objects.filter(usuario=us,eliminado=False).count()
-        expedientesCompletados = Expediente.objects.filter(estatus=3, usuario=us).count()
+        expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
+        numExpedientes = expedientes_totales.count()
+        
+        # Inicializa el conteo por estado y total
+        conteo_por_estado = {}
+        for estado in estados:
+            conteo_por_estado[estado.nombre] = {
+                'count': 0,
+                'color': estado.color,
+                'id': estado.id
+            }
+
+        # Cuenta los expedientes en cada estado
+        for exp in expedientes_totales:
+            if exp.estatus and exp.estatus.nombre in conteo_por_estado:
+                conteo_por_estado[exp.estatus.nombre]['count'] += 1
+            
+        # Calcula el progreso general (basado en el estado con ID=3, si existe)
+        expedientes_completados = expedientes_totales.filter(estatus__id=3).count()
         
         if numExpedientes > 0:
-            porcentaje_completado = (expedientesCompletados / numExpedientes) * 100
+            porcentaje_completado = (expedientes_completados / numExpedientes) * 100
         else:
             porcentaje_completado = 0
             
         data_por_usuario[us.username] = {
-            'completados': expedientesCompletados,
-            'pendientes': numExpedientes - expedientesCompletados,
             'total': numExpedientes,
-            'porcentaje': round(porcentaje_completado, 2)
+            'porcentaje': round(porcentaje_completado, 2),
+            'estados': conteo_por_estado 
         }
-        
+            
     context = {
-        'data_por_usuario': data_por_usuario
+        'data_por_usuario': data_por_usuario,
+        'estados_list': estados
     }
     
     return render(request, 'Index/avancesLayout.html', context)

@@ -211,7 +211,25 @@ class EditarSocio(forms.ModelForm):
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
         }
+class ModificarApartado(forms.ModelForm):
+    class Meta:
+        model = ApartadoCatalogo
+        fields = ['tipoDeSeccion', 'clave', 'descripcion', 'areaDondeAplica']
+        widgets = {
+            'tipoDeSeccion': forms.Select(attrs={'class': 'form-select'}),
+            'clave': forms.TextInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'areaDondeAplica': forms.Select(attrs={'class': 'form-select'}),
+        }
 
+class SelectorApartadoForm(forms.Form):
+    apartado_selector = forms.ModelChoiceField(
+        queryset=ApartadoCatalogo.objects.all(),
+        label="Apartado a Editar",
+        required=False,
+        empty_label="--- Nuevo Apartado ---",
+        widget=forms.Select(attrs={'class': 'form-select', 'onchange': 'cargarApartado(this.value)'})
+    )
 # La creación del formset debe funcionar correctamente con el cambio
 #SociosoFormSet = forms.modelformset_factory(Socio, form=EditarSocio, extra=1, can_delete=True)
 

@@ -27,6 +27,7 @@ urlpatterns = [
     path('admin-usuarios/editar_usuario_datos/<int:user_id>/', views.editar_usuario_datos, name='editar_usuario_datos'),
     path('admin-usuarios/editarcontrasena/<int:user_id>/', views.editar_usuario_contrasena, name='editar_usuario_contrasena'),
 
+    path('obtener-apartado-data/<int:apartado_id>/', views.obtener_apartado_data, name='obtener_apartado_data'),
 
 
     path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),

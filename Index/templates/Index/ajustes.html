@@ -8,11 +8,8 @@
 <style>
     .pickr .pcr-button {
         height: 2.5em;
-        /* Nuevo valor */
         width: 2.5em;
-        /* Nuevo valor */
         margin-top: 0.5em;
-
     }
 
     .pcr-button {
@@ -20,7 +17,6 @@
         border-radius: 50%;
     }
 
-    /* Estilo para hacer el checkbox más grande */
     .form-check-input.form-check-lg {
         height: 2.5em;
         width: 2.5em;
@@ -32,7 +28,7 @@
     <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar estados</h1>
     {% if messages %}
     {% for message in messages %}
-    <div class="alert-{{ message.tags }} fnSuperiorRegularTitle">
+    <div class="alert alert-{{ message.tags }} fnSuperiorRegularTitle">
         {{ message }}
     </div>
     {% endfor %}
@@ -50,13 +46,10 @@
             </div>
             {% endif %}
 
-            {# Encabezados de Columna #}
             <div class="col-md-7 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Nombre</label></div>
             <div class="col-md-3 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Color</label></div>
             <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block text-center"><label>Picker</label>
             </div>
-            <!--             <div class="col-1 fnSuperiorRegularTitle3"><label>Eliminar</label></div>
- -->
             <div class="col-6"></div>
 
             {% for form in formset %}
@@ -77,14 +70,6 @@
             <div class="col-md-2 col-2 text-center">
                 <div class="color-picker-anchor " data-input-id="{{ form.color.id_for_label }}"></div>
             </div>
-
-            {# Columna 4: Eliminar (1 col) #}
-            <!--        <div class="col-1 d-flex align-items-center justify-content-center ">
-                <div class="form-check">
-                    <input type="checkbox" name="{{ form.DELETE.html_name }}" id="{{ form.DELETE.id_for_label }}"
-                        class="form-check-input form-check-lg">
-                </div>
-            </div> -->
 
             {{ form.id }}
 
@@ -127,6 +112,48 @@
     </form>
 </div>
 
+<div class="container my-5">
+    <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar Apartado de Catálogo</h1>
+
+    <form method="post" id="form-editar-apartado">
+        {% csrf_token %}
+        <input type="hidden" name="form_name" value="apartado_form"> 
+        <input type="hidden" name="apartado_id" id="apartado-id-input" value="">
+
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formSelectorApartado.apartado_selector.id_for_label }}">Apartado a
+                Editar/Crear</label>
+            {{ formSelectorApartado.apartado_selector }}
+        </div>
+        
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formApartado.tipoDeSeccion.id_for_label }}">Tipo de Sección</label>
+            {{ formApartado.tipoDeSeccion }}
+            {% if formApartado.tipoDeSeccion.errors %}<div class="text-danger small">{{ formApartado.tipoDeSeccion.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formApartado.clave.id_for_label }}">Clave</label>
+            {{ formApartado.clave }}
+            {% if formApartado.clave.errors %}<div class="text-danger small">{{ formApartado.clave.errors }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formApartado.descripcion.id_for_label }}">Descripción</label>
+            {{ formApartado.descripcion }}
+            {% if formApartado.descripcion.errors %}<div class="text-danger small">{{ formApartado.descripcion.errors }}</div>{% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formApartado.areaDondeAplica.id_for_label }}">Área Donde Aplica</label>
+            {{ formApartado.areaDondeAplica }}
+            {% if formApartado.areaDondeAplica.errors %}<div class="text-danger small">{{ formApartado.areaDondeAplica.errors }}</div>{% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary col-12 my-2">Guardar Apartado</button>
+    </form>
+</div>
+
 <script>
     function cargarSocio(socioId) {
         const nombreInput = document.getElementById('{{ formSocios.nombre.id_for_label }}');
@@ -153,6 +180,39 @@
                 tipoPersonaSelect.value = data.tipoPersona;
             })
             .catch(error => console.error('Error al cargar datos del socio:', error));
+    }
+    
+    function cargarApartado(apartadoId) {
+        const tipoDeSeccionSelect = document.getElementById('{{ formApartado.tipoDeSeccion.id_for_label }}');
+        const claveInput = document.getElementById('{{ formApartado.clave.id_for_label }}');
+        const descripcionInput = document.getElementById('{{ formApartado.descripcion.id_for_label }}');
+        const areaDondeAplicaSelect = document.getElementById('{{ formApartado.areaDondeAplica.id_for_label }}');
+        const apartadoIdInput = document.getElementById('apartado-id-input');
+
+        apartadoIdInput.value = apartadoId;
+
+        if (!apartadoId) {
+            tipoDeSeccionSelect.value = tipoDeSeccionSelect.options.length > 0 ? tipoDeSeccionSelect.options[0].value : ''; 
+            claveInput.value = '';
+            descripcionInput.value = '';
+            areaDondeAplicaSelect.value = areaDondeAplicaSelect.options.length > 0 ? areaDondeAplicaSelect.options[0].value : ''; 
+            return;
+        }
+
+        fetch(`/obtener-apartado-data/${apartadoId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('No se pudo obtener el apartado');
+                }
+                return response.json();
+            })
+            .then(data => {
+                tipoDeSeccionSelect.value = data.tipoDeSeccion;
+                claveInput.value = data.clave;
+                descripcionInput.value = data.descripcion;
+                areaDondeAplicaSelect.value = data.areaDondeAplica;
+            })
+            .catch(error => console.error('Error al cargar datos del apartado:', error));
     }
 </script>
 
@@ -182,7 +242,6 @@
 
             inputField.classList.add('border', 'border-3', 'border-primary', 'my-2', 'rounded', 'rounded-5');
             inputField.style.backgroundColor = inputField.value;
-            //inputField.style.borderRadius = 50
 
             picker.on('change', (color) => {
                 const hexColor = color.toHEXA().toString();
@@ -195,7 +254,18 @@
                 picker.hide();
             });
         });
+        
+        const apartadoSelector = document.getElementById('id_apartado_selector');
+        if (apartadoSelector) {
+            cargarApartado(apartadoSelector.value);
+            apartadoSelector.addEventListener('change', (e) => cargarApartado(e.target.value));
+        }
+        
+        const socioSelector = document.getElementById('id_socio_selector');
+        if (socioSelector) {
+            cargarSocio(socioSelector.value);
+            socioSelector.addEventListener('change', (e) => cargarSocio(e.target.value));
+        }
     });
 </script>
-
 {% endblock %}
