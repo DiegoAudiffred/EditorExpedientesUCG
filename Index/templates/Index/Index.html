@@ -13,23 +13,24 @@
     }
 </style>
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12 d-flex justify-content-center">
-            <div class="position-relative rounded-5 overflow-hidden" style="width: 50%;">
+    <div class="row mb-4 justify-content-center">
+        <div class="col-10 d-flex justify-content-center">
+            <div class="position-relative rounded-5 overflow-hidden w-75">
 
                 <img src="{% static 'img/banner.jpg' %}" alt="Descripción del banner" class="w-100">
 
                 <div class="overlay-blue d-flex justify-content-center align-items-center">
-                        <div class="row">
-<div class="col-12 text-center">
+                    <div class="row">
+                        <div class="col-12 text-center">
 
-                    <h1 class="text-white m-0 fnSuperiorRegularTitle2">Bienvenid@ {{request.user}}</h1>
-                            </div>
+                            <h1 class="text-white m-0 fnSuperiorRegularTitleIndex">Bienvenid@ {{request.user}}</h1>
+                        </div>
 
-<div class="col-12 text-center">
-                    <h4 class="text-white m-0 "> {{request.user.roles}}</h4>
+                        <div class="col-12 text-center">
+                            <h4 class="text-white m-0 "> {{request.user.roles}}</h4>
 
-</div>                        </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>

@@ -64,6 +64,14 @@
   line-height: 60px;
 }
 
+.fnSuperiorRegularTitleIndex {
+  font-family: "LTSuperior", sans-serif;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 80px;
+  line-height: 60px;
+}
+
 .fnSuperiorBold {
   font-family: "LTSuperior", sans-serif;
   font-weight: 700;

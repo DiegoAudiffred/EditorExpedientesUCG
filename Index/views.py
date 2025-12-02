@@ -453,7 +453,7 @@ def avances(request):
 def administrador(request):
 
  
-    form = UserAdminForm()
+    form = UserAdminPassForm()
     usuarios = User.objects.all().order_by('username')
     context = {
         "usuarios": usuarios,
@@ -462,13 +462,29 @@ def administrador(request):
     }
     return render(request, "Index/administradorPage.html", context)
 
+
+
+
 @login_required(login_url='/login/')
 def alta_usuario(request):
     if request.method == 'POST':
-        form = UserAdminForm(request.POST)
+        form = UserAdminPassForm(request.POST) 
         if form.is_valid():
-            form.save()
-            return redirect('Index:administrador')    
+            user = form.save() 
+
+            return redirect('Index:administrador')
+        else:
+            usuarios = User.objects.all().order_by('username')
+            
+            context = {
+                "usuarios": usuarios,
+                "current_user_id": request.user.id,
+                "form": form,  
+                "show_modal_error": True 
+            }
+            return render(request, 'Index/administradorPage.html', context)
+    else:
+        return redirect('Index:administrador')
 
 @login_required(login_url='/login/')
 #@user_passes_test(is_admin)
