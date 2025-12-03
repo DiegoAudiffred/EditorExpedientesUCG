@@ -582,3 +582,78 @@ def editar_usuario_contrasena(request, user_id):
                 'formpassowrd':form
             }
             return render(request, "Index/editar_usuario.html", context)
+def chatbotLayout(request):
+    """Renderiza la plantilla principal del chatbot."""
+    context = {}
+    return render(request, "Index/chatbotLayout.html", context)
+
+def chatbot_response(request):
+    """Procesa la entrada del usuario y genera una respuesta basada en la DB."""
+    try:
+        data = json.loads(request.body)
+        user_input = data.get('message', '').strip().lower()
+
+        response_text = "Lo siento, no pude entender tu solicitud. Intenta preguntar por el estado de un socio o la descripción de un apartado."
+        
+        # --- Lógica de Consulta: Estado de Expediente por Nombre de Socio ---
+        if 'estado' in user_input and 'socio' in user_input:
+            # Intentar extraer el nombre del socio (esto es una simplificación)
+            # Para una implementación real se requeriría PLN o un parsing más robusto.
+            parts = user_input.split()
+            # Asumimos que el nombre del socio es la siguiente palabra después de "socio"
+            try:
+                socio_index = parts.index('socio')
+                if socio_index + 1 < len(parts):
+                    socio_nombre_busqueda = parts[socio_index + 1]
+                    # Buscar por nombre que contenga la palabra clave
+                    expedientes = Expediente.objects.filter(socio__nombre__icontains=socio_nombre_busqueda).select_related('socio', 'estatus').order_by('-fecha')
+                    
+                    if expedientes.exists():
+                        expediente = expedientes.first()
+                        response_text = (
+                            f"El expediente más reciente para el socio **{expediente.socio.nombre}** "
+                            f"(ID: {expediente.pk}) está en estado: **{expediente.estatus.nombre}** "
+                            f"(Fecha: {expediente.fecha}). Color: {expediente.estatus.color}."
+                        )
+                    else:
+                        response_text = f"No encontré expedientes activos para un socio llamado **{socio_nombre_busqueda}**."
+                else:
+                    response_text = "Por favor, especifica el nombre del socio."
+            except ValueError:
+                response_text = "Por favor, especifica el nombre del socio."
+
+        # --- Lógica de Consulta: Descripción de Apartado por Clave o Descripción ---
+        elif 'apartado' in user_input and ('descri' in user_input or 'que es' in user_input):
+            # Intentar extraer la clave del apartado (ej. I-101) o una palabra clave
+            parts = user_input.split()
+            keyword = next((p for p in parts if p not in ['apartado', 'descri', 'que', 'es', 'de', 'el', 'la', 'un', 'una']), None)
+            
+            if keyword:
+                apartados = ApartadoCatalogo.objects.filter(
+                    Q(clave__icontains=keyword) | Q(descripcion__icontains=keyword)
+                ).order_by('tipoDeSeccion', 'clave')[:3] # Limitar a 3 resultados
+
+                if apartados.exists():
+                    responses = ["He encontrado la siguiente información sobre apartados:"]
+                    for ap in apartados:
+                        responses.append(
+                            f"- **{ap.tipoDeSeccion}-{ap.clave}**: {ap.descripcion} (Aplica: {ap.areaDondeAplica})"
+                        )
+                    response_text = "\n".join(responses)
+                else:
+                    response_text = f"No se encontró un apartado con la clave o descripción que contenga **{keyword}**."
+            else:
+                response_text = "Por favor, especifica la clave o una palabra clave del apartado que buscas."
+
+        # --- Respuesta de Bienvenida/Ayuda ---
+        elif any(greeting in user_input for greeting in ['hola', 'buenas', 'ayuda']):
+            response_text = "Hola! Soy tu asistente de expedientes. Puedes preguntarme el **estado de un socio** (ej: 'estado del socio Juan Pérez') o la **descripción de un apartado** (ej: 'qué es el apartado I-A')."
+        
+        return JsonResponse({'response': response_text})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        # En caso de cualquier error interno
+        print(f"Error en chatbot_response: {e}")
+        return JsonResponse({'response': 'Hubo un error interno al procesar tu solicitud.'})

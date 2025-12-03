@@ -1,0 +1,67 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+ <div class="chat-container">
+        <div class="chat-header">Asistente de Consulta de Expedientes</div>
+        <div class="chat-box" id="chat-box">
+            <div class="message bot-message">Hola! Soy tu asistente de expedientes. Puedes preguntarme el **estado de un socio** (ej: 'estado del socio Juan Pérez') o la **descripción de un apartado** (ej: 'qué es el apartado I-A').</div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Escribe tu mensaje..." onkeypress="if(event.keyCode == 13) sendMessage()">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const apiEndpoint = "{% url 'Index:chatbot_response_api' %}";
+        const csrfToken = "{{ csrf_token }}"; // Token de seguridad de Django
+
+        // Función para añadir mensajes al chat
+        function appendMessage(sender, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            // Usamos innerHTML para renderizar el **markdown** simple
+            messageDiv.innerHTML = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); 
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll al final
+        }
+
+        // Función principal para enviar mensajes
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (message === "") return;
+
+            // 1. Mostrar mensaje del usuario
+            appendMessage('user', message);
+            userInput.value = '';
+
+            // 2. Enviar a la API de Django
+            fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken // Envío del token de seguridad
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    // 3. Mostrar respuesta del bot
+                    appendMessage('bot', data.response);
+                } else if (data.error) {
+                    appendMessage('bot', `Error: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error al enviar mensaje:', error);
+                appendMessage('bot', 'Hubo un problema de conexión con el servidor.');
+            });
+        }
+    </script>
+{% endblock %}

@@ -51,14 +51,6 @@ class UserManager(BaseUserManager):
 
 
 
-
-"""Formatodevariables 
-1.-camelCase
-2.-singular
-3.-espanol
-"""
-
-
 class User(AbstractUser):
     ROLES = (
         ('Ejecutivo de Negocios', 'Ejecutivo de Negocios'), #Sonia,Omar etc
