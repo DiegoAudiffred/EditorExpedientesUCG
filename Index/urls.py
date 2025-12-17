@@ -29,8 +29,7 @@ urlpatterns = [
 
     path('obtener-apartado-data/<int:apartado_id>/', views.obtener_apartado_data, name='obtener_apartado_data'),
 
-    path('chatbot/', views.chatbotLayout, name='chatbot_layout'),
-    path('chatbot/response/', views.chatbot_response, name='chatbot_response_api'),
+
     path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
 
 ] 

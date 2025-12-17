@@ -216,6 +216,57 @@
 
     render();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
 
+    document.querySelector('form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Estamos creando el expediente',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() }
+        });
+
+        const formData = new FormData(this);
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Creado!',
+                        text: 'El expediente se ha generado correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = data.redirect_url;
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Atención',
+                        html: data.error,
+                        confirmButtonColor: '#3085d6'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de servidor',
+                    text: 'No se pudo completar la solicitud.'
+                });
+            });
+    });
+</script>
 
 {% endblock %}

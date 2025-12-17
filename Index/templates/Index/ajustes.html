@@ -25,13 +25,15 @@
 </style>
 
 <div class="container my-5">
-    <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar estados</h1>
+    <h1 class="fnSuperiorRegularTitle2 text-secondary"> Modificar estados</h1>
+    
     {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} fnSuperiorRegularTitle">
-        {{ message }}
-    </div>
-    {% endfor %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-green{% else %}alert-red {% endif %} alert-dismissible fade show fnSuperiorRegularTitle" role="alert">
+                <strong>{% if message.tags == 'success' %}¡Éxito!{% else %}¡Atención!{% endif %}</strong> {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
     {% endif %}
     <form method="post">
         <input type="hidden" name="form_name" value="estado_form"> {{ formset.management_form }}
@@ -155,32 +157,30 @@
 </div>
 
 <script>
-    function cargarSocio(socioId) {
-        const nombreInput = document.getElementById('{{ formSocios.nombre.id_for_label }}');
-        const tipoPersonaSelect = document.getElementById('{{ formSocios.tipoPersona.id_for_label }}');
-        const socioIdInput = document.getElementById('socio-id-input');
+  function cargarSocio(socioId) {
+    const nombreInput = document.getElementById('{{ formSocios.nombre.id_for_label }}');
+    const tipoPersonaSelect = document.getElementById('{{ formSocios.tipoPersona.id_for_label }}');
+    const socioIdInput = document.getElementById('socio-id-input');
 
-        socioIdInput.value = socioId;
+    socioIdInput.value = socioId; // Será cadena vacía si es Nuevo Socio
 
-        if (!socioId) {
-            nombreInput.value = '';
-            tipoPersonaSelect.value = '';
-            return;
-        }
-
-        fetch(`/obtener-socio-data/${socioId}/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('No se pudo obtener el socio');
-                }
-                return response.json();
-            })
-            .then(data => {
-                nombreInput.value = data.nombre;
-                tipoPersonaSelect.value = data.tipoPersona;
-            })
-            .catch(error => console.error('Error al cargar datos del socio:', error));
+    if (!socioId || socioId === "") {
+        nombreInput.value = '';
+        tipoPersonaSelect.value = 'F'; // Valor por defecto
+        return;
     }
+
+    fetch(`/obtener-socio-data/${socioId}/`)
+        .then(response => {
+            if (!response.ok) throw new Error('No se pudo obtener el socio');
+            return response.json();
+        })
+        .then(data => {
+            nombreInput.value = data.nombre;
+            tipoPersonaSelect.value = data.tipoPersona;
+        })
+        .catch(error => console.error('Error al cargar datos del socio:', error));
+}
     
     function cargarApartado(apartadoId) {
         const tipoDeSeccionSelect = document.getElementById('{{ formApartado.tipoDeSeccion.id_for_label }}');

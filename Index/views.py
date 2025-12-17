@@ -91,11 +91,6 @@ def filtrar_expedientes_ajax(request):
 @login_required(login_url='/login/')
 def expediente_editar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
-    
-    #if expediente.estatus_id == 1:
-    #    expediente.estatus_id = 2
-    #    expediente.save()
-
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
     usuarios = User.objects.all()
@@ -125,22 +120,16 @@ def expediente_editar(request, id):
             datos_agrupados[ids_tuple][field] = value.strip()
 
         for (seccion_id, apartado_id), campos in datos_agrupados.items():
-            
             try:
-                seccion = SeccionesExpediente.objects.get(pk=seccion_id, expediente=expediente)
-                apartado = ApartadoCatalogo.objects.filter(pk=apartado_id, tipoDeSeccion=seccion.tipoDeSeccion).first()
-            except (SeccionesExpediente.DoesNotExist, ValueError):
+                # Solo actualizamos registros que ya pertenecen a este expediente
+                registro = RegistroSeccion.objects.get(
+                    seccion__id=seccion_id, 
+                    seccion__expediente=expediente, 
+                    apartado__id=apartado_id
+                )
+            except RegistroSeccion.DoesNotExist:
                 continue
             
-            if not apartado:
-                continue
-
-            registro, created = RegistroSeccion.objects.get_or_create(
-                seccion=seccion,
-                apartado=apartado,
-                defaults={ 'estatus': '', 'comentario': '', 'fecha': None }
-            )
-
             if 'estatus' in campos:
                 registro.estatus = campos['estatus']
             
@@ -164,48 +153,45 @@ def expediente_editar(request, id):
 
     context = {
         'estados': estados,
-        'usuarios':usuarios,
+        'usuarios': usuarios,
         'expediente': expediente,
         'secciones': [],
     }
+    
     totalRegistros = 0
     totalRegistrosLlenos = 0
 
     for seccion in secciones:
-        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        # CAMBIO CLAVE: Iteramos sobre los registros que YA existen para esta sección
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave')
+        
         filas = []
-        for apartado in apartados:
+        for registro in registros_existentes:
             totalRegistros += 1
 
-            registro, created = RegistroSeccion.objects.get_or_create(
-                seccion=seccion,
-                apartado=apartado,
-                defaults={ 'estatus': '', 'comentario': '', 'fecha': None } 
-            )
-            
-            if registro.estatus != "": 
+            if registro.estatus and registro.estatus != "": 
                 totalRegistrosLlenos += 1
 
             fecha_html = ""
             if registro.fecha:
                 fecha_html = registro.fecha.strftime("%Y-%m-%d")
 
-            fila_data = {
-                'apartado': apartado,
+            filas.append({
+                'apartado': registro.apartado,
                 'registro': registro,
                 'fecha_html': fecha_html,
-            }
-            filas.append(fila_data)
+            })
             
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
         })
         
-    context['totalRegistros']=totalRegistros
-    context['totalRegistrosLlenos']=totalRegistrosLlenos
+    context['totalRegistros'] = totalRegistros
+    context['totalRegistrosLlenos'] = totalRegistrosLlenos
 
     return render(request, 'Index/editarExpediente.html', context)
+
 @login_required(login_url='/login/')
 def expediente_cambiar_usuario(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -217,8 +203,7 @@ def expediente_cambiar_usuario(request, id):
             expediente.usuario_id = nuevo_usuarios_id
             expediente.save()
 
-    # CORRECCIÓN: Usar el nombre de la URL ('name') configurado en urls.py
-    # Reemplaza 'editarExpediente' si tu nombre de URL es diferente.
+
     return redirect('Index:expediente_editar', id=expediente.id)
 
 @login_required(login_url='/login/')
@@ -241,82 +226,92 @@ def expediente_llenar(request, id):
 
 @login_required(login_url='/login/')
 def expediente_crear(request):
-
     if request.method == "POST":
         exp_form = ExpedienteCrearForm(request.POST)
         rep_form = RepresentantesForm(request.POST)
         obl_form = ObligadosForm(request.POST)
 
         if exp_form.is_valid() and rep_form.is_valid() and obl_form.is_valid():
-            
             try:
-                    
-                   socio_existente = exp_form.cleaned_data.get('socio')
-                   nombre_manual = exp_form.cleaned_data.get('socio_manual_nombre')
-                   tipo_manual = exp_form.cleaned_data.get('socio_manual_tipo')
-                   socio_a_asignar = None
-                   if socio_existente:
-                       socio_a_asignar = socio_existente
-                   elif nombre_manual and tipo_manual:
-          
-                       socio_a_asignar = Socio.objects.create(
-                           nombre=nombre_manual,
-                           tipoPersona=tipo_manual 
-                       )
-                   else:
-
-                       raise Exception("Debe proporcionar un Socio existente o crear uno nuevo.")
-                   
-                   expediente = exp_form.save(commit=False)
-                   expediente.socio = socio_a_asignar
-                   expediente.estatus_id = 1
-                   expediente.save()
-                   SECCIONES = SeccionesExpediente.SECCIONES
-                   for tipo, titulo in SECCIONES:
-                       if tipo not in ['B', 'C']:
-                           SeccionesExpediente.objects.create(
-                               expediente=expediente,
-                               tipoDeSeccion=tipo
-                           )
-                           continue
-                       lista = rep_form.cleaned_data.get('representantes', '') if tipo == 'B' else obl_form.cleaned_data.get('obligados', '')
-                       lista_raw = lista.strip().strip("|")
-                       nombres = [x.strip() for x in lista_raw.split("||") if x.strip()]
-                       if not nombres:
-                           nombres = [""]
-                       for nombre in nombres:
-                           titulo_final = titulo if nombre == "" else f"{titulo} - {nombre}"
-                           SeccionesExpediente.objects.create(
-                               expediente=expediente,
-                               tipoDeSeccion=tipo,
-                               tituloSeccion=titulo_final
-                           )
-                   return redirect('Index:expedientesLayout')
-            except Exception as e:
-                # Manejar error de base de datos o de lógica
-                print(f"Error al crear expediente o socio: {e}")
-                exp_form.add_error(None, f"Error al procesar la solicitud: {e}")
+                socio_existente = exp_form.cleaned_data.get('socio')
+                nombre_manual = exp_form.cleaned_data.get('socio_manual_nombre')
+                tipo_manual = exp_form.cleaned_data.get('socio_manual_tipo')
                 
-        return render(
-            request,
-            'Index/crearExpediente.html',
-            {
-                'exp_form': exp_form,
-                'rep_form': rep_form,
-                'obl_form': obl_form,
-            }
-        )
+                socio_a_asignar = None
+                if socio_existente:
+                    socio_a_asignar = socio_existente
+                elif nombre_manual and tipo_manual:
+                    socio_a_asignar = Socio.objects.create(nombre=nombre_manual, tipoPersona=tipo_manual)
+                
+                if not socio_a_asignar:
+                    return JsonResponse({'success': False, 'error': "No se encontró socio."}, status=400)
 
-    return render(
-        request,
-        'Index/crearExpediente.html',
-        {
-            'exp_form': ExpedienteCrearForm(),
-            'rep_form': RepresentantesForm(),
-            'obl_form': ObligadosForm(),
-        }
-    )
+                tipo_persona = socio_a_asignar.tipoPersona
+                tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
+                area_socio = tipo_persona_map.get(tipo_persona)
 
+                print(f"\n================ INICIO CREACION EXPEDIENTE ================")
+                print(f"SOCIO: {socio_a_asignar.nombre} | TIPO: {tipo_persona} | AREA_FILTRO: {area_socio}")
+
+                reps_raw = rep_form.cleaned_data.get('representantes', '').strip().strip("|")
+                nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
+                obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
+                nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+
+                if tipo_persona == 'M' and (not nombres_reps or not nombres_obls):
+                    return JsonResponse({'success': False, 'error': "Faltan representantes u obligados para Persona Moral."}, status=400)
+
+                expediente = exp_form.save(commit=False)
+                expediente.socio = socio_a_asignar
+                expediente.estatus_id = 1
+                expediente.save()
+                print(f"EXPEDIENTE CREADO ID: {expediente.id}")
+
+                SECCIONES = SeccionesExpediente.SECCIONES
+                for tipo_sec, titulo_sec in SECCIONES:
+                    if tipo_sec == 'B':
+                        for nombre in nombres_reps:
+                            nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec, tituloSeccion=f"{titulo_sec} - {nombre}")
+                            _generar_con_debug_extremo(nueva, area_socio)
+                    elif tipo_sec == 'C':
+                        for nombre in nombres_obls:
+                            nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec, tituloSeccion=f"{titulo_sec} - {nombre}")
+                            _generar_con_debug_extremo(nueva, area_socio)
+                    else:
+                        nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec)
+                        _generar_con_debug_extremo(nueva, area_socio)
+
+                print(f"================ FIN CREACION EXPEDIENTE ================\n")
+                return JsonResponse({'success': True, 'redirect_url': reverse('Index:expedientesLayout')})
+
+            except Exception as e:
+                print(f"!!! ERROR: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+                
+        return JsonResponse({'success': False, 'error': "Formulario no válido."}, status=400)
+
+    return render(request, 'Index/crearExpediente.html', {'exp_form': ExpedienteCrearForm(), 'rep_form': RepresentantesForm(), 'obl_form': ObligadosForm()})
+
+def _generar_con_debug_extremo(seccion_obj, area_socio):
+    filtro_permitido = [area_socio, 'Ambas']
+    # Traemos todos para comparar uno por uno en el print
+    todos_los_apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion_obj.tipoDeSeccion)
+    
+    print(f"\n--- SECCION: {seccion_obj.tipoDeSeccion} (ID: {seccion_obj.id}) ---")
+    print(f"Filtro permitido: {filtro_permitido}")
+    
+    for ap in todos_los_apartados:
+        # Forzamos string para evitar problemas de tipos
+        area_en_db = str(ap.areaDondeAplica).strip()
+        condicion = area_en_db in filtro_permitido
+        
+        print(f"  > Evaluando Apartado [{ap.clave}]: DB_VAL='{area_en_db}' | ¿Entra en filtro?: {condicion}")
+        
+        if condicion:
+            reg = RegistroSeccion.objects.create(seccion=seccion_obj, apartado=ap)
+            print(f"    [CREADO] RegistroSeccion ID: {reg.id} para Apartado: {ap.clave}")
+        else:
+            print(f"    [SALTADO] No se crea registro para {ap.clave}")
 
 @login_required(login_url='/login/')    
 def expediente_eliminar(request,id):
@@ -341,79 +336,60 @@ def expediente_cambiar_status(request, id):
     return redirect('Index:expediente_editar', id=expediente.id)
 
 @login_required(login_url='/login/')    
-@login_required(login_url='/login/')    
 def editar_layout(request):
-    
     formset = EstadoFormSet(queryset=Estado.objects.all())
     formSocios = EditarSocio()
-    
     formApartado = ModificarApartado()
     formSelectorApartado = SelectorApartadoForm()
 
     if request.method == 'POST':
-        
         form_name = request.POST.get('form_name')
 
         if form_name == 'estado_form':
             formset = EstadoFormSet(request.POST)
-            
             if formset.is_valid():
-                try:
-                    formset.save()
-                    messages.success(request, "Estados actualizados correctamente.")
-                    return redirect('Index:editar_layout') 
-                except Exception as e:
-                    messages.error(request, f"Error de base de datos al guardar Estados: {e}")
+                formset.save()
+                messages.success(request, "Los estados se actualizaron con éxito.")
+                return redirect('Index:editar_layout')
             else:
-                messages.error(request, "Error de validación en los Estados. Revisa los campos marcados.")
+                messages.error(request, f"Error en estados: {formset.errors.as_text()}")
         
         elif form_name == 'socio_form':
             socio_id = request.POST.get('socio_id')
-            
-            if socio_id:
-                try:
-                    instance = get_object_or_404(Socio, pk=socio_id)
-                except Exception:
-                    messages.error(request, "Socio no encontrado para la edición.")
-                    return redirect('Index:editar_layout')
-                
+            if socio_id and socio_id.strip() != "":
+                instance = get_object_or_404(Socio, pk=socio_id)
                 formSocios = EditarSocio(request.POST, instance=instance)
+                accion = "actualizado"
             else:
                 formSocios = EditarSocio(request.POST)
+                accion = "creado"
                 
             if formSocios.is_valid():
-                try:
-                    formSocios.save()
-                    messages.success(request, "Socio actualizado correctamente.")
-                    return redirect('Index:editar_layout')
-                except Exception as e:
-                    messages.error(request, f"Error de base de datos al guardar Socio: {e}")
+                formSocios.save()
+                messages.success(request, f"Socio {accion} con éxito.")
+                return redirect('Index:editar_layout')
             else:
-                messages.error(request, "Error de validación al editar Socio. Revisa los campos marcados.")
+                errores = " / ".join([f"{v[0]}" for k, v in formSocios.errors.items()])
+                messages.error(request, f"Error al guardar socio: {errores}")
         
         elif form_name == 'apartado_form':
             apartado_id = request.POST.get('apartado_id')
-            
-            if apartado_id:
-                try:
-                    instance = get_object_or_404(ApartadoCatalogo, pk=apartado_id)
-                    formApartado = ModificarApartado(request.POST, instance=instance)
-                except Exception:
-                    messages.error(request, "Apartado de Catálogo no encontrado para la edición.")
-                    return redirect('Index:editar_layout')
+            if apartado_id and apartado_id.strip() != "":
+                instance = get_object_or_404(ApartadoCatalogo, pk=apartado_id)
+                formApartado = ModificarApartado(request.POST, instance=instance)
+                accion = "actualizado"
             else:
-                formApartado = ModificarApartado(request.POST) 
+                formApartado = ModificarApartado(request.POST)
+                accion = "creado"
                 
             if formApartado.is_valid():
-                try:
-                    formApartado.save()
-                    messages.success(request, "Apartado de Catálogo guardado correctamente.")
-                    return redirect('Index:editar_layout')
-                except Exception as e:
-                    messages.error(request, f"Error de base de datos al guardar Apartado: {e}")
+                formApartado.save()
+                messages.success(request, f"Apartado de catálogo {accion} con éxito.")
+                return redirect('Index:editar_layout')
             else:
-                messages.error(request, "Error de validación al editar/crear Apartado. Revisa los campos marcados.")
-                
+                errores = " / ".join([f"{v[0]}" for k, v in formApartado.errors.items()])
+                messages.error(request, f"Error en el apartado: {errores}")
+
     context = {
         'formset': formset,
         'formSocios': formSocios,
@@ -582,78 +558,4 @@ def editar_usuario_contrasena(request, user_id):
                 'formpassowrd':form
             }
             return render(request, "Index/editar_usuario.html", context)
-def chatbotLayout(request):
-    """Renderiza la plantilla principal del chatbot."""
-    context = {}
-    return render(request, "Index/chatbotLayout.html", context)
 
-def chatbot_response(request):
-    """Procesa la entrada del usuario y genera una respuesta basada en la DB."""
-    try:
-        data = json.loads(request.body)
-        user_input = data.get('message', '').strip().lower()
-
-        response_text = "Lo siento, no pude entender tu solicitud. Intenta preguntar por el estado de un socio o la descripción de un apartado."
-        
-        # --- Lógica de Consulta: Estado de Expediente por Nombre de Socio ---
-        if 'estado' in user_input and 'socio' in user_input:
-            # Intentar extraer el nombre del socio (esto es una simplificación)
-            # Para una implementación real se requeriría PLN o un parsing más robusto.
-            parts = user_input.split()
-            # Asumimos que el nombre del socio es la siguiente palabra después de "socio"
-            try:
-                socio_index = parts.index('socio')
-                if socio_index + 1 < len(parts):
-                    socio_nombre_busqueda = parts[socio_index + 1]
-                    # Buscar por nombre que contenga la palabra clave
-                    expedientes = Expediente.objects.filter(socio__nombre__icontains=socio_nombre_busqueda).select_related('socio', 'estatus').order_by('-fecha')
-                    
-                    if expedientes.exists():
-                        expediente = expedientes.first()
-                        response_text = (
-                            f"El expediente más reciente para el socio **{expediente.socio.nombre}** "
-                            f"(ID: {expediente.pk}) está en estado: **{expediente.estatus.nombre}** "
-                            f"(Fecha: {expediente.fecha}). Color: {expediente.estatus.color}."
-                        )
-                    else:
-                        response_text = f"No encontré expedientes activos para un socio llamado **{socio_nombre_busqueda}**."
-                else:
-                    response_text = "Por favor, especifica el nombre del socio."
-            except ValueError:
-                response_text = "Por favor, especifica el nombre del socio."
-
-        # --- Lógica de Consulta: Descripción de Apartado por Clave o Descripción ---
-        elif 'apartado' in user_input and ('descri' in user_input or 'que es' in user_input):
-            # Intentar extraer la clave del apartado (ej. I-101) o una palabra clave
-            parts = user_input.split()
-            keyword = next((p for p in parts if p not in ['apartado', 'descri', 'que', 'es', 'de', 'el', 'la', 'un', 'una']), None)
-            
-            if keyword:
-                apartados = ApartadoCatalogo.objects.filter(
-                    Q(clave__icontains=keyword) | Q(descripcion__icontains=keyword)
-                ).order_by('tipoDeSeccion', 'clave')[:3] # Limitar a 3 resultados
-
-                if apartados.exists():
-                    responses = ["He encontrado la siguiente información sobre apartados:"]
-                    for ap in apartados:
-                        responses.append(
-                            f"- **{ap.tipoDeSeccion}-{ap.clave}**: {ap.descripcion} (Aplica: {ap.areaDondeAplica})"
-                        )
-                    response_text = "\n".join(responses)
-                else:
-                    response_text = f"No se encontró un apartado con la clave o descripción que contenga **{keyword}**."
-            else:
-                response_text = "Por favor, especifica la clave o una palabra clave del apartado que buscas."
-
-        # --- Respuesta de Bienvenida/Ayuda ---
-        elif any(greeting in user_input for greeting in ['hola', 'buenas', 'ayuda']):
-            response_text = "Hola! Soy tu asistente de expedientes. Puedes preguntarme el **estado de un socio** (ej: 'estado del socio Juan Pérez') o la **descripción de un apartado** (ej: 'qué es el apartado I-A')."
-        
-        return JsonResponse({'response': response_text})
-
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    except Exception as e:
-        # En caso de cualquier error interno
-        print(f"Error en chatbot_response: {e}")
-        return JsonResponse({'response': 'Hubo un error interno al procesar tu solicitud.'})

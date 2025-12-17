@@ -124,7 +124,7 @@ class ExpedienteCrearForm(forms.ModelForm):
     )
     
     TIPO_CHOICES = [
-        ('F', 'Física'),
+        ('F', 'Fisica'),
         ('M', 'Moral'),
     ]
     socio_manual_tipo = forms.ChoiceField(
@@ -161,7 +161,6 @@ class ExpedienteCrearForm(forms.ModelForm):
 
         return cleaned_data
     
-
 class RepresentantesForm(forms.Form):
     representantes = forms.CharField(
         required=False,
@@ -174,8 +173,6 @@ class ObligadosForm(forms.Form):
         widget=forms.HiddenInput()
     )
 
-
-
 class ModificarEstados(forms.ModelForm):
     class Meta:
         model = Estado
@@ -187,27 +184,27 @@ class ModificarEstados(forms.ModelForm):
 
 class EditarSocio(forms.ModelForm):
     TIPO_CHOICES = [
-        ('F', 'Física'),
+        ('F', 'Fisica'),
         ('M', 'Moral'),
     ]
     
     socio_selector = forms.ModelChoiceField(
         queryset=Socio.objects.all(),
-        label="Socio a Editar",
-        empty_label="--- Seleccione un Socio ---",
-        widget=forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2', 'onchange': 'cargarSocio(this.value)'})
+        label="Socio a Editar/Crear",
+        empty_label="--- Nuevo Socio  ---",
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2', 'onchange': 'cargarSocio(this.value)'})
     )
 
     tipoPersona = forms.ChoiceField(
         label="Tipo de Persona",
         choices=TIPO_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'})
+        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2'})
     )
     
     class Meta:
         model = Socio
         fields = ['nombre', 'tipoPersona'] 
-        
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
         }
@@ -216,10 +213,10 @@ class ModificarApartado(forms.ModelForm):
         model = ApartadoCatalogo
         fields = ['tipoDeSeccion', 'clave', 'descripcion', 'areaDondeAplica']
         widgets = {
-            'tipoDeSeccion': forms.Select(attrs={'class': 'form-select'}),
-            'clave': forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'areaDondeAplica': forms.Select(attrs={'class': 'form-select'}),
+            'tipoDeSeccion': forms.Select(attrs={'class': 'form-select  border border-3 border-primary my-2'}),
+            'clave': forms.TextInput(attrs={'class': 'form-control  border border-3 border-primary my-2'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control  border border-3 border-primary my-2', 'rows': 3}),
+            'areaDondeAplica': forms.Select(attrs={'class': 'form-select  border border-3 border-primary my-2'}),
         }
 
 class SelectorApartadoForm(forms.Form):
@@ -228,7 +225,7 @@ class SelectorApartadoForm(forms.Form):
         label="Apartado a Editar",
         required=False,
         empty_label="--- Nuevo Apartado ---",
-        widget=forms.Select(attrs={'class': 'form-select', 'onchange': 'cargarApartado(this.value)'})
+        widget=forms.Select(attrs={'class': 'form-select  border border-3 border-primary my-2', 'onchange': 'cargarApartado(this.value)'})
     )
 # La creación del formset debe funcionar correctamente con el cambio
 #SociosoFormSet = forms.modelformset_factory(Socio, form=EditarSocio, extra=1, can_delete=True)
