@@ -1,8 +1,12 @@
+from io import BytesIO
+import os
 from pyexpat.errors import messages
 from urllib import request
-from django.http import HttpResponse, JsonResponse
+from django.conf import settings
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from openpyxl import load_workbook
 from Index.forms import *
 from db.models import *
 from django.contrib.auth import authenticate,login,logout
@@ -330,9 +334,6 @@ def expediente_cambiar_status(request, id):
         if nuevo_estatus_id:
             expediente.estatus_id = nuevo_estatus_id
             expediente.save()
-
-    # CORRECCIÓN: Usar el nombre de la URL ('name') configurado en urls.py
-    # Reemplaza 'editarExpediente' si tu nombre de URL es diferente.
     return redirect('Index:expediente_editar', id=expediente.id)
 
 @login_required(login_url='/login/')    
@@ -419,6 +420,179 @@ def obtener_socio_data(request, socio_id):
         return JsonResponse(data)
     except Socio.DoesNotExist:
         return JsonResponse({'error': 'Socio no encontrado'}, status=404)
+from openpyxl.styles import *
+from openpyxl.styles.borders import Border, Side
+
+@login_required(login_url='/login/')
+def exportarExcel(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    
+    ruta_directorio = fr"C:\Users\Diego Audiffred\Downloads\Lista de proyectos\PlataformaExpedientes\drAlejandro\static"
+    ruta_plantilla = os.path.join(ruta_directorio, "FormatoParaExpedientes.xlsx")
+    
+    try:
+        wb = load_workbook(ruta_plantilla)
+        ws = wb['Template1'] if 'Template1' in wb.sheetnames else wb.active
+
+        ws['A2'] = f" {expediente.socio.nombre}-#{expediente.id}"
+
+        fila_actual = 4
+        
+        secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+
+        from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        alignment_center = Alignment(horizontal='center', wrap_text=True, vertical='center')
+
+        for item in secciones:
+            registros = RegistroSeccion.objects.filter(seccion=item).select_related('apartado').order_by('apartado__clave')
+            
+            if not registros.exists():
+                continue
+
+            ws.merge_cells(start_row=fila_actual, start_column=1, end_row=fila_actual, end_column=5)
+            
+            for col in range(1, 6):
+                celda_borde = ws.cell(row=fila_actual, column=col)
+                celda_borde.border = thin_border
+                if col == 1:
+                    celda_borde.value = str(item.tituloSeccion).upper()
+                    celda_borde.alignment = alignment_center
+                    celda_borde.font = Font(bold=True)
+                    celda_borde.fill = PatternFill(start_color="9BC2E6", end_color="9BC2E6", fill_type="solid")
+                else:
+                    celda_borde.fill = PatternFill(start_color="9BC2E6", end_color="9BC2E6", fill_type="solid")
+
+            fila_actual += 1
+
+            for reg in registros:
+                datos = [
+                    reg.apartado.clave,
+                    reg.apartado.descripcion,
+                    reg.fecha.strftime("%d/%m/%Y") if reg.fecha else "",
+                    reg.estatus,
+                    reg.comentario
+                ]
+
+                for col_idx, valor in enumerate(datos, start=1):
+                    cell = ws.cell(row=fila_actual, column=col_idx, value=valor)
+                    cell.border = thin_border
+                    cell.alignment = alignment_center
+                
+                fila_actual += 1
+
+        nombre_socio = "".join([c for c in str(expediente.socio.nombre) if c.isalnum() or c==' ']).replace(' ', '_')
+        nombre_salida = f"Expediente_{expediente.id}_{nombre_socio}.xlsx"
+        ruta_salida = os.path.join(ruta_directorio, nombre_salida)
+        
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        with open(ruta_salida, "wb") as f:
+            f.write(buffer.getbuffer())
+
+        buffer.seek(0)
+        response = FileResponse(buffer, as_attachment=True, filename=nombre_salida)
+        response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error critico al generar archivo: {str(e)}", status=500)
+    
+@login_required(login_url='/login/')
+def exportarPDF(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    
+    from django.template.loader import render_to_string
+    from xhtml2pdf import pisa
+    
+    try:
+        secciones_data = []
+        secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+
+        for item in secciones:
+            registros = RegistroSeccion.objects.filter(seccion=item).select_related('apartado').order_by('apartado__clave')
+            
+            if registros.exists():
+                secciones_data.append({
+                    'titulo': str(item.tituloSeccion).upper(),
+                    'registros': registros
+                })
+
+        context = {
+            'expediente': expediente,
+            'secciones': secciones_data,
+            'socio_info': f"{expediente.socio.nombre} - #{expediente.id}"
+        }
+
+        html_string = f"""
+        <html>
+        <head>
+            <style>
+                @page {{ size: letter; margin: 1cm; }}
+                body {{ font-family: Arial, sans-serif; font-size: 10px; }}
+                .header {{ text-align: center; font-weight: bold; font-size: 24px; background-color:#d6dce4;height:15px;border: 1px solid black;padding:5px}}
+                table {{ width: 100%; border-collapse: collapse; margin-bottom: 0px; table-layout: fixed; }}
+                th, td {{ border: 1px solid black; padding: 4px; word-wrap: break-word; }}
+                .titulo-seccion {{ background-color: #9BC2E6; font-weight: bold; text-align: center; }}
+                .col-clave {{ width: 10%; text-align: center; }}
+                .col-desc {{ width: 40%; }}
+                .col-fecha {{ width: 12%; text-align: center;}}
+                .col-status {{ width: 12%; text-align: center; }}
+                .col-com {{ width: 26%; }}
+            </style>
+        </head>
+<body>
+            <div style="background-color:#3eb1c8; padding: 15px 5px; border: 1px solid black; text-align: right; font-weight: bold; font-size: 18px; color:#ffffff;">
+                INTEGRACION DE EXPEDIENTE UNICO DE CRÉDITO
+            </div>
+
+            <div class="header" style="padding: 50% 0;">{context['socio_info']}</div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2" style="width: 50%; text-align: center; font-size: 15px;background-color:#d6dce4;">I. Identificación del Socio</th>
+                        <th class="col-fecha" style="font-size: 15px;background-color:#d6dce4;padding: 15px 5px;">Fecha</th>
+                        <th class="col-status" style="font-size: 15px;background-color:#d6dce4;padding: 15px 5px;">Status</th>
+                        <th class="col-com" style="font-size: 15px;background-color:#d6dce4;padding: 15px 5px;">Comentarios</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+
+        for sec in secciones_data:
+            html_string += f'<tr><td colspan="5" class="titulo-seccion">{sec["titulo"]}</td></tr>'
+            for reg in sec['registros']:
+                fecha = reg.fecha.strftime("%d/%m/%Y") if reg.fecha else ""
+                html_string += f"""
+                    <tr>
+                        <td class="col-clave" style="text-align: center;">{reg.apartado.clave}</td>
+                        <td class="col-desc">{reg.apartado.descripcion}</td>
+                        <td class="col-fecha" style="text-align: center;">{fecha}</td>
+                        <td class="col-status" style="text-align: center;">{reg.estatus or ''}</td>
+                        <td class="col-com">{reg.comentario or ''}</td>
+                    </tr>
+                """
+
+        html_string += "</tbody></table></body></html>"
+
+        buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(html_string, dest=buffer)
+
+        if pisa_status.err:
+            return HttpResponse("Error al renderizar PDF", status=500)
+
+        buffer.seek(0)
+        nombre_socio = "".join([c for c in str(expediente.socio.nombre) if c.isalnum() or c==' ']).replace(' ', '_')
+        return FileResponse(buffer, as_attachment=True, filename=f"Expediente_{expediente.id}_{nombre_socio}.pdf")
+
+    except Exception as e:
+        return HttpResponse(f"Error critico al generar PDF: {str(e)}", status=500)
+
+
 
 @login_required(login_url='/login/')    
 def avances(request):
@@ -466,7 +640,7 @@ def avances(request):
     return render(request, 'Index/avancesLayout.html', context)
 
 @login_required(login_url='/login/')
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def administrador(request):
 
  
@@ -479,10 +653,8 @@ def administrador(request):
     }
     return render(request, "Index/administradorPage.html", context)
 
-
-
-
 @login_required(login_url='/login/')
+@user_passes_test(is_admin)
 def alta_usuario(request):
     if request.method == 'POST':
         form = UserAdminPassForm(request.POST) 
@@ -504,7 +676,7 @@ def alta_usuario(request):
         return redirect('Index:administrador')
 
 @login_required(login_url='/login/')
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def editar_usuario(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     form = UserAdminForm(instance=usuario)
@@ -516,6 +688,8 @@ def editar_usuario(request, user_id):
     }
     return render(request, "Index/editar_usuario.html", context)
 
+@login_required(login_url='/login/')
+@user_passes_test(is_admin)
 def editar_usuario_datos(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
@@ -534,7 +708,8 @@ def editar_usuario_datos(request, user_id):
             }
             return render(request, "Index/editar_usuario.html", context)
 
-
+@login_required(login_url='/login/')
+@user_passes_test(is_admin)
 def editar_usuario_contrasena(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     

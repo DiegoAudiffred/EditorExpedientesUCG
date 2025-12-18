@@ -3,3 +3,4 @@ django-crispy-forms
 django-user-agents
 Pillow
 django-colorfield
+openpyxl

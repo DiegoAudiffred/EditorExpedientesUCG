@@ -182,9 +182,8 @@
 
         <div class="d-flex justify-content-end">
             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
-            <a class="btn btn-secondary mx-2 text-white">Exportar a PDF</a>
-            <a class="btn btn-green mx-2 text-white">Exportar a Excel</a>
-            <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
+            <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a PDF</a>
+<a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}" target="_blank">Exportar a Excel</a>           <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
                 aria-hidden="true">
