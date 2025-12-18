@@ -24,65 +24,57 @@ class UserAdminForm(UserChangeForm):
             self.fields['is_active'].required = True
 
 
-class UserAdminPassForm(UserChangeForm):
-
+class UserAdminPassForm(forms.ModelForm):
     nueva_contrasena = forms.CharField(
         widget=forms.PasswordInput(
             attrs={'class': 'form-control border border-3 border-primary my-2'}
         ),
         label="Contraseña",
-        required=False 
+        required=True
     )
     confirmar_contrasena = forms.CharField(
         widget=forms.PasswordInput(
             attrs={'class': 'form-control border border-3 border-primary my-2'}
         ),
         label="Confirmar Contraseña",
-        required=False
+        required=True
     )
     
     class Meta:
         model = User
         fields = ('username', 'roles', 'is_active') 
-        
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'roles': forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary my-1'}),
         }
-        def __init__(self, *args, **kwargs):
-            super(UserAdminPassForm, self).__init__(*args, **kwargs)
-            self.fields['username'].required = True
-            self.fields['roles'].required = True
-            self.fields['is_active'].required = True
-            self.fields['nueva_contrasena'].required = True
-            self.fields['confirmar_contrasena'].required = True
+
+    def __init__(self, *args, **kwargs):
+        super(UserAdminPassForm, self).__init__(*args, **kwargs)
+        self.fields['username'].required = True
+        self.fields['roles'].required = True
+        self.fields['is_active'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
         nueva_contrasena = cleaned_data.get("nueva_contrasena")
         confirmar_contrasena = cleaned_data.get("confirmar_contrasena")
-        if nueva_contrasena == "" and confirmar_contrasena == "":
-            raise forms.ValidationError("Las contraseñas no pueden quedar vacias.")
 
-        if nueva_contrasena and nueva_contrasena != confirmar_contrasena:
-            raise forms.ValidationError("Las contraseñas no coinciden.")
-        
-        if (nueva_contrasena and not confirmar_contrasena) or (confirmar_contrasena and not nueva_contrasena):
-             raise forms.ValidationError("Debes ingresar y confirmar la nueva contraseña.")
+        if nueva_contrasena and confirmar_contrasena:
+            if nueva_contrasena != confirmar_contrasena:
+                raise forms.ValidationError("Las contraseñas no coinciden.")
+        else:
+            raise forms.ValidationError("Ambos campos de contraseña son requeridos.")
              
         return cleaned_data
         
     def save(self, commit=True):
         user = super().save(commit=False)
-
         password = self.cleaned_data.get("nueva_contrasena")
         if password:
             user.set_password(password)
-        
         if commit:
             user.save()
-            
         return user
 
 class UserPasswordForm(forms.Form):
