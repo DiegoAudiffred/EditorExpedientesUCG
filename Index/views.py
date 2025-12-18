@@ -434,7 +434,7 @@ def exportarExcel(request, id):
         wb = load_workbook(ruta_plantilla)
         ws = wb['Template1'] if 'Template1' in wb.sheetnames else wb.active
 
-        ws['A2'] = f" {expediente.socio.nombre}-#{expediente.id}"
+        ws['A2'] = f" {expediente.socio.nombre} -# {expediente.id}"
 
         fila_actual = 4
         
@@ -527,14 +527,22 @@ def exportarPDF(request, id):
             'socio_info': f"{expediente.socio.nombre} - #{expediente.id}"
         }
 
+        ruta_logo = r"C:/Users/Diego Audiffred/Downloads/Lista de proyectos/PlataformaExpedientes/drAlejandro/static/img/Logo.png"
+
         html_string = f"""
         <html>
         <head>
             <style>
                 @page {{ size: letter; margin: 1cm; }}
                 body {{ font-family: Arial, sans-serif; font-size: 10px; }}
-                .header {{ text-align: center; font-weight: bold; font-size: 24px; background-color:#d6dce4;height:15px;border: 1px solid black;padding:5px}}
-                table {{ width: 100%; border-collapse: collapse; margin-bottom: 0px; table-layout: fixed; }}
+.header {{ 
+    text-align: center; 
+    font-weight: bold; 
+    font-size: 24px; 
+    background-color: #d6dce4; 
+    border: 1px solid black; 
+    padding: 15px 5px; /* El primer valor (30px) centra verticalmente */
+}}                table {{ width: 100%; border-collapse: collapse; margin-bottom: 0px; table-layout: fixed; }}
                 th, td {{ border: 1px solid black; padding: 4px; word-wrap: break-word; }}
                 .titulo-seccion {{ background-color: #9BC2E6; font-weight: bold; text-align: center; }}
                 .col-clave {{ width: 10%; text-align: center; }}
@@ -544,20 +552,29 @@ def exportarPDF(request, id):
                 .col-com {{ width: 26%; }}
             </style>
         </head>
-<body>
-            <div style="background-color:#3eb1c8; padding: 15px 5px; border: 1px solid black; text-align: right; font-weight: bold; font-size: 18px; color:#ffffff;">
-                INTEGRACION DE EXPEDIENTE UNICO DE CRÉDITO
+        <body>
+            <div style="background-color:#3eb1c8; border: 1px solid black; padding: 5px;">
+                <table style="width: 100%; border: none; margin: 0;background-color:#3eb1c8; border: 1px solid black;">
+                    <tr>
+                        <td style="width: 20%; border: none; vertical-align: middle; text-align: left;">
+                            <img src="{ruta_logo}" style="height: 40px;width:120px">
+                        </td>
+                        <td style="width: 80%; border: none; vertical-align: middle; text-align: right; font-weight: bold; font-size: 18px;color:#ffffff">
+                            INTEGRACION DE EXPEDIENTE UNICO DE CRÉDITO
+                        </td>
+                    </tr>
+                </table>
             </div>
-
-            <div class="header" style="padding: 50% 0;">{context['socio_info']}</div>
+            
+            <div class="header">{context['socio_info']}</div>
 
             <table>
                 <thead>
                     <tr>
-                        <th colspan="2" style="width: 50%; text-align: center; font-size: 15px;background-color:#d6dce4;">I. Identificación del Socio</th>
-                        <th class="col-fecha" style="font-size: 15px;background-color:#d6dce4;padding: 15px 5px;">Fecha</th>
-                        <th class="col-status" style="font-size: 15px;background-color:#d6dce4;padding: 15px 5px;">Status</th>
-                        <th class="col-com" style="font-size: 15px;background-color:#d6dce4;padding: 15px 5px;">Comentarios</th>
+                        <th colspan="2" style="width: 50%; text-align: center; font-size: 15px; background-color:#d6dce4;">I. Identificación del Socio</th>
+                        <th class="col-fecha" style="font-size: 15px; background-color:#d6dce4; padding: 5px 5px;">Fecha</th>
+                        <th class="col-status" style="font-size: 15px; background-color:#d6dce4; padding: 5px 5px;">Status</th>
+                        <th class="col-com" style="font-size: 15px; background-color:#d6dce4; padding: 5px 5px;">Comentarios</th>
                     </tr>
                 </thead>
                 <tbody>
