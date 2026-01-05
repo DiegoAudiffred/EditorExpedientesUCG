@@ -10,13 +10,14 @@ from openpyxl import load_workbook
 from Index.forms import *
 from db.models import *
 from django.contrib.auth import authenticate,login,logout
-# Create your views here.
 from django.contrib.auth.decorators import user_passes_test,login_required
 from django.core.paginator import Paginator
-from django.contrib import messages # <--- ¡Asegúrate de importar esto!
+from django.contrib import messages 
 from django.shortcuts import render
 from django.db.models import Q
-
+from openpyxl.styles import *
+from openpyxl.styles.borders import Border, Side
+#LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
     return user.roles == 'Administrador'
 
@@ -125,7 +126,6 @@ def expediente_editar(request, id):
 
         for (seccion_id, apartado_id), campos in datos_agrupados.items():
             try:
-                # Solo actualizamos registros que ya pertenecen a este expediente
                 registro = RegistroSeccion.objects.get(
                     seccion__id=seccion_id, 
                     seccion__expediente=expediente, 
@@ -166,7 +166,6 @@ def expediente_editar(request, id):
     totalRegistrosLlenos = 0
 
     for seccion in secciones:
-        # CAMBIO CLAVE: Iteramos sobre los registros que YA existen para esta sección
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave')
         
         filas = []
@@ -214,7 +213,6 @@ def expediente_cambiar_usuario(request, id):
 def expediente_llenar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
-    print(request.method)
     for seccion in secciones:
         apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
         for apartado in apartados:
@@ -254,9 +252,7 @@ def expediente_crear(request):
                 tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
                 area_socio = tipo_persona_map.get(tipo_persona)
 
-                print(f"\n================ INICIO CREACION EXPEDIENTE ================")
-                print(f"SOCIO: {socio_a_asignar.nombre} | TIPO: {tipo_persona} | AREA_FILTRO: {area_socio}")
-
+     
                 reps_raw = rep_form.cleaned_data.get('representantes', '').strip().strip("|")
                 nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
                 obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
@@ -269,7 +265,7 @@ def expediente_crear(request):
                 expediente.socio = socio_a_asignar
                 expediente.estatus_id = 1
                 expediente.save()
-                print(f"EXPEDIENTE CREADO ID: {expediente.id}")
+              
 
                 SECCIONES = SeccionesExpediente.SECCIONES
                 for tipo_sec, titulo_sec in SECCIONES:
@@ -285,11 +281,9 @@ def expediente_crear(request):
                         nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec)
                         _generar_con_debug_extremo(nueva, area_socio)
 
-                print(f"================ FIN CREACION EXPEDIENTE ================\n")
                 return JsonResponse({'success': True, 'redirect_url': reverse('Index:expedientesLayout')})
 
             except Exception as e:
-                print(f"!!! ERROR: {str(e)}")
                 return JsonResponse({'success': False, 'error': str(e)}, status=500)
                 
         return JsonResponse({'success': False, 'error': "Formulario no válido."}, status=400)
@@ -298,24 +292,18 @@ def expediente_crear(request):
 
 def _generar_con_debug_extremo(seccion_obj, area_socio):
     filtro_permitido = [area_socio, 'Ambas']
-    # Traemos todos para comparar uno por uno en el print
     todos_los_apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion_obj.tipoDeSeccion)
     
-    print(f"\n--- SECCION: {seccion_obj.tipoDeSeccion} (ID: {seccion_obj.id}) ---")
-    print(f"Filtro permitido: {filtro_permitido}")
-    
+
     for ap in todos_los_apartados:
-        # Forzamos string para evitar problemas de tipos
+
         area_en_db = str(ap.areaDondeAplica).strip()
         condicion = area_en_db in filtro_permitido
         
-        print(f"  > Evaluando Apartado [{ap.clave}]: DB_VAL='{area_en_db}' | ¿Entra en filtro?: {condicion}")
         
         if condicion:
             reg = RegistroSeccion.objects.create(seccion=seccion_obj, apartado=ap)
-            print(f"    [CREADO] RegistroSeccion ID: {reg.id} para Apartado: {ap.clave}")
-        else:
-            print(f"    [SALTADO] No se crea registro para {ap.clave}")
+      
 
 @login_required(login_url='/login/')    
 def expediente_eliminar(request,id):
@@ -420,8 +408,7 @@ def obtener_socio_data(request, socio_id):
         return JsonResponse(data)
     except Socio.DoesNotExist:
         return JsonResponse({'error': 'Socio no encontrado'}, status=404)
-from openpyxl.styles import *
-from openpyxl.styles.borders import Border, Side
+
 
 @login_required(login_url='/login/')
 def exportarExcel(request, id):
@@ -621,7 +608,6 @@ def avances(request):
         expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
         numExpedientes = expedientes_totales.count()
         
-        # Inicializa el conteo por estado y total
         conteo_por_estado = {}
         for estado in estados:
             conteo_por_estado[estado.nombre] = {
@@ -630,13 +616,11 @@ def avances(request):
                 'id': estado.id
             }
 
-        # Cuenta los expedientes en cada estado
         for exp in expedientes_totales:
             if exp.estatus and exp.estatus.nombre in conteo_por_estado:
                 conteo_por_estado[exp.estatus.nombre]['count'] += 1
             
-        # Calcula el progreso general (basado en el estado con ID=3, si existe)
-        expedientes_completados = expedientes_totales.filter(estatus__id=3).count()
+        expedientes_completados = expedientes_totales.filter(estatus__id=2).count()
         
         if numExpedientes > 0:
             porcentaje_completado = (expedientes_completados / numExpedientes) * 100
@@ -742,7 +726,6 @@ def editar_usuario_contrasena(request, user_id):
             messages.success(request, f"Contraseña del usuario {usuario.username} actualizada correctamente.")
             return redirect('Index:administrador')
         else:
-            # Si falla la validación de contraseña, renderizamos la página con el error.
             form_datos = UserAdminForm(instance=usuario)
             context = {
                 'form': form_datos,

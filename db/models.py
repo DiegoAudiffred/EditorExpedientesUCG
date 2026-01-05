@@ -54,7 +54,7 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     ROLES = (
         ('Ejecutivo de Negocios', 'Ejecutivo de Negocios'), #Sonia,Omar etc
-        ('Ejecutivo de servicios', 'Ejecutivo de servicios'), #Andres,Maru
+        ('Ejecutivo de Servicios', 'Ejecutivo de Servicios'), #Andres,Maru
         ('Administrador', 'Administrador'), #Servilleta 
         ('Credito', 'Credito'), #Pao,etc
         ('Juridico', 'Juridico'), #Los de la 41 xd
@@ -78,6 +78,9 @@ class Socio(models.Model):
     #id por default
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
     tipoPersona = models.CharField("Tipo",max_length=1,null=True)
+    is_socio = models.BooleanField("Socio",default=True)
+    is_obligado = models.BooleanField("Obligado Solidario",default=False)
+    is_representante = models.BooleanField("Representante Legal",default=False)
     def __str__(self):
         return self.nombre
     
