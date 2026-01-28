@@ -127,22 +127,10 @@ class ExpedienteCrearForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
-    socio_linea = forms.ModelChoiceField(
-        label="Linea del expediente",
-        queryset=Linea.objects.none(), 
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_socio_linea', 'onchange': 'actualizarMonto()'}),
-    )
-
-    monto = forms.IntegerField(
-        label="Monto del expediente",
-        required=False,
-        widget=forms.NumberInput(attrs={'class': 'form-control border-start-0 ps-0', 'id': 'id_monto'}),
-    )
 
     class Meta:
         model = Expediente
-        fields = ['socio', 'usuario', 'socio_linea', 'monto'] 
+        fields = ['socio', 'usuario'] 
         widgets = {
             'usuario': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -152,11 +140,12 @@ class ExpedienteCrearForm(forms.ModelForm):
         if 'socio' in self.data:
             try:
                 socio_id = int(self.data.get('socio'))
-                self.fields['socio_linea'].queryset = Linea.objects.filter(socio_id=socio_id)
+                #self.fields['socio_linea'].queryset = Linea.objects.filter(socio_id=socio_id)
             except (ValueError, TypeError):
                 pass
         elif self.instance.pk and self.instance.socio:
-            self.fields['socio_linea'].queryset = self.instance.socio.linea_set.all()
+            #self.fields['socio_linea'].queryset = self.instance.socio.linea_set.all()
+            pass
 
     def clean(self):
         cleaned_data = super().clean()
@@ -217,9 +206,10 @@ class EditarSocio(forms.ModelForm):
     
     class Meta:
         model = Socio
-        fields = ['nombre', 'tipoPersona'] 
+        fields = ['nombre', 'tipoPersona','numeroKepler'] 
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
+            'numeroKepler': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
         }
 class ModificarApartado(forms.ModelForm):
     class Meta:

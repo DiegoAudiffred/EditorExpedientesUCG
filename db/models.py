@@ -85,6 +85,7 @@ class Socio(models.Model):
     is_socio = models.BooleanField("Socio",default=True)
     is_obligado = models.BooleanField("Obligado Solidario",default=False)
     is_representante = models.BooleanField("Representante Legal",default=False)
+    numeroKepler = models.CharField("Numero en Kepler",default="",null=True,blank=True)
     def __str__(self):
         return self.nombre
 
@@ -95,10 +96,7 @@ class ObligadoSolidario(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
 
-class Linea(models.Model):
-    socio = models.ForeignKey(Socio,on_delete=models.CASCADE,null=True,blank=True)
-    numero = models.CharField("Numero", max_length=10, blank=True,null=True)
-    monto = models.IntegerField(default=0,blank=False,null=False)    
+  
     
 class Estado(models.Model):
     nombre = models.CharField("Nombre", max_length=30, unique=True, null=True)
@@ -118,8 +116,13 @@ class Expediente(models.Model):
     usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
     eliminado = models.BooleanField(default=False)
-    monto = models.IntegerField(blank=True,null=True,default=0)
-    linea = models.CharField(blank=True,null=True)
+
+class Linea(models.Model):
+    expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=True,blank=True)
+    numero = models.CharField("Numero", max_length=10, blank=True,null=True)
+    monto = models.IntegerField(default=0,blank=False,null=False)  
+    def __str__(self):
+        return self.numero
 
 class SeccionesExpediente(models.Model):
     SECCIONES = [

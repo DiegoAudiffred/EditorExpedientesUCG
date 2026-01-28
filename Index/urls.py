@@ -9,10 +9,9 @@ urlpatterns = [
 
 
     path("",views.index,name='index'),
-    path("lineas/",views.lineas,name='lineas'),
 
     path("expedientes/",views.expedientesLayout,name='expedientesLayout'),
-    #path('expedientes/', views.lista_expedientes, name='lista_expedientes'),
+
     path('expedientes/filtrar/', views.filtrar_expedientes_ajax, name='filtrar_expedientes_ajax'),
     path("expedientes/editarExpediente/<int:id>/",views.expediente_editar,name='expediente_editar'),
     path('expediente/crear/', views.expediente_crear, name='expediente_crear'),
@@ -30,6 +29,7 @@ urlpatterns = [
     
     path('avances/', views.avances, name='avances'),
     
+    #Administrador
     path('admin-usuarios/', views.administrador, name='administrador'),
     path('admin-usuarios/alta/', views.alta_usuario, name='alta_usuario'),
     path('admin-usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
@@ -40,5 +40,9 @@ urlpatterns = [
 
 
     path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
+    #Lineas
+    path("lineas/",views.lineasLayout,name='lineasLayout'),
+    path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),
+
 
 ] 

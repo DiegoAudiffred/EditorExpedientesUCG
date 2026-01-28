@@ -1,0 +1,56 @@
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Linea</th>
+            <th>Socio</th>
+            <th>Num Expediente</th>
+            <th>Monto</th>
+            <th>Editar</th>
+
+        </tr>
+    </thead>
+    <tbody>
+        {% for linea in lineas %}
+        <tr class="">
+            <td>{{ linea.id }}</td>
+            <td>{{ linea.numero }}</td>
+            <td>{{ linea.expediente.socio.nombre }}</td>
+            <td>{{ linea.expediente.id }}</td>
+            <td>{{ linea.monto }}</td>
+            <td><a href=""
+                    class="btn  rounded rounded-4 bg-tercero text-white"> Editar linea</a></td>
+
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No se encontraron lineas.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center mt-3" style="cursor: pointer;">
+    <ul class="pagination">
+
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link paginar" data-page="{{ page_obj.previous_page_number }}">«</a>
+        </li>
+        {% endif %}
+
+        {% for i in paginator.page_range %}
+        <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+            <a class="page-link paginar" data-page="{{ i }}">{{ i }}</a>
+        </li>
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link paginar" data-page="{{ page_obj.next_page_number }}">»</a>
+        </li>
+        {% endif %}
+
+    </ul>
+</div>
+{% endif %}

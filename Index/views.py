@@ -47,6 +47,44 @@ def expedientesLayout(request):
     }
     return render(request, 'Index/expedientesLayout.html',contexto)
 
+@login_required(login_url='/login/')    
+def lineasLayout(request):
+    lineas = Linea.objects.all().order_by('-id')
+
+    usuarios = User.objects.all()
+    
+    contexto = {
+        'lineas': lineas,
+        'usuarios': usuarios,
+    }
+    return render(request, 'Index/lineasLayout.html',contexto)
+
+def filtrar_lineas_ajax(request):
+    socio_query = request.GET.get('socio', '').strip()
+    page_number = request.GET.get('page', 1)
+
+    lineas = Linea.objects.all()
+
+    if socio_query:
+
+        filtro = Q(expediente__socio__nombre__icontains=socio_query)
+        
+        if socio_query.isdigit():
+            filtro |= Q(expediente__socio__id=int(socio_query))
+        
+        lineas = lineas.filter(filtro).distinct()
+    lineas = lineas.order_by('-id')
+
+    paginator = Paginator(lineas, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'lineas': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator
+    }
+
+    return render(request, 'Index/tablasLineas.html', context)
 
 def filtrar_expedientes_ajax(request):
     estatus_id = request.GET.get('estatus', '0')
@@ -401,9 +439,6 @@ def obtener_apartado_data(request, apartado_id):
         'areaDondeAplica': apartado.areaDondeAplica,
     }
     return JsonResponse(data)
-def lineas(request):
-    return render(request, 'Index/lineas.html')
-
 
 def obtener_socio_data(request, socio_id):
     try:
@@ -411,6 +446,8 @@ def obtener_socio_data(request, socio_id):
         data = {
             'nombre': socio.nombre,
             'tipoPersona': socio.tipoPersona, 
+            'numeroKepler': socio.numeroKepler, 
+
         }
         return JsonResponse(data)
     except Socio.DoesNotExist:

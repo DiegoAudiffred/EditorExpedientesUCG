@@ -1,0 +1,17 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container">
+
+    <div class="row">
+
+        {% include 'Index/filtrosDeLineas.html' %}
+    </div>
+    <hr>
+    <div class="row " id="resultados-lineas">
+        {% include 'Index/tablasLineas.html' %}
+    </div>
+</div>
+
+{% endblock %}

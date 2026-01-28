@@ -1,0 +1,82 @@
+<div class="row d-flex align-items-end" id="filtros-lineas" data-url="{% url 'Index:filtrar_lineas_ajax' %}">
+    <div class="col-10">
+        <h1 class="text-secondary fnSuperiorRegularTitle2">Panel de lineas</h1>
+    </div>
+    <div class="col-2 my-auto">
+        <a href="{% url 'Index:expediente_crear' %}"
+            class="btn btn-sm btn-secondary me-2 text-primary w-100 fw-bold border border-3 rounded rounded-pill border-quinto w-100">Crear
+            Linea</a>
+    </div>
+
+
+
+    <div class="col-3">
+        <div class="fnSuperiorRegularTitle text-quinto">Nombre</div>
+        <input type="text" id="socio-input"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero"
+            placeholder="Buscar por nombre">
+    </div>
+
+
+    <div class="col-1 p-0">
+        <button id="boton-reset-datos" class="btn bg-quinto text-white rounded rounded-4 py-1  w-100">
+            Reiniciar
+        </button>
+    </div>
+
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+  $(document).ready(function () {
+    const filtrosContainer = document.getElementById('filtros-lineas');
+    if (!filtrosContainer) return;
+
+    const filterUrl = filtrosContainer.dataset.url;
+    const socioInput = document.getElementById('socio-input');
+    const botonReset = document.getElementById('boton-reset-datos'); // Agregada esta línea
+
+    function ejecutarFiltro(page = 1) {
+        const params = {
+            'socio': socioInput.value,
+            'page': page
+        };
+
+        $.ajax({
+            url: filterUrl,
+            type: 'GET',
+            data: params,
+            success: function (response) {
+                // Asegúrate de que este ID exista en el HTML que envuelve la tabla
+                $('#resultados-lineas').html(response);
+            },
+            error: function (xhr, status, error) {
+                console.error("Error AJAX:", error);
+            }
+        });
+    }
+
+    function resetearFiltros() {
+        socioInput.value = "";
+        ejecutarFiltro(1);
+    }
+
+    let timeoutId;
+    socioInput.addEventListener('input', function () {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => ejecutarFiltro(1), 300); // Aumentado a 300ms para mejor performance
+    });
+
+    if (botonReset) {
+        botonReset.addEventListener('click', resetearFiltros);
+    }
+
+    $(document).on('click', '.paginar', function (e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        ejecutarFiltro(page);
+    });
+
+    ejecutarFiltro(1);
+});
+</script>

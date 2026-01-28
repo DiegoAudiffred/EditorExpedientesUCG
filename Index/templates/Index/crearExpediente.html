@@ -38,21 +38,7 @@
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Usuario asignado</label>
                     {{ exp_form.usuario }}
                 </div>
-                <div class="col-md-4 my-3">
-                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Linea</label>
-                    {{ exp_form.socio_linea }}
-                </div>
-                <div class="col-md-4 my-3">
-                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Monto</label>
-                    <div class="form-group">
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text border-end-0" id="span">$</span>
-                            </div>
-                            {{ exp_form.monto }}
-                        </div>
-                    </div>
-                </div>
+               
 
                 <div class="col-md-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Estatus</label>
@@ -129,9 +115,7 @@
     const socioSelect = document.getElementById('id_socio');
     const nombreManualInput = document.getElementById('id_socio_manual_nombre');
     const tipoManualSelect = document.getElementById('id_socio_manual_tipo');
-    const lineaSelect = document.getElementById('id_socio_linea')
-    const montoInput = document.getElementById('id_monto');
-    const spanInput = document.getElementById('span');
+
 
     function syncHidden() {
         document.getElementsByName("representantes")[0].value = reps.join("||");
@@ -187,11 +171,7 @@
             aplicarEstiloDeshabilitado(nombreManualInput, false);
             tipoManualSelect.value = '';
 
-            aplicarEstiloDeshabilitado(montoInput, false);
-            montoInput.disabled = false;
-            aplicarEstiloDeshabilitado(spanInput, false);
-            montoInput.value = '';
-            lineaSelect.value = '';
+  
         }
     }
 
@@ -293,53 +273,7 @@
             });
     });
 
-    function cargarLineas() {
-        const socioId = document.getElementById('id_socio').value;
-        const lineaSelect = document.getElementById('id_socio_linea');
-        const montoInput = document.getElementById('id_monto');
-
-        lineaSelect.innerHTML = '<option value="">--- Seleccione Linea ---</option>';
-        montoInput.value = '';
-
-        if (!socioId) return;
-
-        fetch(`/obtener-lineas-socio/${socioId}/`)
-
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(linea => {
-                    const option = document.createElement('option');
-                    option.value = linea.id;
-                    option.textContent = linea.numero;
-                    option.setAttribute('data-monto', linea.monto);
-                    lineaSelect.appendChild(option);
-
-                });
-            });
-    }
-
-    function actualizarMonto() {
-
-
-
-        const selectedOption = lineaSelect.options[lineaSelect.selectedIndex];
-
-        if (selectedOption && selectedOption.getAttribute('data-monto')) {
-            montoInput.value = selectedOption.getAttribute('data-monto');
-            aplicarEstiloDeshabilitado(montoInput, true);
-            montoInput.disabled = true;
-            aplicarEstiloDeshabilitado(spanInput, true);
-
-
-
-        } else {
-            montoInput.value = '';
-            aplicarEstiloDeshabilitado(montoInput, false);
-            montoInput.disabled = false;
-            aplicarEstiloDeshabilitado(spanInput, false);
-        }
-    }
-
+ 
 </script>
 
 {% endblock %}

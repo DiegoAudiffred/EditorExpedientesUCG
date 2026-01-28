@@ -109,6 +109,12 @@
             {% if formSocios.tipoPersona.errors %}<div class="text-danger small">{{ formSocios.tipoPersona.errors }}
             </div>{% endif %}
         </div>
+                <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formSocios.numeroKepler.id_for_label }}">Número Kepler</label>
+            {{ formSocios.numeroKepler }}
+            {% if formSocios.numeroKepler.errors %}<div class="text-danger small">{{ formSocios.numeroKepler.errors }}
+            </div>{% endif %}
+        </div>
 
         <button type="submit" class="btn btn-primary col-12 my-2">Guardar Socio</button>
     </form>
@@ -161,6 +167,8 @@
     const nombreInput = document.getElementById('{{ formSocios.nombre.id_for_label }}');
     const tipoPersonaSelect = document.getElementById('{{ formSocios.tipoPersona.id_for_label }}');
     const socioIdInput = document.getElementById('socio-id-input');
+    const socioIdKeplerInput = document.getElementById('id_numeroKepler');
+
 
     socioIdInput.value = socioId; // Será cadena vacía si es Nuevo Socio
 
@@ -178,6 +186,7 @@
         .then(data => {
             nombreInput.value = data.nombre;
             tipoPersonaSelect.value = data.tipoPersona;
+            socioIdKeplerInput.value = data.numeroKepler;
         })
         .catch(error => console.error('Error al cargar datos del socio:', error));
 }
