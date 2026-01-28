@@ -23,7 +23,6 @@ class UserAdminForm(UserChangeForm):
             self.fields['roles'].required = True
             self.fields['is_active'].required = True
 
-
 class UserAdminPassForm(forms.ModelForm):
     nueva_contrasena = forms.CharField(
         widget=forms.PasswordInput(
@@ -163,6 +162,19 @@ class ExpedienteCrearForm(forms.ModelForm):
                 self.add_error('socio_manual_nombre', 'El nombre del nuevo socio no puede estar vacío.')
 
         return cleaned_data
+
+class LineaCrearForm(forms.ModelForm):
+    class Meta:
+        model = Linea
+        fields = ['expediente', 'numero','monto'] 
+        widgets = {
+            'expediente': forms.Select(attrs={'class': 'form-control'}),
+                        'numero': forms.Select(attrs={'class': 'form-control'}),
+            'monto': forms.Select(attrs={'class': 'form-control'}),
+
+            
+            }
+
 class RepresentantesForm(forms.Form):
     representantes = forms.CharField(
         required=False,
@@ -211,6 +223,7 @@ class EditarSocio(forms.ModelForm):
             'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'numeroKepler': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
         }
+
 class ModificarApartado(forms.ModelForm):
     class Meta:
         model = ApartadoCatalogo
@@ -230,7 +243,6 @@ class SelectorApartadoForm(forms.Form):
         empty_label="--- Nuevo Apartado ---",
         widget=forms.Select(attrs={'class': 'form-select  border border-3 border-primary my-2', 'onchange': 'cargarApartado(this.value)'})
     )
-# La creación del formset debe funcionar correctamente con el cambio
 #SociosoFormSet = forms.modelformset_factory(Socio, form=EditarSocio, extra=1, can_delete=True)
 
 EstadoFormSet = forms.modelformset_factory(Estado, form=ModificarEstados, extra=1, can_delete=True)

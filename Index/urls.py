@@ -43,6 +43,7 @@ urlpatterns = [
     #Lineas
     path("lineas/",views.lineasLayout,name='lineasLayout'),
     path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),
+    path('linea/crear/', views.linea_crear, name='linea_crear'),
 
 
 ] 

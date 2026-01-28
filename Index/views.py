@@ -263,6 +263,11 @@ def expediente_llenar(request, id):
                 registro.save()
     return redirect('Index:expediente_editar', id=expediente.id)
 
+@login_required(login_url='/login/')
+def linea_crear(request):
+    form = LineaCrearForm()
+    context = {'form':form}
+    return render(request, 'Index/crearLinea.html',context)
 
 @login_required(login_url='/login/')
 def expediente_crear(request):

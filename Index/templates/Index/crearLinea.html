@@ -1,0 +1,217 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<div class="container py-4">
+
+    <h4 class="mb-3 fnSuperiorRegularTitle2 text-secondary">Crear Linea</h4>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-4 ">
+            <div class="fnSuperiorRegularTitle text-quinto ">Datos de la linea</div>
+            <div class=" row  border border-3 border-quinto  rounded rounded-4">
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Socio</label>
+                    {{ form.expediente }}
+                    {% if form.expediente.errors %}<div class="text-danger small">{{ form.expediente.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Numero</label>
+                    {{ form.numero }}
+                    {% if form.numero.errors %}<div class="text-danger small">{{
+                        form.numero.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Monto</label>
+                    {{ form.monto }}
+                    {% if form.monto.errors %}<div class="text-danger small">{{
+                        form.monto.errors }}</div>{% endif %}
+                </div>
+
+ 
+
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-primary">Dar linea de alta </button>
+        </div>
+
+    </form>
+
+</div>
+<script>
+    let reps = [];
+    let obls = [];
+
+    const socioSelect = document.getElementById('id_socio');
+    const nombreManualInput = document.getElementById('id_socio_manual_nombre');
+    const tipoManualSelect = document.getElementById('id_socio_manual_tipo');
+
+
+    function syncHidden() {
+        document.getElementsByName("representantes")[0].value = reps.join("||");
+        document.getElementsByName("obligados")[0].value = obls.join("||");
+    }
+
+    function aplicarEstiloDeshabilitado(element, deshabilitar) {
+        if (deshabilitar) {
+            element.classList.add('bg-grayBorder');
+        } else {
+            element.classList.remove('bg-grayBorder');
+        }
+    }
+
+    function cargarSocio(socioId) {
+        if (!socioId) {
+            tipoManualSelect.value = '';
+            tipoManualSelect.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
+            nombreManualInput.disabled = false;
+            aplicarEstiloDeshabilitado(nombreManualInput, false);
+            return;
+        }
+
+        fetch(`/obtener-socio-data/${socioId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('No se pudo obtener el socio');
+                }
+                return response.json();
+            })
+            .then(data => {
+                tipoManualSelect.value = data.tipoPersona;
+                tipoManualSelect.disabled = true;
+                aplicarEstiloDeshabilitado(tipoManualSelect, true);
+            })
+            .catch(error => console.error('Error al cargar datos del socio:', error));
+    }
+
+    function handleSocioSelectChange() {
+        const selectedValue = socioSelect.value;
+        if (selectedValue && selectedValue !== '') {
+            nombreManualInput.value = '';
+            tipoManualSelect.disabled = true;
+            aplicarEstiloDeshabilitado(tipoManualSelect, true);
+            nombreManualInput.disabled = true;
+            aplicarEstiloDeshabilitado(nombreManualInput, true);
+            cargarSocio(selectedValue);
+        } else {
+            tipoManualSelect.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
+            nombreManualInput.disabled = false;
+            aplicarEstiloDeshabilitado(nombreManualInput, false);
+            tipoManualSelect.value = '';
+
+  
+        }
+    }
+
+    function handleManualInputChange() {
+        const manualName = nombreManualInput.value.trim();
+        if (manualName !== '') {
+            socioSelect.value = '';
+            tipoManualSelect.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
+        }
+        handleSocioSelectChange();
+    }
+
+    socioSelect.addEventListener('change', handleSocioSelectChange);
+    nombreManualInput.addEventListener('input', handleManualInputChange);
+
+    handleSocioSelectChange();
+
+    function render() {
+        const repList = document.getElementById("rep-list");
+        repList.innerHTML = reps.map((x, i) => `
+<div class="input-group m-3">
+    <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
+    <button class="btn btn-danger" onclick="reps.splice(${i},1); render();">X</button>
+</div>
+`).join("");
+
+        const oblList = document.getElementById("obl-list");
+        oblList.innerHTML = obls.map((x, i) => `
+<div class="input-group m-3">
+    <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
+    <button class="btn btn-danger" onclick="obls.splice(${i},1); render();">X</button>
+</div>
+`).join("");
+
+        syncHidden();
+    }
+
+    function agregarRep() {
+        reps.push("");
+        render();
+    }
+
+    function agregarObl() {
+        obls.push("");
+        render();
+    }
+
+    render();
+
+
+
+    document.querySelector('form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Estamos creando el expediente',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() }
+        });
+
+        const formData = new FormData(this);
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Creado!',
+                        text: 'El expediente se ha generado correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = data.redirect_url;
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Atención',
+                        html: data.error,
+                        confirmButtonColor: '#3085d6'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de servidor',
+                    text: 'No se pudo completar la solicitud.'
+                });
+            });
+    });
+
+ 
+</script>
+
+{% endblock %}
