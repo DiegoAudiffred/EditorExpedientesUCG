@@ -290,21 +290,26 @@ def expediente_crear(request):
 
     return render(request, 'Index/crearExpediente.html', {'exp_form': ExpedienteCrearForm(), 'rep_form': RepresentantesForm(), 'obl_form': ObligadosForm()})
 
+from django.db.models.functions import Cast
+from django.db.models import FloatField
 def _generar_con_debug_extremo(seccion_obj, area_socio):
     filtro_permitido = [area_socio, 'Ambas']
-    todos_los_apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion_obj.tipoDeSeccion)
     
+    todos_los_apartados = ApartadoCatalogo.objects.filter(
+        tipoDeSeccion=seccion_obj.tipoDeSeccion
+    ).annotate(
+        clave_numerica=Cast('clave', FloatField())
+    ).order_by('clave_numerica')
 
     for ap in todos_los_apartados:
-
         area_en_db = str(ap.areaDondeAplica).strip()
         condicion = area_en_db in filtro_permitido
         
-        
         if condicion:
-            reg = RegistroSeccion.objects.create(seccion=seccion_obj, apartado=ap)
-      
-
+            RegistroSeccion.objects.create(
+                seccion=seccion_obj, 
+                apartado=ap
+            )
 @login_required(login_url='/login/')    
 def expediente_eliminar(request,id):
     expediente = Expediente.objects.get(id=id)
@@ -396,6 +401,8 @@ def obtener_apartado_data(request, apartado_id):
         'areaDondeAplica': apartado.areaDondeAplica,
     }
     return JsonResponse(data)
+def lineas(request):
+    return render(request, 'Index/lineas.html')
 
 
 def obtener_socio_data(request, socio_id):
@@ -409,6 +416,13 @@ def obtener_socio_data(request, socio_id):
     except Socio.DoesNotExist:
         return JsonResponse({'error': 'Socio no encontrado'}, status=404)
 
+def obtener_lineas_socio(request, socio_id):
+    socio = Socio.objects.get(pk=socio_id)
+    print(socio)
+    socio_id = request.GET.get('socio_id')
+    lineas = Linea.objects.filter(socio_id=socio).values('id', 'numero', 'monto')
+    print(lineas)
+    return JsonResponse(list(lineas), safe=False)
 
 @login_required(login_url='/login/')
 def exportarExcel(request, id):
@@ -600,7 +614,7 @@ def exportarPDF(request, id):
 
 @login_required(login_url='/login/')    
 def avances(request):
-    usuarios = User.objects.all()
+    usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Ejecutivo de Negocios']).distinct()    
     estados = Estado.objects.all().order_by('id')
     data_por_usuario = {}
     
@@ -641,7 +655,7 @@ def avances(request):
     return render(request, 'Index/avancesLayout.html', context)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_admin)
+#@user_passes_test(is_admin)
 def administrador(request):
 
  
@@ -655,7 +669,7 @@ def administrador(request):
     return render(request, "Index/administradorPage.html", context)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_admin)
+#@user_passes_test(is_admin)
 def alta_usuario(request):
     if request.method == 'POST':
         form = UserAdminPassForm(request.POST) 
@@ -676,8 +690,9 @@ def alta_usuario(request):
     else:
         return redirect('Index:administrador')
 
+
 @login_required(login_url='/login/')
-@user_passes_test(is_admin)
+#@user_passes_test(is_admin)
 def editar_usuario(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     form = UserAdminForm(instance=usuario)
@@ -690,7 +705,7 @@ def editar_usuario(request, user_id):
     return render(request, "Index/editar_usuario.html", context)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_admin)
+#@user_passes_test(is_admin)
 def editar_usuario_datos(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
@@ -710,7 +725,7 @@ def editar_usuario_datos(request, user_id):
             return render(request, "Index/editar_usuario.html", context)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_admin)
+#@user_passes_test(is_admin)
 def editar_usuario_contrasena(request, user_id):
     usuario = get_object_or_404(User, id=user_id)
     

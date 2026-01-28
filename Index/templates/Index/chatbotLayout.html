@@ -36,11 +36,11 @@
             const message = userInput.value.trim();
             if (message === "") return;
 
-            // 1. Mostrar mensaje del usuario
+  
             appendMessage('user', message);
             userInput.value = '';
 
-            // 2. Enviar a la API de Django
+    
             fetch(apiEndpoint, {
                 method: 'POST',
                 headers: {

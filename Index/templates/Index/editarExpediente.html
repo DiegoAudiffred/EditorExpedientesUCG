@@ -46,7 +46,8 @@
                         </select>
                     </div>
                     <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-secondary text-white"
+                            data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
                 </form>
@@ -55,7 +56,7 @@
     </div>
 
     <h4 class="mb-3">Expediente del socio: <b>{{expediente.socio}}</b></h4>
-    <h5 class="mb-3">Asignado a: <b>{{expediente.usuario}}</b>         
+    <h5 class="mb-3">Asignado a: <b>{{expediente.usuario}}</b>
         <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModal">
             <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none"
                 xmlns="http://www.w3.org/2000/svg">
@@ -70,7 +71,7 @@
             </svg>
         </span>
     </h5>
-       <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
+    <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-tercero text-white">
@@ -104,9 +105,11 @@
 
         <ul class="nav nav-tabs mb-3" id="seccionTabs" role="tablist">
             {% for item in secciones %}
-            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-secondary  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start" role="presentation">
-                <button class="nav-link {% if forloop.first %}active{% endif %} text-quinto" id="tab-{{ item.seccion.pk }} "
-                    data-bs-toggle="tab" data-bs-target="#seccion-{{ item.seccion.pk }}" type="button" role="tab">
+            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-secondary  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+                role="presentation">
+                <button class="nav-link {% if forloop.first %}active{% endif %} text-quinto"
+                    id="tab-{{ item.seccion.pk }} " data-bs-toggle="tab" data-bs-target="#seccion-{{ item.seccion.pk }}"
+                    type="button" role="tab">
                     {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }})
                 </button>
             </li>
@@ -115,12 +118,12 @@
 
         <div class="tab-content">
             {% for item in secciones %}
-                    
+
             <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="seccion-{{ item.seccion.pk }}"
                 role="tabpanel">
-                    <h2>                    {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }})
- </h2>
- <hr>
+                <h2> {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }})
+                </h2>
+                <hr>
                 <div class="card mb-3">
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -178,12 +181,15 @@
             </div>
             {% endfor %}
         </div>
-    <h4> Total de registros llenados: {{totalRegistrosLlenos}} de {{totalRegistros}}</h4>
+        <h4> Total de registros llenados: {{totalRegistrosLlenos}} de {{totalRegistros}}</h4>
 
         <div class="d-flex justify-content-end">
             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
-            <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a PDF</a>
-<a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}" target="_blank">Exportar a Excel</a>           <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
+            <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a
+                PDF</a>
+            <a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}"
+                target="_blank">Exportar a Excel</a> <a class="btn btn-cuarto mx-2 text-white"
+                href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
                 aria-hidden="true">
@@ -266,12 +272,10 @@
     {% endfor %}
     {% endif %}
 
-    // 2. Lógica JavaScript pura (al cargar la página)
     document.addEventListener('DOMContentLoaded', function () {
         const mainForm = document.getElementById('main-edit-form');
         const loadingModalElement = document.getElementById('loadingModal');
 
-        // Función para mostrar el modal de carga: "Guardando, espera un momento..."
         if (mainForm) {
             mainForm.addEventListener('submit', function (event) {
                 const loadingModal = new bootstrap.Modal(loadingModalElement, {
@@ -282,7 +286,7 @@
             });
         }
 
-        // 3. Mostrar el modal de éxito si la variable JS es true (solo tras la recarga por el redirect)
+        // 3. Mostrar el modal de éxito sis la variable JS es true (solo tras la recarga por el redirect)
         if (dataSavedSuccessfully) {
             // Oculta el modal de carga si por alguna razón sigue visible
             const loadingModalInstance = bootstrap.Modal.getInstance(loadingModalElement);

@@ -104,7 +104,7 @@ class ExpedienteCrearForm(forms.ModelForm):
     socio = forms.ModelChoiceField(
         queryset=Socio.objects.all(), 
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control','onclick':'cargarSocio(this)'}),
+        widget=forms.Select(attrs={'class': 'form-control', 'onchange': 'cargarLineas()', 'id': 'id_socio'}),
         empty_label="--- Seleccionar Socio Existente ---"
     )
 
@@ -119,6 +119,7 @@ class ExpedienteCrearForm(forms.ModelForm):
         ('F', 'Fisica'),
         ('M', 'Moral'),
     ]
+
     socio_manual_tipo = forms.ChoiceField(
         label="Tipo de Persona",
         choices=TIPO_CHOICES,
@@ -126,13 +127,36 @@ class ExpedienteCrearForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    socio_linea = forms.ModelChoiceField(
+        label="Linea del expediente",
+        queryset=Linea.objects.none(), 
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_socio_linea', 'onchange': 'actualizarMonto()'}),
+    )
+
+    monto = forms.IntegerField(
+        label="Monto del expediente",
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control border-start-0 ps-0', 'id': 'id_monto'}),
+    )
+
     class Meta:
         model = Expediente
-        fields = ['socio', 'usuario'] 
-
+        fields = ['socio', 'usuario', 'socio_linea', 'monto'] 
         widgets = {
             'usuario': forms.Select(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'socio' in self.data:
+            try:
+                socio_id = int(self.data.get('socio'))
+                self.fields['socio_linea'].queryset = Linea.objects.filter(socio_id=socio_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.socio:
+            self.fields['socio_linea'].queryset = self.instance.socio.linea_set.all()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -143,16 +167,13 @@ class ExpedienteCrearForm(forms.ModelForm):
         if socio_existente:
             cleaned_data['socio_manual_nombre'] = None
             cleaned_data['socio_manual_tipo'] = None
-        
         elif nombre_manual:
             if not tipo_manual:
                 self.add_error('socio_manual_tipo', 'Debe seleccionar si es Persona Física (F) o Moral (M) para un nuevo socio.')
-            
             if not nombre_manual.strip():
-                 self.add_error('socio_manual_nombre', 'El nombre del nuevo socio no puede estar vacío.')
+                self.add_error('socio_manual_nombre', 'El nombre del nuevo socio no puede estar vacío.')
 
         return cleaned_data
-    
 class RepresentantesForm(forms.Form):
     representantes = forms.CharField(
         required=False,

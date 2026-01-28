@@ -9,6 +9,8 @@ urlpatterns = [
 
 
     path("",views.index,name='index'),
+    path("lineas/",views.lineas,name='lineas'),
+
     path("expedientes/",views.expedientesLayout,name='expedientesLayout'),
     #path('expedientes/', views.lista_expedientes, name='lista_expedientes'),
     path('expedientes/filtrar/', views.filtrar_expedientes_ajax, name='filtrar_expedientes_ajax'),
@@ -19,20 +21,13 @@ urlpatterns = [
     path('expediente/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
     path('expediente/exportarExcel/<int:id>/',views.exportarExcel,name ='exportarExcel'),
     path('expediente/exportarPDF/<int:id>/',views.exportarPDF,name ='exportarPDF'),
-
-
-
-
-
-
+    path('obtener-lineas-socio/<int:socio_id>/',views.obtener_lineas_socio,name ='obtener_lineas_socio'),
 
     path('editar/', views.editar_layout, name='editar_layout'),
 
 
-
-
-
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
+    
     path('avances/', views.avances, name='avances'),
     
     path('admin-usuarios/', views.administrador, name='administrador'),

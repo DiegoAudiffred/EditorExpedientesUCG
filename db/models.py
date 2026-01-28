@@ -49,7 +49,10 @@ class UserManager(BaseUserManager):
 
         return self._create_user(password, **extra_fields)
 
-
+TipoPersona = (
+        ("F","F"),
+        ("M","M")
+    )
 
 class User(AbstractUser):
     ROLES = (
@@ -62,11 +65,12 @@ class User(AbstractUser):
 
     )
 
+
     username = models.CharField('Usuario',max_length=20, unique=True, blank=False, null=False,default="Nuevo")
     
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 
-    roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Visitante')
+    roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Administrador')
 
     objects = UserManager()
     is_active= models.BooleanField('Habilitar Usuario',default=True)
@@ -77,13 +81,24 @@ class User(AbstractUser):
 class Socio(models.Model):
     #id por default
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    tipoPersona = models.CharField("Tipo",max_length=1,null=True)
+    tipoPersona = models.CharField("Tipo",max_length=1,null=True,choices=TipoPersona)
     is_socio = models.BooleanField("Socio",default=True)
     is_obligado = models.BooleanField("Obligado Solidario",default=False)
     is_representante = models.BooleanField("Representante Legal",default=False)
     def __str__(self):
         return self.nombre
-    
+
+class RepresentanteLegal(models.Model):
+    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+
+class ObligadoSolidario(models.Model):
+    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
+
+class Linea(models.Model):
+    socio = models.ForeignKey(Socio,on_delete=models.CASCADE,null=True,blank=True)
+    numero = models.CharField("Numero", max_length=10, blank=True,null=True)
+    monto = models.IntegerField(default=0,blank=False,null=False)    
     
 class Estado(models.Model):
     nombre = models.CharField("Nombre", max_length=30, unique=True, null=True)
@@ -103,6 +118,9 @@ class Expediente(models.Model):
     usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
     eliminado = models.BooleanField(default=False)
+    monto = models.IntegerField(blank=True,null=True,default=0)
+    linea = models.CharField(blank=True,null=True)
+
 class SeccionesExpediente(models.Model):
     SECCIONES = [
         ('A', 'Solicitante'),
@@ -130,28 +148,22 @@ class SeccionesExpediente(models.Model):
         return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.tituloSeccion} - {self.expediente}"
 class ApartadoCatalogo(models.Model):
     SECCIONES = [
-        ('A', 'A'),
-        ('B', 'B'),
-        ('C', 'C'),
-        ('I', 'I'),
-        ('II','II'),
-        ('III','III'),
-        ('IV','IV'),
-        ('V','V'),
-        ('VI','VI')
+        ('A', 'A'), ('B', 'B'), ('C', 'C'), ('I', 'I'),
+        ('II','II'), ('III','III'), ('IV','IV'), ('V','V'), ('VI','VI')
     ]
     AREAS = [('Fisicas','Fisicas'),('Ambas','Ambas'),('Morales','Morales')] 
+    
     tipoDeSeccion = models.CharField(max_length=7, choices=SECCIONES)
     clave = models.CharField(max_length=10)
     descripcion = models.TextField()
-    areaDondeAplica = models.CharField(max_length=8, choices=AREAS,null=True,blank=True) 
+    areaDondeAplica = models.CharField(max_length=8, choices=AREAS, null=True, blank=True) 
 
     class Meta:
         unique_together = ('tipoDeSeccion', 'clave')
+        ordering = ['tipoDeSeccion', 'clave']
 
     def __str__(self):
         return f"{self.tipoDeSeccion} - {self.clave}"
-
 class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
