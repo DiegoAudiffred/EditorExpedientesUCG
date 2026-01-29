@@ -47,44 +47,6 @@ def expedientesLayout(request):
     }
     return render(request, 'Index/expedientesLayout.html',contexto)
 
-@login_required(login_url='/login/')    
-def lineasLayout(request):
-    lineas = Linea.objects.all().order_by('-id')
-
-    usuarios = User.objects.all()
-    
-    contexto = {
-        'lineas': lineas,
-        'usuarios': usuarios,
-    }
-    return render(request, 'Index/lineasLayout.html',contexto)
-
-def filtrar_lineas_ajax(request):
-    socio_query = request.GET.get('socio', '').strip()
-    page_number = request.GET.get('page', 1)
-
-    lineas = Linea.objects.all()
-
-    if socio_query:
-
-        filtro = Q(expediente__socio__nombre__icontains=socio_query)
-        
-        if socio_query.isdigit():
-            filtro |= Q(expediente__socio__id=int(socio_query))
-        
-        lineas = lineas.filter(filtro).distinct()
-    lineas = lineas.order_by('-id')
-
-    paginator = Paginator(lineas, 10)
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'lineas': page_obj.object_list,
-        'page_obj': page_obj,
-        'paginator': paginator
-    }
-
-    return render(request, 'Index/tablasLineas.html', context)
 
 def filtrar_expedientes_ajax(request):
     estatus_id = request.GET.get('estatus', '0')
@@ -134,6 +96,8 @@ def filtrar_expedientes_ajax(request):
 @login_required(login_url='/login/')
 def expediente_editar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
+    lineasLista = Linea.objects.filter(expediente=expediente)
+    print(lineasLista)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
     usuarios = User.objects.all()
@@ -197,6 +161,7 @@ def expediente_editar(request, id):
         'estados': estados,
         'usuarios': usuarios,
         'expediente': expediente,
+        'lineasLista':lineasLista,
         'secciones': [],
     }
     
@@ -263,11 +228,6 @@ def expediente_llenar(request, id):
                 registro.save()
     return redirect('Index:expediente_editar', id=expediente.id)
 
-@login_required(login_url='/login/')
-def linea_crear(request):
-    form = LineaCrearForm()
-    context = {'form':form}
-    return render(request, 'Index/crearLinea.html',context)
 
 @login_required(login_url='/login/')
 def expediente_crear(request):
@@ -791,3 +751,92 @@ def editar_usuario_contrasena(request, user_id):
             }
             return render(request, "Index/editar_usuario.html", context)
 
+""" 
+
+
+Todo este apartado es para lineas
+
+
+"""
+#Templeate donde se ven todas las lineas
+@login_required(login_url='/login/')    
+def lineasLayout(request):
+    lineas = Linea.objects.all().order_by('-id')
+
+    usuarios = User.objects.all()
+    
+    contexto = {
+        'lineas': lineas,
+        'usuarios': usuarios,
+    }
+    return render(request, 'Index/lineasLayout.html',contexto)
+
+#Metodo para filtrar las lineas
+def filtrar_lineas_ajax(request):
+    socio_query = request.GET.get('socio', '').strip()
+    page_number = request.GET.get('page', 1)
+
+    lineas = Linea.objects.all()
+
+    if socio_query:
+
+        filtro = Q(expediente__socio__nombre__icontains=socio_query)
+        
+        if socio_query.isdigit():
+            filtro |= Q(expediente__socio__id=int(socio_query))
+        
+        lineas = lineas.filter(filtro).distinct()
+    lineas = lineas.order_by('-id')
+
+    paginator = Paginator(lineas, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'lineas': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator
+    }
+
+    return render(request, 'Index/tablasLineas.html', context)
+
+#Metodo para crear una linea
+@login_required(login_url='/login/')
+def lineaCrear(request):
+    exito=False
+
+
+    if request.method == "POST":
+        form = LineaCrearForm(request.POST)
+        if form.is_valid():
+            form.save(commit=True)
+            messages.success(request, f"Línea creada con éxito.")
+            exito = True
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    form = LineaCrearForm()
+    context = {'form': form, 'exito': exito}
+    return render(request, 'Index/crearLinea.html',context)
+
+#Metodo para editar una linea
+@login_required(login_url='/login/')
+def editarLinea(request, id):
+    linea = get_object_or_404(Linea, pk=id)
+    exito = False
+
+    if request.method == "POST":
+        form = LineaCrearForm(request.POST, instance=linea)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Línea de {linea.expediente.socio.nombre} actualizada.")
+            exito = True
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    else:
+        form = LineaCrearForm(instance=linea)
+    
+    context = {'form': form, 'exito': exito}
+    return render(request, 'Index/editarLinea.html', context)

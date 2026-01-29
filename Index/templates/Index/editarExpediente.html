@@ -71,6 +71,54 @@
             </svg>
         </span>
     </h5>
+<button class="btn btn-outline-primary fw-bold border-3 px-4 shadow-sm mb-2" 
+        type="button" 
+        data-bs-toggle="collapse" 
+        data-bs-target="#collapseLineas" 
+        aria-expanded="false">
+    <i class="bi bi-list-ul me-2"></i>Lista de líneas
+</button>
+
+<div class="collapse" id="collapseLineas">
+    <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
+        <div class="list-group list-group-flush">
+            {% for linea in lineasLista %}
+            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <span class="text-secondary small d-block">Número de línea</span>
+                    <span class="fw-bold h6 mb-0">{{ linea.numero }}</span>
+                </div>
+                
+                <div class="text-center">
+                    <span class="text-secondary small d-block">Monto</span>
+                    <span class="fw-bold text-dark">${{ linea.monto }}</span>
+                </div>
+                    
+                <div class="text-center">
+                    <span class="text-secondary small d-block">Tipo</span>
+                    <span class="fw-bold text-dark">{{ linea.tipoLinea }}</span>
+                </div>
+
+                <div class="text-end">
+                    {% if linea.vigente %}
+                        <span class="badge rounded-pill bg-primary-subtle text-tercero border border-primary px-3">
+                            Vigente
+                        </span>
+                    {% else %}
+                        <span class="badge rounded-pill bg-red-subtle text-red border border-red px-3">
+                            Vencida
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay líneas registradas
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
     <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -261,7 +309,6 @@
 </div>
 
 <script>
-    // 1. Uso de Django para definir una variable JS
     let dataSavedSuccessfully = false;
 
     {% if messages %}
@@ -286,15 +333,12 @@
             });
         }
 
-        // 3. Mostrar el modal de éxito sis la variable JS es true (solo tras la recarga por el redirect)
         if (dataSavedSuccessfully) {
-            // Oculta el modal de carga si por alguna razón sigue visible
             const loadingModalInstance = bootstrap.Modal.getInstance(loadingModalElement);
             if (loadingModalInstance) {
                 loadingModalInstance.hide();
             }
 
-            // Muestra el modal de éxito: "Datos guardados con éxito"
             const successModal = new bootstrap.Modal(document.getElementById('successModal'));
             successModal.show();
         }

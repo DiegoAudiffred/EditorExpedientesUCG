@@ -166,15 +166,14 @@ class ExpedienteCrearForm(forms.ModelForm):
 class LineaCrearForm(forms.ModelForm):
     class Meta:
         model = Linea
-        fields = ['expediente', 'numero','monto'] 
+        fields = ['expediente', 'numero','monto','tipoLinea'] 
         widgets = {
             'expediente': forms.Select(attrs={'class': 'form-control'}),
-                        'numero': forms.Select(attrs={'class': 'form-control'}),
-            'monto': forms.Select(attrs={'class': 'form-control'}),
+            'numero': forms.TextInput(attrs={'class': 'form-control'}),
+            'monto': forms.NumberInput(attrs={'class': 'form-control'}),
+            'tipoLinea': forms.Select(attrs={'class': 'form-control'}),
 
-            
-            }
-
+        }
 class RepresentantesForm(forms.Form):
     representantes = forms.CharField(
         required=False,

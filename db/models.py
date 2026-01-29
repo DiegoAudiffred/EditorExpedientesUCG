@@ -116,14 +116,22 @@ class Expediente(models.Model):
     usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
     eliminado = models.BooleanField(default=False)
+    def __str__(self):
+        return f"{self.socio}"
 
 class Linea(models.Model):
-    expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=True,blank=True)
-    numero = models.CharField("Numero", max_length=10, blank=True,null=True)
+    tipoLinea = (
+        ("Libre","Libre"),
+        ("Back","Back")
+    )    
+    expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=False,blank=False)
+    numero = models.CharField("Numero", max_length=10, blank=False,null=False,unique=True)
     monto = models.IntegerField(default=0,blank=False,null=False)  
+    vigente = models.BooleanField(default=True)
+    tipoLinea = models.CharField(choices=tipoLinea,blank=False,default="Libre")
     def __str__(self):
         return self.numero
-
+    
 class SeccionesExpediente(models.Model):
     SECCIONES = [
         ('A', 'Solicitante'),

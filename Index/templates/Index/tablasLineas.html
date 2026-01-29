@@ -12,13 +12,14 @@
     </thead>
     <tbody>
         {% for linea in lineas %}
-        <tr class="">
+        <tr class="{% if linea.vigente %} bg-green {% else %} bg-red  {% endif %} ">
             <td>{{ linea.id }}</td>
             <td>{{ linea.numero }}</td>
             <td>{{ linea.expediente.socio.nombre }}</td>
             <td>{{ linea.expediente.id }}</td>
+            <td>{{ linea.tipoLinea }}</td>
             <td>{{ linea.monto }}</td>
-            <td><a href=""
+            <td><a href="{% url 'Index:editarLinea' linea.id %}"
                     class="btn  rounded rounded-4 bg-tercero text-white"> Editar linea</a></td>
 
         </tr>

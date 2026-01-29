@@ -13,9 +13,9 @@ urlpatterns = [
     path("expedientes/",views.expedientesLayout,name='expedientesLayout'),
 
     path('expedientes/filtrar/', views.filtrar_expedientes_ajax, name='filtrar_expedientes_ajax'),
-    path("expedientes/editarExpediente/<int:id>/",views.expediente_editar,name='expediente_editar'),
     path('expediente/crear/', views.expediente_crear, name='expediente_crear'),
     path('expediente/eliminar/<int:id>/', views.expediente_eliminar, name='expediente_eliminar'),
+    path("expedientes/editarExpediente/<int:id>/",views.expediente_editar,name='expediente_editar'),
     path('expediente/cambiarStatus/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
     path('expediente/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
     path('expediente/exportarExcel/<int:id>/',views.exportarExcel,name ='exportarExcel'),
@@ -43,7 +43,9 @@ urlpatterns = [
     #Lineas
     path("lineas/",views.lineasLayout,name='lineasLayout'),
     path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),
-    path('linea/crear/', views.linea_crear, name='linea_crear'),
-
+    path('lineas/crear/', views.lineaCrear, name='lineaCrear'),
+    path("lineas/editarLinea/<int:id>/",views.editarLinea,name='editarLinea'),
+    path('lineas/eliminar/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
+    path('lineas/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
 
 ] 
