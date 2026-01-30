@@ -262,6 +262,13 @@ def expediente_crear(request):
                 obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
                 nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
 
+                for rep in nombres_reps:
+
+                    RepresentanteLegal.objects.get_or_create(nombre=rep)  
+                for obls in nombres_obls:
+
+                    ObligadoSolidario.objects.get_or_create(nombre=obls,tipoPersona="F")  
+
                 if tipo_persona == 'M' and (not nombres_reps or not nombres_obls):
                     return JsonResponse({'success': False, 'error': "Faltan representantes u obligados para Persona Moral."}, status=400)
 
