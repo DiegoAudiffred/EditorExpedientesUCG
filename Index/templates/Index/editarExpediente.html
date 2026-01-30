@@ -98,6 +98,36 @@
                     <span class="text-secondary small d-block">Tipo</span>
                     <span class="fw-bold text-dark">{{ linea.tipoLinea }}</span>
                 </div>
+                <div class="text-center">
+                    <span class="text-secondary small d-block">Anexar</span>
+                    <button class="btn btn-white text-primary p-1 border border-primary border-3 rounded rounded-3 " data-bs-toggle="modal" data-bs-target="#linea-{{linea.id}}-modal"><strong>Anexar a expediente</strong> </button>
+                </div>
+<div class="modal fade" id="linea-{{linea.id}}-modal" tabindex="-1" aria-labelledby="linea-{{linea.id}}-modalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-tercero text-white">
+        <h3 class="modal-title" id="linea-{{linea.id}}-modalLabel ">Apartados de linea 1</h3>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+<h5>
+    Se crearan las secciones 
+    <span class="text-quinto text-decoration-underline" style="color: #ff5733; font-weight: bold;">Información de Garantias</span> 
+    y 
+    <span class="text-quinto text-decoration-underline" style="color: #ff5733; font-weight: bold;">Contratos</span> 
+    para la linea: 
+    <strong class="text-primary" style="color: #007bff;">{{linea.numero}}</strong>
+    para el expediente del socio 
+    <strong class="text-primary" style="color: #007bff;">{{expediente.socio.nombre}}</strong>
+</h5>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary text-white">Crear apartados</button>
+      </div>
+    </div>
+  </div>
+</div>
 
                 <div class="text-end">
                     {% if linea.vigente %}
@@ -162,6 +192,22 @@
                 </button>
             </li>
             {% endfor %}
+                        <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+                role="presentation">
+                <button class="nav-link text-quinto"
+                    id="tab-agregarObligado" data-bs-toggle="tab" data-bs-target="#seccion-agregarObligado"
+                    type="button" role="tab">
+                    Agregar Obligado Solidario +
+                </button>
+            </li>
+                     <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+                role="presentation">
+                <button class="nav-link text-quinto"
+                    id="tab-agregarObligado" data-bs-toggle="tab" data-bs-target="#seccion-agregarObligado"
+                    type="button" role="tab">
+                    Agregar Representante Legal +
+                                </button>
+            </li>
         </ul>
 
         <div class="tab-content">

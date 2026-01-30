@@ -17,6 +17,8 @@ from django.shortcuts import render
 from django.db.models import Q
 from openpyxl.styles import *
 from openpyxl.styles.borders import Border, Side
+import smtplib
+from email.message import EmailMessage
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
     return user.roles == 'Administrador'
@@ -97,7 +99,6 @@ def filtrar_expedientes_ajax(request):
 def expediente_editar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     lineasLista = Linea.objects.filter(expediente=expediente)
-    print(lineasLista)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
     usuarios = User.objects.all()
@@ -320,14 +321,83 @@ def expediente_eliminar(request,id):
     expediente.save()
     return redirect('Index:expedientesLayout')
 
+
+
+def correroParaRevision(expediente):
+    #scortes@ucg.com.mx 
+    # "daudiffred@ucg.com.mx" 
+    destinatario = "portiz@ucg.com.mx"
+    dominio = "http://192.168.0.132:8000/expedientes/editarExpediente/"
+    url_final = f"{dominio}{expediente.id}/"
+    asunto = "Informe listo para revisión"
+    
+    cuerpo_texto = f"""
+    Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} esta listo para su revisión. 
+    Atte {expediente.usuario.username}.
+    Ingrese directamente: {url_final}
+    """
+
+    cuerpo_html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                <p>Estimado usuario,</p>
+                <p>Le informamos que el expediente <strong>{expediente.id}</strong> del socio <strong>{expediente.socio.nombre}</strong> está listo para su revisión.</p>
+                <div style="margin: 30px 0; text-align: center;">
+                    <a href="{url_final}" 
+                       style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Revisar Expediente
+                    </a>
+                </div>
+                <p style="font-size: 0.9em; color: #555;">
+                    Atentamente,<br>
+                    <strong>{expediente.usuario.username}</strong>
+                </p>
+                <hr style="border: 0; border-top: 1px solid #eee;">
+                <p style="font-size: 0.8em; color: #999; text-align: center;">
+                    Este es un mensaje automático, por favor no responda a este correo.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    SMTP_HOST = "ucg.com.mx"
+    SMTP_PORT = 587
+    USUARIO = "informacion@ucg.com.mx"
+    CONTRASENA = "UcG911_@!#"
+
+    mensaje = EmailMessage()
+    mensaje["From"] = USUARIO
+    mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
+    mensaje["Subject"] = asunto
+    
+    mensaje.set_content(cuerpo_texto)
+
+    mensaje.add_alternative(cuerpo_html, subtype="html")
+
+    try:
+        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        servidor.starttls()
+        servidor.login(USUARIO, CONTRASENA)
+        servidor.send_message(mensaje)
+        servidor.quit()
+        print("Correo enviado correctamente")
+    except Exception as e:
+        print("Error al enviar correo:", e)
+
 @login_required(login_url='/login/')
 def expediente_cambiar_status(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
 
     if request.method == "POST":
         nuevo_estatus_id = request.POST.get("estatus")
-
-        if nuevo_estatus_id:
+        print(nuevo_estatus_id)
+        print(str(expediente.estatus.id))
+        if nuevo_estatus_id and  nuevo_estatus_id != str(expediente.estatus.id)  :
+            if nuevo_estatus_id == "2" :
+                correroParaRevision(expediente)
             expediente.estatus_id = nuevo_estatus_id
             expediente.save()
     return redirect('Index:expediente_editar', id=expediente.id)

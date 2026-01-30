@@ -166,14 +166,20 @@ class ExpedienteCrearForm(forms.ModelForm):
 class LineaCrearForm(forms.ModelForm):
     class Meta:
         model = Linea
-        fields = ['expediente', 'numero','monto','tipoLinea'] 
+        fields = ['expediente', 'numero','monto','tipoLinea','vigente'] 
         widgets = {
             'expediente': forms.Select(attrs={'class': 'form-control'}),
             'numero': forms.TextInput(attrs={'class': 'form-control'}),
             'monto': forms.NumberInput(attrs={'class': 'form-control'}),
             'tipoLinea': forms.Select(attrs={'class': 'form-control'}),
 
+
         }
+    def __init__(self, *args, **kwargs):
+            super(LineaCrearForm, self).__init__(*args, **kwargs)
+            check_style = 'form-check-input fs-2 my-0'
+            self.fields['vigente'].widget.attrs.update({'class': check_style})
+
 class RepresentantesForm(forms.Form):
     representantes = forms.CharField(
         required=False,

@@ -103,4 +103,5 @@ def cargar_apartados_default(sender, **kwargs):
                         'areaDondeAplica': data['area_aplicacion']
                     }
                 )
-    #Estado.objects.get_or_create(nombre="Nuevo", color="#FFFFFF")
+    #Estado.objects.get_or_create(nombre="Nuevo", color="#FFFFFF")    
+    #Estado.objects.get_or_create(nombre="Completo", color="#0EF64D")
