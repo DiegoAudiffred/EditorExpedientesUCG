@@ -125,11 +125,16 @@ class ExpedienteCrearForm(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-
+    socio_manual_numero = forms.CharField(
+        label="Numero Kepler",
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = Expediente
-        fields = ['socio', 'usuario'] 
+        fields = ['socio', 'usuario',] 
         widgets = {
             'usuario': forms.Select(attrs={'class': 'form-control'}),
         }

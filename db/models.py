@@ -71,7 +71,7 @@ class User(AbstractUser):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 
     roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Administrador')
-
+    #canEdit = models.BooleanField('Habilitar Usuario',default=False) #Sedara solo permisos a ejecutivos como Pao,Brisa
     objects = UserManager()
     is_active= models.BooleanField('Habilitar Usuario',default=True)
 

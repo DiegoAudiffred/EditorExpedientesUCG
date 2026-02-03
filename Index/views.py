@@ -243,7 +243,7 @@ def checarRuta(ruta, secciones):
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
     rutaMaestra = os.path.join(rutaServidor, ruta, "Maestra")
     rutaOperativa = os.path.join(rutaServidor, ruta, "Operativa")
-    
+
     mapeo_secciones = {
         "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
         "2": os.path.join(rutaMaestra, "II. Información Financiera"),
@@ -252,7 +252,7 @@ def checarRuta(ruta, secciones):
         "5": os.path.join(rutaOperativa, "V. Contratos"),
         "6": os.path.join(rutaOperativa, "VI. Seguimiento")
     }
-
+    
     resultados = {}
 
     for seccion in secciones:
@@ -263,10 +263,9 @@ def checarRuta(ruta, secciones):
             prefijo = clave.split('.')[0]
             
             ruta_busqueda = mapeo_secciones.get(prefijo)
-            
             if not ruta_busqueda or not os.path.exists(ruta_busqueda):
                 continue
-
+            print(ruta_busqueda)
             archivo_mas_reciente = None
             mtime_maximo = 0
 
@@ -292,7 +291,7 @@ def checarRuta(ruta, secciones):
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
-
+    print(resultados)
     return resultados
             
 
@@ -341,12 +340,13 @@ def expediente_crear(request):
                 socio_existente = exp_form.cleaned_data.get('socio')
                 nombre_manual = exp_form.cleaned_data.get('socio_manual_nombre')
                 tipo_manual = exp_form.cleaned_data.get('socio_manual_tipo')
-                
+                numeroK = exp_form.cleaned_data.get('socio_manual_numero')
+
                 socio_a_asignar = None
                 if socio_existente:
                     socio_a_asignar = socio_existente
                 elif nombre_manual and tipo_manual:
-                    socio_a_asignar = Socio.objects.create(nombre=nombre_manual, tipoPersona=tipo_manual)
+                    socio_a_asignar = Socio.objects.create(nombre=nombre_manual, tipoPersona=tipo_manual,numeroKepler=numeroK)
                 
                 if not socio_a_asignar:
                     return JsonResponse({'success': False, 'error': "No se encontró socio."}, status=400)

@@ -33,7 +33,12 @@
                     {% if exp_form.socio_manual_tipo.errors %}<div class="text-danger small">{{
                         exp_form.socio_manual_tipo.errors }}</div>{% endif %}
                 </div>
-
+     <div class="col-md-4 my-3">
+                    <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Numero Kepler</label>
+                    {{ exp_form.socio_manual_numero }}
+                    {% if exp_form.socio_manual_numero.errors %}<div class="text-danger small">{{
+                        exp_form.socio_manual_numero.errors }}</div>{% endif %}
+                </div>
                 <div class="col-md-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Usuario asignado</label>
                     {{ exp_form.usuario }}
@@ -62,6 +67,7 @@
     const socioSelect = document.getElementById('id_socio');
     const nombreManualInput = document.getElementById('id_socio_manual_nombre');
     const tipoManualSelect = document.getElementById('id_socio_manual_tipo');
+    const tipoManualSelect = document.getElementById('id_socio_manual_numero');
 
 
 
