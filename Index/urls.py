@@ -15,7 +15,7 @@ urlpatterns = [
     path('expedientes/filtrar/', views.filtrar_expedientes_ajax, name='filtrar_expedientes_ajax'),
     path('expediente/crear/', views.expediente_crear, name='expediente_crear'),
     path('expediente/eliminar/<int:id>/', views.expediente_eliminar, name='expediente_eliminar'),
-    path("expedientes/editarExpediente/<int:id>/",views.expediente_editar,name='expediente_editar'),
+    path("expedientes/editarExpediente/<int:id>/",views.editarExpediente,name='editarExpediente'),
     path('expediente/cambiarStatus/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
     path('expediente/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
     path('expediente/exportarExcel/<int:id>/',views.exportarExcel,name ='exportarExcel'),
@@ -38,8 +38,8 @@ urlpatterns = [
 
     path('obtener-apartado-data/<int:apartado_id>/', views.obtener_apartado_data, name='obtener_apartado_data'),
 
-
-    path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
+    path('servirArchivo/', views.servirArchivo, name='servirArchivo'),    path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
+    
     #Lineas
     path("lineas/",views.lineasLayout,name='lineasLayout'),
     path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),

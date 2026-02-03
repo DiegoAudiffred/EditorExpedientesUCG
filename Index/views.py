@@ -1,9 +1,10 @@
 from io import BytesIO
+import mimetypes
 import os
 from pyexpat.errors import messages
 from urllib import request
 from django.conf import settings
-from django.http import FileResponse, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from openpyxl import load_workbook
@@ -95,8 +96,17 @@ def filtrar_expedientes_ajax(request):
     return render(request, 'Index/tablaExpedientex.html', context)
 
 
+os
+mimetypes
+datetime
+FileResponse, Http404
+render, get_object_or_404, redirect
+reverse
+messages
+login_required
+
 @login_required(login_url='/login/')
-def expediente_editar(request, id):
+def editarExpediente(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     lineasLista = Linea.objects.filter(expediente=expediente)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
@@ -156,13 +166,16 @@ def expediente_editar(request, id):
             registro.save()
 
         messages.success(request, 'Datos guardados con éxito.')
-        return redirect(reverse('Index:expediente_editar', args=[expediente.pk]))
+        return redirect(reverse('Index:editarExpediente', args=[expediente.pk]))
+
+    stringSocio = "0000 " + expediente.socio.nombre.upper() if expediente.socio.numeroKepler == "" else expediente.socio.numeroKepler + " " + expediente.socio.nombre.upper()
+    archivos_encontrados = checarRuta(stringSocio, secciones)
 
     context = {
         'estados': estados,
         'usuarios': usuarios,
         'expediente': expediente,
-        'lineasLista':lineasLista,
+        'lineasLista': lineasLista,
         'secciones': [],
     }
     
@@ -182,11 +195,14 @@ def expediente_editar(request, id):
             fecha_html = ""
             if registro.fecha:
                 fecha_html = registro.fecha.strftime("%Y-%m-%d")
-
+            
+            info_archivo = archivos_encontrados.get(registro.id)
+            
             filas.append({
                 'apartado': registro.apartado,
                 'registro': registro,
                 'fecha_html': fecha_html,
+                'archivo_url': info_archivo['ruta'] if info_archivo else None
             })
             
         context['secciones'].append({
@@ -199,6 +215,89 @@ def expediente_editar(request, id):
 
     return render(request, 'Index/editarExpediente.html', context)
 
+@login_required
+def servirArchivo(request):
+    ruta_archivo = request.GET.get('ruta')
+    if not ruta_archivo or not os.path.exists(ruta_archivo):
+        raise Http404("El archivo no existe")
+
+    nombre_archivo = os.path.basename(ruta_archivo)
+    mime_type, _ = mimetypes.guess_type(ruta_archivo)
+    
+    response = FileResponse(open(ruta_archivo, 'rb'), content_type=mime_type)
+    response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
+    return response
+@login_required
+def servir_archivo_expediente(request):
+    ruta_archivo = request.GET.get('ruta')
+    if not ruta_archivo or not os.path.exists(ruta_archivo):
+        raise Http404("El archivo no existe")
+
+    nombre_archivo = os.path.basename(ruta_archivo)
+    mime_type, _ = mimetypes.guess_type(ruta_archivo)
+    
+    response = FileResponse(open(ruta_archivo, 'rb'), content_type=mime_type)
+    response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
+    return response
+def checarRuta(ruta, secciones):
+    rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+    rutaMaestra = os.path.join(rutaServidor, ruta, "Maestra")
+    rutaOperativa = os.path.join(rutaServidor, ruta, "Operativa")
+    
+    mapeo_secciones = {
+        "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
+        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
+        "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
+        "4": os.path.join(rutaOperativa, "IV. Inform de las Gtías"),
+        "5": os.path.join(rutaOperativa, "V. Contratos"),
+        "6": os.path.join(rutaOperativa, "VI. Seguimiento")
+    }
+
+    resultados = {}
+
+    for seccion in secciones:
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
+        
+        for registro in registros_existentes:
+            clave = str(registro.apartado.clave).strip()
+            prefijo = clave.split('.')[0]
+            
+            ruta_busqueda = mapeo_secciones.get(prefijo)
+            
+            if not ruta_busqueda or not os.path.exists(ruta_busqueda):
+                continue
+
+            archivo_mas_reciente = None
+            mtime_maximo = 0
+
+            for nombre_item in os.listdir(ruta_busqueda):
+                ruta_item = os.path.join(ruta_busqueda, nombre_item)
+                
+                if os.path.isdir(ruta_item) and nombre_item.startswith(clave):
+                    try:
+                        for archivo in os.listdir(ruta_item):
+                            if archivo.startswith(clave):
+                                ruta_archivo = os.path.join(ruta_item, archivo)
+                                if os.path.isfile(ruta_archivo):
+                                    mtime = os.path.getmtime(ruta_archivo)
+                                    if mtime > mtime_maximo:
+                                        mtime_maximo = mtime
+                                        archivo_mas_reciente = ruta_archivo
+                    except Exception:
+                        continue
+
+            if archivo_mas_reciente:
+                resultados[registro.id] = {
+                    'clave': clave,
+                    'ruta': archivo_mas_reciente,
+                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
+                }
+
+    return resultados
+            
+
+        
+        
 @login_required(login_url='/login/')
 def expediente_cambiar_usuario(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -211,7 +310,7 @@ def expediente_cambiar_usuario(request, id):
             expediente.save()
 
 
-    return redirect('Index:expediente_editar', id=expediente.id)
+    return redirect('Index:editarExpediente', id=expediente.id)
 
 @login_required(login_url='/login/')
 def expediente_llenar(request, id):
@@ -227,7 +326,7 @@ def expediente_llenar(request, id):
                 else:
                     registro.estatus = registro.estatus
                 registro.save()
-    return redirect('Index:expediente_editar', id=expediente.id)
+    return redirect('Index:editarExpediente', id=expediente.id)
 
 
 @login_required(login_url='/login/')
@@ -407,7 +506,7 @@ def expediente_cambiar_status(request, id):
                 correroParaRevision(expediente)
             expediente.estatus_id = nuevo_estatus_id
             expediente.save()
-    return redirect('Index:expediente_editar', id=expediente.id)
+    return redirect('Index:editarExpediente', id=expediente.id)
 
 @login_required(login_url='/login/')    
 def editar_layout(request):
@@ -876,6 +975,59 @@ def filtrar_lineas_ajax(request):
 
     return render(request, 'Index/tablasLineas.html', context)
 
+def filtrar_obligados_ajax(request):
+    socio_query = request.GET.get('socio', '').strip()
+    page_number = request.GET.get('page', 1)
+
+    lineas = Linea.objects.all()
+
+    if socio_query:
+
+        filtro = Q(expediente__socio__nombre__icontains=socio_query)
+        
+        if socio_query.isdigit():
+            filtro |= Q(expediente__socio__id=int(socio_query))
+        
+        lineas = lineas.filter(filtro).distinct()
+    lineas = lineas.order_by('-id')
+
+    paginator = Paginator(lineas, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'lineas': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator
+    }
+
+    return render(request, 'Index/tablasLineas.html', context)
+
+def filtrar_representantes_ajax(request):
+    socio_query = request.GET.get('socio', '').strip()
+    page_number = request.GET.get('page', 1)
+
+    lineas = Linea.objects.all()
+
+    if socio_query:
+
+        filtro = Q(expediente__socio__nombre__icontains=socio_query)
+        
+        if socio_query.isdigit():
+            filtro |= Q(expediente__socio__id=int(socio_query))
+        
+        lineas = lineas.filter(filtro).distinct()
+    lineas = lineas.order_by('-id')
+
+    paginator = Paginator(lineas, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'lineas': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator
+    }
+
+    return render(request, 'Index/tablasLineas.html', context)
 #Metodo para crear una linea
 @login_required(login_url='/login/')
 def lineaCrear(request):

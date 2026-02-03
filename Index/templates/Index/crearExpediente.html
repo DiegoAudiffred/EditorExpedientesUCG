@@ -48,59 +48,7 @@
             </div>
         </div>
 
-        <div class="mb-4">
-            <div class="fnSuperiorRegularTitle text-quinto ">Representantes legales</div>
-            <div class="row border border-3 border-quinto rounded rounded-3">
-
-                <div id="rep-list" class="col-12"></div>
-
-                <div class="col-3">
-                    <button type="button" class="btn btn-secondary my-3  text-white  mx-3 py-0 px-3"
-                        onclick="agregarRep()">
-                        <p class="fnSuperiorRegularTitle3 m-0">Agregar
-                            representante <span><svg width="28px" height="28px" viewBox="0 0 24 24" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round">
-                                    </g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round"></path>
-                                    </g>
-                                </svg></span> </p>
-                    </button>
-
-                    {{ rep_form.representantes }}
-                </div>
-            </div>
-        </div>
-
-        <div class="mb-4">
-            <div class="fnSuperiorRegularTitle text-quinto r">Obligados solidarios y garantes</div>
-            <div class="row border border-3 border-quinto rounded rounded-3">
-
-                <div id="obl-list" class="col-12"></div>
-                <div class="col-3">
-                    <button type="button" class="btn btn-secondary my-3 text-white  mx-3 py-0 px-3"
-                        onclick="agregarObl()">
-                        <p class="fnSuperiorRegularTitle3 m-0">Agregar
-                            obligado <span><svg width="28px" height="28px" viewBox="0 0 24 24" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round">
-                                    </g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round"></path>
-                                    </g>
-                                </svg></span> </p>
-                    </button>
-
-                    {{ obl_form.obligados }}
-                </div>
-            </div>
-        </div>
-
+        {% include 'Index/crearExpedienteRepObl.html' %}
         <div class="d-flex justify-content-end">
             <button class="btn btn-primary">Crear expediente</button>
         </div>
@@ -109,18 +57,13 @@
 
 </div>
 <script>
-    let reps = [];
-    let obls = [];
+  
 
     const socioSelect = document.getElementById('id_socio');
     const nombreManualInput = document.getElementById('id_socio_manual_nombre');
     const tipoManualSelect = document.getElementById('id_socio_manual_tipo');
 
 
-    function syncHidden() {
-        document.getElementsByName("representantes")[0].value = reps.join("||");
-        document.getElementsByName("obligados")[0].value = obls.join("||");
-    }
 
     function aplicarEstiloDeshabilitado(element, deshabilitar) {
         if (deshabilitar) {
@@ -189,37 +132,7 @@
     nombreManualInput.addEventListener('input', handleManualInputChange);
 
     handleSocioSelectChange();
-
-    function render() {
-        const repList = document.getElementById("rep-list");
-        repList.innerHTML = reps.map((x, i) => `
-<div class="input-group m-3">
-    <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-    <button class="btn btn-danger" onclick="reps.splice(${i},1); render();">X</button>
-</div>
-`).join("");
-
-        const oblList = document.getElementById("obl-list");
-        oblList.innerHTML = obls.map((x, i) => `
-<div class="input-group m-3">
-    <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
-    <button class="btn btn-danger" onclick="obls.splice(${i},1); render();">X</button>
-</div>
-`).join("");
-
-        syncHidden();
-    }
-
-    function agregarRep() {
-        reps.push("");
-        render();
-    }
-
-    function agregarObl() {
-        obls.push("");
-        render();
-    }
-
+ 
     render();
 
 

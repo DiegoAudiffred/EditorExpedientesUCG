@@ -124,6 +124,7 @@ class Linea(models.Model):
         ("Libre","Libre"),
         ("Back","Back")
     )    
+
     expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=False,blank=False)
     numero = models.CharField("Numero", max_length=10, blank=False,null=False,unique=True)
     monto = models.IntegerField(default=0,blank=False,null=False)  
@@ -132,7 +133,7 @@ class Linea(models.Model):
     def __str__(self):
         return self.numero
     
-class SeccionesExpediente(models.Model):
+class SeccionesExpediente(models.Model):#ENCABEZADO DE LA SECCION Y SU NOMBRE
     SECCIONES = [
         ('A', 'Solicitante'),
         ('B', 'Representante legal'),
@@ -157,7 +158,7 @@ class SeccionesExpediente(models.Model):
 
     def __str__(self):
         return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.tituloSeccion} - {self.expediente}"
-class ApartadoCatalogo(models.Model):
+class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del renglon
     SECCIONES = [
         ('A', 'A'), ('B', 'B'), ('C', 'C'), ('I', 'I'),
         ('II','II'), ('III','III'), ('IV','IV'), ('V','V'), ('VI','VI')
@@ -175,7 +176,7 @@ class ApartadoCatalogo(models.Model):
 
     def __str__(self):
         return f"{self.tipoDeSeccion} - {self.clave}"
-class RegistroSeccion(models.Model):
+class RegistroSeccion(models.Model): #El renglon
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
     fecha = models.DateField(null=True, blank=True)

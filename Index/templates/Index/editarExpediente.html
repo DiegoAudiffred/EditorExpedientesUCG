@@ -236,8 +236,18 @@
                                     {% with apartado=fila.apartado registro=fila.registro %}
                                     <tr>
                                         <td class="align-middle">{{ apartado.clave }}</td>
-                                        <td class="align-middle">{{ apartado.descripcion|linebreaksbr }} </td>
-                                        <td>
+<td class="align-middle">
+    {% if fila.archivo_url %}
+        <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}" 
+           target="_blank" 
+           title="Click para abrir archivo"
+           style="text-decoration: none; color: #0d6efd;">
+            <i class="bi bi-file-earmark-pdf"></i> {{ apartado.descripcion|linebreaksbr }}
+        </a>
+    {% else %}
+        {{ apartado.descripcion|linebreaksbr }}
+    {% endif %}
+</td>                                        <td>
                                             <input type="date" class="form-control form-control-sm"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
                                                 value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
