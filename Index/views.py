@@ -97,15 +97,11 @@ def filtrar_expedientes_ajax(request):
 
     return render(request, 'Index/tablaExpedientex.html', context)
 
+def agregarRepresentantes(request,id):
+    print("Se agregara Rep")
+def agregarObligados(request,id):
+    print("Se agregara Obl")
 
-os
-mimetypes
-datetime
-FileResponse, Http404
-render, get_object_or_404, redirect
-reverse
-messages
-login_required
 
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
@@ -114,7 +110,8 @@ def editarExpediente(request, id):
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
     usuarios = User.objects.all()
-    
+    rep_form = CrearRepresentante()
+    obl_form = CrearObligado()
     if request.method == "POST":
         post = request.POST
         datos_agrupados = {}
@@ -210,11 +207,13 @@ def editarExpediente(request, id):
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
+
         })
         
     context['totalRegistros'] = totalRegistros
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
-
+    context['rep_form']=rep_form
+    context["obl_form"]=obl_form
     return render(request, 'Index/editarExpediente.html', context)
 
 @login_required

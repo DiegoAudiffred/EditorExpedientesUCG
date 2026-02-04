@@ -52,19 +52,19 @@
     function render() {
         const repList = document.getElementById("rep-list");
         repList.innerHTML = reps.map((x, i) => `
-            <div class="input-group m-3 w-75">
+            <div class="input-group my-2 w-100">
                 <span class="input-group-text bg-primary text-white">Rep.</span>
                 <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-                <button class="btn btn-danger" type="button" onclick="reps.splice(${i},1); render();">X</button>
+                <button class="btn btn-primary" type="button" onclick="reps.splice(${i},1); render();">X</button>
             </div>
         `).join("");
 
         const oblList = document.getElementById("obl-list");
         oblList.innerHTML = obls.map((x, i) => `
-            <div class="input-group m-3 w-75">
+            <div class="input-group my-2 w-100">
                 <span class="input-group-text bg-primary text-white">Obl.</span>
                 <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
-                <button class="btn btn-danger" type="button" onclick="obls.splice(${i},1); render();">X</button>
+                <button class="btn btn-primary" type="button" onclick="obls.splice(${i},1); render();">X</button>
             </div>
         `).join("");
 

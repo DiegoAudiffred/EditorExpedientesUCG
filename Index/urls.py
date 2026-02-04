@@ -21,6 +21,8 @@ urlpatterns = [
     path('expediente/exportarExcel/<int:id>/',views.exportarExcel,name ='exportarExcel'),
     path('expediente/exportarPDF/<int:id>/',views.exportarPDF,name ='exportarPDF'),
     path('obtener-lineas-socio/<int:socio_id>/',views.obtener_lineas_socio,name ='obtener_lineas_socio'),
+    path('expediente/agregarObligados/<int:id>/',views.agregarObligados,name ='agregarObligados'),
+    path('expediente/agregarRepresentantes/<int:id>/',views.agregarRepresentantes,name ='agregarRepresentantes'),
 
     path('editar/', views.editar_layout, name='editar_layout'),
 
