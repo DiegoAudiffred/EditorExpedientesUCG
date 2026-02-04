@@ -1,116 +1,96 @@
 {% load static %}
-        <div class="mb-4">
-            <div class="fnSuperiorRegularTitle text-quinto ">Representantes legales</div>
-            <div class="row border border-3 border-quinto rounded rounded-3">
 
+<div class="mb-4">
+    <div class="fnSuperiorRegularTitle text-quinto">Representantes legales</div>
+    <div class="row border border-3 border-quinto rounded rounded-3">
+        <div class="col-12 p-3">
+            <label>Seleccionar existente o escribir nuevo:</label>
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1" id="contenedor-select-rep">
+                    {{ rep_form.representante_selector }}
+                </div>
+                <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarRep()">
+                    Agregar
+                </button>
+            </div>
+            {{ rep_form.representantes }}
+        </div>
                 <div id="rep-list" class="col-12"></div>
 
-                <div class="col-3">
-                    <button type="button" class="btn btn-secondary my-3  text-white  mx-3 py-0 px-3"
-                        onclick="agregarRep()">
-                        <p class="fnSuperiorRegularTitle3 m-0">Agregar
-                            representante <span><svg width="28px" height="28px" viewBox="0 0 24 24" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round">
-                                    </g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round"></path>
-                                    </g>
-                                </svg></span> </p>
-                    </button>
+    </div>
+</div>
 
-                    {{ rep_form.representantes }}
+<div class="mb-4">
+    <div class="fnSuperiorRegularTitle text-quinto">Obligados solidarios y garantes</div>
+    <div class="row border border-3 border-quinto rounded rounded-3">
+        <div class="col-12 p-3">
+            <label>Seleccionar existente o escribir nuevo:</label>
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1" id="contenedor-select-obl">
+                    {{ obl_form.obligado_selector }}
                 </div>
+                <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarObl()">
+                    Agregar
+                </button>
             </div>
+            {{ obl_form.obligados }}
         </div>
-
-        <div class="mb-4">
-            <div class="fnSuperiorRegularTitle text-quinto r">Obligados solidarios y garantes</div>
-            <div class="row border border-3 border-quinto rounded rounded-3">
-
                 <div id="obl-list" class="col-12"></div>
-                <div class="col-3">
-                    <button type="button" class="btn btn-secondary my-3 text-white  mx-3 py-0 px-3"
-                        onclick="agregarObl()">
-                        <p class="fnSuperiorRegularTitle3 m-0">Agregar
-                            obligado <span><svg width="28px" height="28px" viewBox="0 0 24 24" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round">
-                                    </g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round"></path>
-                                    </g>
-                                </svg></span> </p>
-                    </button>
 
-                    {{ obl_form.obligados }}
-                </div>
-            </div>
-        </div>
+    </div>
+</div>
 
 <script>
-let reps = [];
+    let reps = [];
     let obls = [];
+
     function syncHidden() {
         document.getElementsByName("representantes")[0].value = reps.join("||");
         document.getElementsByName("obligados")[0].value = obls.join("||");
     }
+
     function render() {
         const repList = document.getElementById("rep-list");
         repList.innerHTML = reps.map((x, i) => `
-<div class="input-group m-3">
-    <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-    <button class="btn btn-danger" onclick="reps.splice(${i},1); render();">X</button>
-</div>
-`).join("");
+            <div class="input-group m-3 w-75">
+                <span class="input-group-text bg-primary text-white">Rep.</span>
+                <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
+                <button class="btn btn-danger" type="button" onclick="reps.splice(${i},1); render();">X</button>
+            </div>
+        `).join("");
 
         const oblList = document.getElementById("obl-list");
         oblList.innerHTML = obls.map((x, i) => `
-<div class="input-group m-3">
-    <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
-    <button class="btn btn-danger" onclick="obls.splice(${i},1); render();">X</button>
-</div>
-`).join("");
+            <div class="input-group m-3 w-75">
+                <span class="input-group-text bg-primary text-white">Obl.</span>
+                <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
+                <button class="btn btn-danger" type="button" onclick="obls.splice(${i},1); render();">X</button>
+            </div>
+        `).join("");
 
         syncHidden();
     }
 
     function agregarRep() {
-        reps.push("");
+        const select = document.querySelector('[name="representante_selector"]');
+        const valor = select.options[select.selectedIndex].text;
+        
+
+        const nombreParaAgregar = select.value === "" ? "" : valor;
+        
+        reps.push(nombreParaAgregar);
         render();
+        select.value = ""; 
     }
 
     function agregarObl() {
-        obls.push("");
+        const select = document.querySelector('[name="obligado_selector"]');
+        const valor = select.options[select.selectedIndex].text;
+        
+        const nombreParaAgregar = select.value === "" ? "" : valor;
+        
+        obls.push(nombreParaAgregar);
         render();
-    }
-
-    function cargarRep(repNombre) {
-        if (!socioId) {
-            tipoManualSelect.value = '';
-            tipoManualSelect.disabled = false;
-            aplicarEstiloDeshabilitado(tipoManualSelect, false);
-            nombreManualInput.disabled = false;
-            aplicarEstiloDeshabilitado(nombreManualInput, false);
-            return;
-        }
-
-        fetch(`/obtener-socio-data/${socioId}/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('No se pudo obtener el socio');
-                }
-                return response.json();
-            })
-            .then(data => {
-                tipoManualSelect.value = data.tipoPersona;
-                tipoManualSelect.disabled = true;
-                aplicarEstiloDeshabilitado(tipoManualSelect, true);
-            })
-            .catch(error => console.error('Error al cargar datos del socio:', error));
+        select.value = ""; 
     }
 </script>

@@ -5,7 +5,14 @@
 <div class="container py-4">
 
     <h4 class="mb-3 fnSuperiorRegularTitle2 text-secondary">Crear expediente</h4>
-
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
     <form method="post">
         {% csrf_token %}
 
@@ -61,13 +68,14 @@
     </form>
 
 </div>
+
 <script>
   
 
     const socioSelect = document.getElementById('id_socio');
     const nombreManualInput = document.getElementById('id_socio_manual_nombre');
     const tipoManualSelect = document.getElementById('id_socio_manual_tipo');
-    const tipoManualSelect = document.getElementById('id_socio_manual_numero');
+    const tipoManualSelectNumero = document.getElementById('id_socio_manual_numero');
 
 
 
@@ -83,7 +91,11 @@
         if (!socioId) {
             tipoManualSelect.value = '';
             tipoManualSelect.disabled = false;
+            tipoManualSelectNumero.value = '';
+            tipoManualSelectNumero.disabled = false;
             aplicarEstiloDeshabilitado(tipoManualSelect, false);
+            aplicarEstiloDeshabilitado(tipoManualSelectNumero, false);
+
             nombreManualInput.disabled = false;
             aplicarEstiloDeshabilitado(nombreManualInput, false);
             return;
@@ -99,30 +111,42 @@
             .then(data => {
                 tipoManualSelect.value = data.tipoPersona;
                 tipoManualSelect.disabled = true;
+                tipoManualSelectNumero.value = data.numeroKepler;
+                tipoManualSelectNumero.disabled = true;
                 aplicarEstiloDeshabilitado(tipoManualSelect, true);
+                aplicarEstiloDeshabilitado(tipoManualSelectNumero, true);
+
             })
             .catch(error => console.error('Error al cargar datos del socio:', error));
     }
 
-    function handleSocioSelectChange() {
-        const selectedValue = socioSelect.value;
-        if (selectedValue && selectedValue !== '') {
-            nombreManualInput.value = '';
-            tipoManualSelect.disabled = true;
-            aplicarEstiloDeshabilitado(tipoManualSelect, true);
-            nombreManualInput.disabled = true;
-            aplicarEstiloDeshabilitado(nombreManualInput, true);
-            cargarSocio(selectedValue);
-        } else {
-            tipoManualSelect.disabled = false;
-            aplicarEstiloDeshabilitado(tipoManualSelect, false);
-            nombreManualInput.disabled = false;
-            aplicarEstiloDeshabilitado(nombreManualInput, false);
-            tipoManualSelect.value = '';
+ function handleSocioSelectChange() {
+    const selectedValue = socioSelect.value;
+    if (selectedValue && selectedValue !== '') {
+        nombreManualInput.value = '';
+        
+        tipoManualSelect.disabled = true;
+        nombreManualInput.disabled = true;
+        tipoManualSelectNumero.disabled = true;
 
-  
-        }
+        aplicarEstiloDeshabilitado(tipoManualSelect, true);
+        aplicarEstiloDeshabilitado(nombreManualInput, true);
+        aplicarEstiloDeshabilitado(tipoManualSelectNumero, true);
+
+        cargarSocio(selectedValue);
+    } else {
+        tipoManualSelect.disabled = false;
+        nombreManualInput.disabled = false;
+        tipoManualSelectNumero.disabled = false;
+
+        aplicarEstiloDeshabilitado(tipoManualSelect, false);
+        aplicarEstiloDeshabilitado(nombreManualInput, false);
+        aplicarEstiloDeshabilitado(tipoManualSelectNumero, false);
+        
+        tipoManualSelect.value = '';
+        tipoManualSelectNumero.value = '';
     }
+}
 
     function handleManualInputChange() {
         const manualName = nombreManualInput.value.trim();
@@ -130,6 +154,8 @@
             socioSelect.value = '';
             tipoManualSelect.disabled = false;
             aplicarEstiloDeshabilitado(tipoManualSelect, false);
+            tipoManualSelectNumero.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelectNumero, false);
         }
         handleSocioSelectChange();
     }

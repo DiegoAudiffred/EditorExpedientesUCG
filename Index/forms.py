@@ -103,7 +103,7 @@ class ExpedienteCrearForm(forms.ModelForm):
     socio = forms.ModelChoiceField(
         queryset=Socio.objects.all(), 
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control', 'onchange': 'cargarLineas()', 'id': 'id_socio'}),
+        widget=forms.Select(attrs={'class': 'form-control',  'id': 'id_socio'}), #'onchange': 'cargarLineas()'
         empty_label="--- Seleccionar Socio Existente ---"
     )
 
@@ -167,7 +167,48 @@ class ExpedienteCrearForm(forms.ModelForm):
                 self.add_error('socio_manual_nombre', 'El nombre del nuevo socio no puede estar vacío.')
 
         return cleaned_data
+    
+class CrearObligado(forms.ModelForm):
+    obligados = forms.CharField(widget=forms.HiddenInput(), required=False)
+    obligado_selector = forms.ModelChoiceField(
+        queryset=ObligadoSolidario.objects.all(),
+        label="Obligado a Editar/Crear",
+        empty_label="--- Nuevo Obligado ---",
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2'})
+    )
 
+    class Meta:
+        model = ObligadoSolidario
+        fields = ['nombre']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nombre'].required = False
+
+class CrearRepresentante(forms.ModelForm):
+    representantes = forms.CharField(widget=forms.HiddenInput(), required=False)
+    representante_selector = forms.ModelChoiceField(
+        queryset=RepresentanteLegal.objects.all(),
+        label="Representante a Editar/Crear",
+        empty_label="--- Nuevo Representante ---",
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2'})
+    )
+
+    class Meta:
+        model = RepresentanteLegal
+        fields = ['nombre']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nombre'].required = False
 class LineaCrearForm(forms.ModelForm):
     class Meta:
         model = Linea
@@ -185,17 +226,7 @@ class LineaCrearForm(forms.ModelForm):
             check_style = 'form-check-input fs-2 my-0'
             self.fields['vigente'].widget.attrs.update({'class': check_style})
 
-class RepresentantesForm(forms.Form):
-    representantes = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
 
-class ObligadosForm(forms.Form):
-    obligados = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
 
 class ModificarEstados(forms.ModelForm):
     class Meta:

@@ -91,11 +91,13 @@ class Socio(models.Model):
 
 class RepresentanteLegal(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-
+    def __str__(self):
+        return self.nombre
 class ObligadoSolidario(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
-
+    def __str__(self):
+        return self.nombre
   
     
 class Estado(models.Model):

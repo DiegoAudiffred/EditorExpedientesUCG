@@ -20,6 +20,8 @@ from openpyxl.styles import *
 from openpyxl.styles.borders import Border, Side
 import smtplib
 from email.message import EmailMessage
+from django.db.models.functions import Cast
+from django.db.models import FloatField
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
     return user.roles == 'Administrador'
@@ -265,7 +267,7 @@ def checarRuta(ruta, secciones):
             ruta_busqueda = mapeo_secciones.get(prefijo)
             if not ruta_busqueda or not os.path.exists(ruta_busqueda):
                 continue
-            print(ruta_busqueda)
+            #print(ruta_busqueda)
             archivo_mas_reciente = None
             mtime_maximo = 0
 
@@ -291,7 +293,7 @@ def checarRuta(ruta, secciones):
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
-    print(resultados)
+    #print(resultados)
     return resultados
             
 
@@ -332,8 +334,8 @@ def expediente_llenar(request, id):
 def expediente_crear(request):
     if request.method == "POST":
         exp_form = ExpedienteCrearForm(request.POST)
-        rep_form = RepresentantesForm(request.POST)
-        obl_form = ObligadosForm(request.POST)
+        rep_form = CrearRepresentante(request.POST)
+        obl_form = CrearObligado(request.POST)
 
         if exp_form.is_valid() and rep_form.is_valid() and obl_form.is_valid():
             try:
@@ -346,62 +348,114 @@ def expediente_crear(request):
                 if socio_existente:
                     socio_a_asignar = socio_existente
                 elif nombre_manual and tipo_manual:
-                    socio_a_asignar = Socio.objects.create(nombre=nombre_manual, tipoPersona=tipo_manual,numeroKepler=numeroK)
+                    socio_a_asignar = Socio.objects.create(
+                        nombre=nombre_manual, 
+                        tipoPersona=tipo_manual, 
+                        numeroKepler=numeroK
+                    )
                 
                 if not socio_a_asignar:
-                    return JsonResponse({'success': False, 'error': "No se encontró socio."}, status=400)
+                    print("--- ERROR: No se pudo determinar el socio ---")
+                    return JsonResponse({
+                        'success': False, 
+                        'error': "Debe seleccionar un socio existente o completar los datos manuales."
+                    }, status=400)
 
                 tipo_persona = socio_a_asignar.tipoPersona
                 tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
                 area_socio = tipo_persona_map.get(tipo_persona)
 
-     
                 reps_raw = rep_form.cleaned_data.get('representantes', '').strip().strip("|")
                 nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
+                
                 obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
                 nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
 
-                for rep in nombres_reps:
-
-                    RepresentanteLegal.objects.get_or_create(nombre=rep)  
-                for obls in nombres_obls:
-
-                    ObligadoSolidario.objects.get_or_create(nombre=obls,tipoPersona="F")  
-
                 if tipo_persona == 'M' and (not nombres_reps or not nombres_obls):
-                    return JsonResponse({'success': False, 'error': "Faltan representantes u obligados para Persona Moral."}, status=400)
+                    print("--- ERROR: Persona Moral sin representantes/obligados ---")
+                    return JsonResponse({
+                        'success': False, 
+                        'error': "Las Personas Morales requieren representantes y obligados."
+                    }, status=400)
+
+                for rep_nombre in nombres_reps:
+                    RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)  
+                
+                for obl_nombre in nombres_obls:
+                    ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")  
 
                 expediente = exp_form.save(commit=False)
                 expediente.socio = socio_a_asignar
                 expediente.estatus_id = 1
                 expediente.save()
-              
 
                 SECCIONES = SeccionesExpediente.SECCIONES
                 for tipo_sec, titulo_sec in SECCIONES:
                     if tipo_sec == 'B':
                         for nombre in nombres_reps:
-                            nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec, tituloSeccion=f"{titulo_sec} - {nombre}")
+                            nueva = SeccionesExpediente.objects.create(
+                                expediente=expediente, 
+                                tipoDeSeccion=tipo_sec, 
+                                tituloSeccion=f"{titulo_sec} - {nombre}"
+                            )
                             _generar_con_debug_extremo(nueva, area_socio)
                     elif tipo_sec == 'C':
                         for nombre in nombres_obls:
-                            nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec, tituloSeccion=f"{titulo_sec} - {nombre}")
+                            nueva = SeccionesExpediente.objects.create(
+                                expediente=expediente, 
+                                tipoDeSeccion=tipo_sec, 
+                                tituloSeccion=f"{titulo_sec} - {nombre}"
+                            )
                             _generar_con_debug_extremo(nueva, area_socio)
                     else:
-                        nueva = SeccionesExpediente.objects.create(expediente=expediente, tipoDeSeccion=tipo_sec)
+                        nueva = SeccionesExpediente.objects.create(
+                            expediente=expediente, 
+                            tipoDeSeccion=tipo_sec
+                        )
                         _generar_con_debug_extremo(nueva, area_socio)
 
-                return JsonResponse({'success': True, 'redirect_url': reverse('Index:expedientesLayout')})
+                return JsonResponse({
+                    'success': True, 
+                    'redirect_url': reverse('Index:expedientesLayout')
+                })
 
             except Exception as e:
-                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+                print(f"--- EXCEPCIÓN EN PROCESO DE GUARDADO ---\n{str(e)}")
+                return JsonResponse({
+                    'success': False, 
+                    'error': f"Ocurrió un error inesperado: {str(e)}"
+                }, status=500)
+        else:
+            print("\n--- ERRORES DE VALIDACIÓN ---")
+            print(f"Exp: {exp_form.errors}")
+            print(f"Rep: {rep_form.errors}")
+            print(f"Obl: {obl_form.errors}\n")
+            
+            error_msg = "Datos inválidos en el formulario. Revise los campos."
+            if exp_form.errors:
+                error_msg = f"Error en Expediente: {exp_form.errors.as_text()}"
                 
-        return JsonResponse({'success': False, 'error': "Formulario no válido."}, status=400)
+            return JsonResponse({
+                'success': False, 
+                'error': error_msg
+            }, status=400)
 
-    return render(request, 'Index/crearExpediente.html', {'exp_form': ExpedienteCrearForm(), 'rep_form': RepresentantesForm(), 'obl_form': ObligadosForm()})
+    exp_form = ExpedienteCrearForm()
+    rep_form = CrearRepresentante()
+    obl_form = CrearObligado()
+    
+    return render(request, 'Index/crearExpediente.html', {
+        'exp_form': exp_form, 
+        'rep_form': rep_form, 
+        'obl_form': obl_form
+    })
 
-from django.db.models.functions import Cast
-from django.db.models import FloatField
+
+
+
+
+
+
 def _generar_con_debug_extremo(seccion_obj, area_socio):
     filtro_permitido = [area_socio, 'Ambas']
     
@@ -432,7 +486,7 @@ def expediente_eliminar(request,id):
 def correroParaRevision(expediente):
     #scortes@ucg.com.mx 
     # "daudiffred@ucg.com.mx" 
-    destinatario = "portiz@ucg.com.mx"
+    destinatario = "daudiffred@ucg.com.mx"
     dominio = "http://192.168.0.132:8000/expedientes/editarExpediente/"
     url_final = f"{dominio}{expediente.id}/"
     asunto = "Informe listo para revisión"
@@ -499,8 +553,6 @@ def expediente_cambiar_status(request, id):
 
     if request.method == "POST":
         nuevo_estatus_id = request.POST.get("estatus")
-        print(nuevo_estatus_id)
-        print(str(expediente.estatus.id))
         if nuevo_estatus_id and  nuevo_estatus_id != str(expediente.estatus.id)  :
             if nuevo_estatus_id == "2" :
                 correroParaRevision(expediente)
@@ -596,10 +648,8 @@ def obtener_socio_data(request, socio_id):
 
 def obtener_lineas_socio(request, socio_id):
     socio = Socio.objects.get(pk=socio_id)
-    print(socio)
     socio_id = request.GET.get('socio_id')
     lineas = Linea.objects.filter(socio_id=socio).values('id', 'numero', 'monto')
-    print(lineas)
     return JsonResponse(list(lineas), safe=False)
 
 @login_required(login_url='/login/')
