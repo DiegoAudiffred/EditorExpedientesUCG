@@ -21,6 +21,8 @@ from openpyxl.styles.borders import Border, Side
 import smtplib
 from email.message import EmailMessage
 from django.db.models.functions import Cast
+from django.db import transaction
+
 from django.db.models import FloatField
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
@@ -99,46 +101,68 @@ def filtrar_expedientes_ajax(request):
 
 def agregarRepresentantes(request, id):
     if request.method == 'POST':
-        expediente = Expediente.objects.get(id=id)
-        reps_raw = request.POST.get('representantes', '').strip().strip("|")
-        nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
-        
-        for nombre in nombres_reps:
-            representante, created = RepresentanteLegal.objects.get_or_create(
-                nombre=nombre
-            )
-            representante.expedientes.add(expediente)
+        try:
+            expediente = Expediente.objects.get(id=id)
+            reps_raw = request.POST.get('representantes', '').strip().strip("|")
+            nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
             
-        return JsonResponse({'status': 'ok'})
-    return JsonResponse({'status': 'error'}, status=400)
-  
-def agregarObligados(request,id):
-    print("Se agregara Obl")
-    if request.method == 'POST':
-        expediente = Expediente.objects.get(id=id)
-        obls_raw = request.POST.get('obligados', '').strip().strip("|")
-        nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
-        
-        for nombre in nombres_obls:
-            representante, created = ObligadoSolidario.objects.get_or_create(
-                nombre=nombre
-            )
-            representante.expedientes.add(expediente)
-            
-        return JsonResponse({'status': 'ok'})
-    return JsonResponse({'status': 'error'}, status=400)
-        #obl_form = CrearObligado()
+            tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
+            area_socio = tipo_persona_map.get(expediente.socio.tipoPersona)
 
-        #obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
-    #nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
-    
-    #for rep_nombre in nombres_reps:
-    #    RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)  
+            for nombre in nombres_reps:
+                representante, created_rep = RepresentanteLegal.objects.get_or_create(
+                    nombre=nombre
+                )
+                representante.expedientes.add(expediente)
                 
-    #for obl_nombre in nombres_obls:
-    #    ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")
-  
+                nueva, created_sec = SeccionesExpediente.objects.get_or_create(
+                    expediente=expediente,
+                    tipoDeSeccion='B',
+                    tituloSeccion=f"Representante legal - {nombre}"
+                )
+                
+                if created_sec:
+                    _generar_con_debug_extremo(nueva, area_socio)
+                
+            return JsonResponse({'status': 'ok'})
+        except Exception as e:
+            print(f"Error en agregarRepresentantes: {e}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+    return JsonResponse({'status': 'error'}, status=400)
 
+def agregarObligados(request, id):
+    if request.method == 'POST':
+        try:
+            expediente = Expediente.objects.get(id=id)
+            obls_raw = request.POST.get('obligados', '').strip().strip("|")
+            nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+            
+            tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
+            area_socio = tipo_persona_map.get(expediente.socio.tipoPersona)
+
+            for nombre in nombres_obls:
+                obligado, created_obl = ObligadoSolidario.objects.get_or_create(
+                    nombre=nombre,
+                    tipoPersona="F"
+                )
+                obligado.expedientes.add(expediente)
+
+                nueva, created_sec = SeccionesExpediente.objects.get_or_create(
+                    expediente=expediente,
+                    tipoDeSeccion='C',
+                    tituloSeccion=f"Obligado solidario y garantes - {nombre}"
+                )
+                
+                if created_sec:
+                    _generar_con_debug_extremo(nueva, area_socio)
+                
+            return JsonResponse({'status': 'ok'})
+        except Exception as e:
+            print(f"Error en agregarObligados: {e}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error'}, status=400)
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
 
@@ -371,7 +395,8 @@ def expediente_llenar(request, id):
 
 
 @login_required(login_url='/login/')
-def expediente_crear(request):
+
+def crearExpediente(request):
     if request.method == "POST":
         exp_form = ExpedienteCrearForm(request.POST)
         rep_form = CrearRepresentante(request.POST)
@@ -379,121 +404,100 @@ def expediente_crear(request):
 
         if exp_form.is_valid() and rep_form.is_valid() and obl_form.is_valid():
             try:
-                socio_existente = exp_form.cleaned_data.get('socio')
-                nombre_manual = exp_form.cleaned_data.get('socio_manual_nombre')
-                tipo_manual = exp_form.cleaned_data.get('socio_manual_tipo')
-                numeroK = exp_form.cleaned_data.get('socio_manual_numero')
+                with transaction.atomic():
+                    socio_existente = exp_form.cleaned_data.get('socio')
+                    nombre_manual = exp_form.cleaned_data.get('socio_manual_nombre')
+                    tipo_manual = exp_form.cleaned_data.get('socio_manual_tipo')
+                    numeroK = exp_form.cleaned_data.get('socio_manual_numero')
 
-                socio_a_asignar = None
-                if socio_existente:
-                    socio_a_asignar = socio_existente
-                elif nombre_manual and tipo_manual:
-                    socio_a_asignar = Socio.objects.create(
-                        nombre=nombre_manual, 
-                        tipoPersona=tipo_manual, 
-                        numeroKepler=numeroK
-                    )
-                
-                if not socio_a_asignar:
-                    print("--- ERROR: No se pudo determinar el socio ---")
-                    return JsonResponse({
-                        'success': False, 
-                        'error': "Debe seleccionar un socio existente o completar los datos manuales."
-                    }, status=400)
-
-                tipo_persona = socio_a_asignar.tipoPersona
-                tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
-                area_socio = tipo_persona_map.get(tipo_persona)
-
-                reps_raw = rep_form.cleaned_data.get('representantes', '').strip().strip("|")
-                nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
-                
-                obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
-                nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
-
-                if tipo_persona == 'M' and (not nombres_reps or not nombres_obls):
-                    print("--- ERROR: Persona Moral sin representantes/obligados ---")
-                    return JsonResponse({
-                        'success': False, 
-                        'error': "Las Personas Morales requieren representantes y obligados."
-                    }, status=400)
-
-
-
-                expediente = exp_form.save(commit=False)
-                expediente.socio = socio_a_asignar
-                expediente.estatus_id = 1
-                expediente.save()
-                for rep_nombre in nombres_reps:
-                    representante, created =RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)  
-          
-                    representante.expedientes.add(expediente)
-
-                for obl_nombre in nombres_obls:
-                    obligado, created = ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")  
-
-                    obligado.expedientes.add(expediente)
-                SECCIONES = SeccionesExpediente.SECCIONES
-                for tipo_sec, titulo_sec in SECCIONES:
-                    if tipo_sec == 'B':
-                        for nombre in nombres_reps:
-                            nueva = SeccionesExpediente.objects.create(
-                                expediente=expediente, 
-                                tipoDeSeccion=tipo_sec, 
-                                tituloSeccion=f"{titulo_sec} - {nombre}"
-                            )
-                            _generar_con_debug_extremo(nueva, area_socio)
-                    elif tipo_sec == 'C':
-                        for nombre in nombres_obls:
-                            nueva = SeccionesExpediente.objects.create(
-                                expediente=expediente, 
-                                tipoDeSeccion=tipo_sec, 
-                                tituloSeccion=f"{titulo_sec} - {nombre}"
-                            )
-                            _generar_con_debug_extremo(nueva, area_socio)
-                    else:
-                        nueva = SeccionesExpediente.objects.create(
-                            expediente=expediente, 
-                            tipoDeSeccion=tipo_sec
+                    socio_a_asignar = None
+                    if socio_existente:
+                        socio_a_asignar = socio_existente
+                    elif nombre_manual and tipo_manual:
+                        socio_a_asignar = Socio.objects.create(
+                            nombre=nombre_manual, 
+                            tipoPersona=tipo_manual, 
+                            numeroKepler=numeroK
                         )
-                        _generar_con_debug_extremo(nueva, area_socio)
+                    
+                    if not socio_a_asignar:
+                        raise ValueError("Debe seleccionar un socio existente o completar los datos manuales.")
+
+                    tipo_persona = socio_a_asignar.tipoPersona
+                    tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
+                    area_socio = tipo_persona_map.get(tipo_persona)
+
+                    reps_raw = rep_form.cleaned_data.get('representantes', '').strip().strip("|")
+                    nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
+                    
+                    obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
+                    nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+
+                    if tipo_persona == 'M' and (not nombres_reps or not nombres_obls):
+                        raise ValueError("Las Personas Morales requieren representantes y obligados.")
+
+                    expediente = exp_form.save(commit=False)
+                    expediente.socio = socio_a_asignar
+                    expediente.estatus_id = 1
+                    expediente.save()
+
+                    for rep_nombre in nombres_reps:
+                        representante, created = RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)
+                        representante.expedientes.add(expediente)
+
+                    for obl_nombre in nombres_obls:
+                        obligado, created = ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")
+                        obligado.expedientes.add(expediente)
+
+                    SECCIONES = SeccionesExpediente.SECCIONES
+                    for tipo_sec, titulo_sec in SECCIONES:
+                        if tipo_sec == 'B':
+                            for nombre in nombres_reps:
+                                nueva = SeccionesExpediente.objects.create(
+                                    expediente=expediente, 
+                                    tipoDeSeccion=tipo_sec, 
+                                    tituloSeccion=f"{titulo_sec} - {nombre}"
+                                )
+                                _generar_con_debug_extremo(nueva, area_socio)
+                        elif tipo_sec == 'C':
+                            for nombre in nombres_obls:
+                                nueva = SeccionesExpediente.objects.create(
+                                    expediente=expediente, 
+                                    tipoDeSeccion=tipo_sec, 
+                                    tituloSeccion=f"{titulo_sec} - {nombre}"
+                                )
+                                _generar_con_debug_extremo(nueva, area_socio)
+                        else:
+                            nueva = SeccionesExpediente.objects.create(
+                                expediente=expediente, 
+                                tipoDeSeccion=tipo_sec
+                            )
+                            _generar_con_debug_extremo(nueva, area_socio)
 
                 return JsonResponse({
                     'success': True, 
                     'redirect_url': reverse('Index:expedientesLayout')
                 })
 
+            except ValueError as e:
+                return JsonResponse({'success': False, 'error': str(e)}, status=400)
             except Exception as e:
-                print(f"--- EXCEPCIÓN EN PROCESO DE GUARDADO ---\n{str(e)}")
                 return JsonResponse({
                     'success': False, 
                     'error': f"Ocurrió un error inesperado: {str(e)}"
                 }, status=500)
         else:
-            print("\n--- ERRORES DE VALIDACIÓN ---")
-            print(f"Exp: {exp_form.errors}")
-            print(f"Rep: {rep_form.errors}")
-            print(f"Obl: {obl_form.errors}\n")
-            
-            error_msg = "Datos inválidos en el formulario. Revise los campos."
-            if exp_form.errors:
-                error_msg = f"Error en Expediente: {exp_form.errors.as_text()}"
-                
-            return JsonResponse({
-                'success': False, 
-                'error': error_msg
-            }, status=400)
+            error_msg = f"Errores: {exp_form.errors.as_text()} {rep_form.errors.as_text()} {obl_form.errors.as_text()}"
+            return JsonResponse({'success': False, 'error': error_msg}, status=400)
 
     exp_form = ExpedienteCrearForm()
     rep_form = CrearRepresentante()
     obl_form = CrearObligado()
-    
     return render(request, 'Index/crearExpediente.html', {
         'exp_form': exp_form, 
         'rep_form': rep_form, 
         'obl_form': obl_form
     })
-
 
 
 
@@ -530,7 +534,7 @@ def expediente_eliminar(request,id):
 def correroParaRevision(expediente):
     #scortes@ucg.com.mx 
     # "daudiffred@ucg.com.mx" 
-    destinatario = "daudiffred@ucg.com.mx"
+    destinatario = "bvillanueva@ucg.com.mx"
     dominio = "http://192.168.0.132:8000/expedientes/editarExpediente/"
     url_final = f"{dominio}{expediente.id}/"
     asunto = "Informe listo para revisión"

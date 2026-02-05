@@ -81,10 +81,12 @@ class User(AbstractUser):
 class Socio(models.Model):
     #id por default
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    #apellidoP
+    #apellidoM
     tipoPersona = models.CharField("Tipo",max_length=1,null=True,choices=TipoPersona)
     is_socio = models.BooleanField("Socio",default=True)
-    is_obligado = models.BooleanField("Obligado Solidario",default=False)
-    is_representante = models.BooleanField("Representante Legal",default=False)
+    #is_obligado = models.BooleanField("Obligado Solidario",default=False)
+    #is_representante = models.BooleanField("Representante Legal",default=False)
     numeroKepler = models.CharField("Numero en Kepler",default="",null=True,blank=True)
     def __str__(self):
         return self.nombre
@@ -110,6 +112,15 @@ class Expediente(models.Model):
     usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
     eliminado = models.BooleanField(default=False)
+    fases = (
+        ('1', 'Centro de Negocios'), 
+        ('2', 'Creditos'), 
+        ('3', 'Administrador'),  
+        ('4', 'Credito'),
+        ('5', 'Juridico'), 
+        ('6', 'Visitante'), 
+
+    )
     def __str__(self):
         return f"{self.socio}"
     

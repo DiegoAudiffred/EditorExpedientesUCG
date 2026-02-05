@@ -13,7 +13,7 @@ urlpatterns = [
     path("expedientes/",views.expedientesLayout,name='expedientesLayout'),
 
     path('expedientes/filtrar/', views.filtrar_expedientes_ajax, name='filtrar_expedientes_ajax'),
-    path('expediente/crear/', views.expediente_crear, name='expediente_crear'),
+    path('expediente/crear/', views.crearExpediente, name='crearExpediente'),
     path('expediente/eliminar/<int:id>/', views.expediente_eliminar, name='expediente_eliminar'),
     path("expedientes/editarExpediente/<int:id>/",views.editarExpediente,name='editarExpediente'),
     path('expediente/cambiarStatus/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
