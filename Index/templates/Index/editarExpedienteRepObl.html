@@ -23,9 +23,9 @@
 
             </div>
             <div class="col-12 text-end">
-                <a href="{% url 'Index:agregarObligados' expediente.id %}"
-                    class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">Agregar
-                    Obligados</a>
+    <button type="button" onclick="enviarObligados()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
+    Guardar Obligados
+</button>
 
             </div>
         </div>
@@ -55,8 +55,9 @@
 
             </div>
             <div class="col-12 text-end">
-                <a href="{% url 'Index:agregarRepresentantes' expediente.id %}" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">Agregar
-                    Representantes</a>
+    <button type="button" onclick="enviarRepresentantes()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
+    Guardar Representantes
+</button>
 
             </div>
         </div>
@@ -115,4 +116,57 @@
         render();
         select.value = "";
     }
+    async function enviarRepresentantes() {
+    const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    const formData = new FormData();
+    formData.append('representantes', reps.join("||"));
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Representantes guardados correctamente");
+            location.reload(); 
+        } else {
+            alert("Error al guardar");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+async function enviarObligados() {
+    const url = "{% url 'Index:agregarObligados' expediente.id %}";
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    const formData = new FormData();
+    formData.append('obligados', obls.join("||"));
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Obligados guardados correctamente");
+            location.reload();
+        } else {
+            alert("Error al guardar");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
 </script>

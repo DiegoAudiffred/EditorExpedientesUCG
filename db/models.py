@@ -89,15 +89,7 @@ class Socio(models.Model):
     def __str__(self):
         return self.nombre
 
-class RepresentanteLegal(models.Model):
-    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    def __str__(self):
-        return self.nombre
-class ObligadoSolidario(models.Model):
-    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
-    def __str__(self):
-        return self.nombre
+
   
     
 class Estado(models.Model):
@@ -120,7 +112,19 @@ class Expediente(models.Model):
     eliminado = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.socio}"
+    
+class RepresentanteLegal(models.Model):
+    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes",blank=True,null=True)
+    def __str__(self):
+        return self.nombre
+class ObligadoSolidario(models.Model):
+    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados",blank=True,null=True)
 
+    tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
+    def __str__(self):
+        return self.nombre
 class Linea(models.Model):
     tipoLinea = (
         ("Libre","Libre"),

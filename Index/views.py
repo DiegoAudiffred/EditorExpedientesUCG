@@ -97,14 +97,51 @@ def filtrar_expedientes_ajax(request):
 
     return render(request, 'Index/tablaExpedientex.html', context)
 
-def agregarRepresentantes(request,id):
-    print("Se agregara Rep")
+def agregarRepresentantes(request, id):
+    if request.method == 'POST':
+        expediente = Expediente.objects.get(id=id)
+        reps_raw = request.POST.get('representantes', '').strip().strip("|")
+        nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
+        
+        for nombre in nombres_reps:
+            representante, created = RepresentanteLegal.objects.get_or_create(
+                nombre=nombre
+            )
+            representante.expedientes.add(expediente)
+            
+        return JsonResponse({'status': 'ok'})
+    return JsonResponse({'status': 'error'}, status=400)
+  
 def agregarObligados(request,id):
     print("Se agregara Obl")
+    if request.method == 'POST':
+        expediente = Expediente.objects.get(id=id)
+        obls_raw = request.POST.get('obligados', '').strip().strip("|")
+        nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+        
+        for nombre in nombres_obls:
+            representante, created = ObligadoSolidario.objects.get_or_create(
+                nombre=nombre
+            )
+            representante.expedientes.add(expediente)
+            
+        return JsonResponse({'status': 'ok'})
+    return JsonResponse({'status': 'error'}, status=400)
+        #obl_form = CrearObligado()
 
+        #obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
+    #nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+    
+    #for rep_nombre in nombres_reps:
+    #    RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)  
+                
+    #for obl_nombre in nombres_obls:
+    #    ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")
+  
 
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
+
     expediente = get_object_or_404(Expediente, pk=id)
     lineasLista = Linea.objects.filter(expediente=expediente)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
@@ -214,6 +251,10 @@ def editarExpediente(request, id):
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
     context['rep_form']=rep_form
     context["obl_form"]=obl_form
+    lista_reps = RepresentanteLegal.objects.filter(expedientes=expediente)
+    lista_obls = ObligadoSolidario.objects.filter(expedientes=expediente)
+    context['lista_reps']=lista_reps
+    context["lista_obls"]=lista_obls
     return render(request, 'Index/editarExpediente.html', context)
 
 @login_required
@@ -377,17 +418,21 @@ def expediente_crear(request):
                         'error': "Las Personas Morales requieren representantes y obligados."
                     }, status=400)
 
-                for rep_nombre in nombres_reps:
-                    RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)  
-                
-                for obl_nombre in nombres_obls:
-                    ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")  
+
 
                 expediente = exp_form.save(commit=False)
                 expediente.socio = socio_a_asignar
                 expediente.estatus_id = 1
                 expediente.save()
+                for rep_nombre in nombres_reps:
+                    representante, created =RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)  
+          
+                    representante.expedientes.add(expediente)
 
+                for obl_nombre in nombres_obls:
+                    obligado, created = ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")  
+
+                    obligado.expedientes.add(expediente)
                 SECCIONES = SeccionesExpediente.SECCIONES
                 for tipo_sec, titulo_sec in SECCIONES:
                     if tipo_sec == 'B':

@@ -71,12 +71,31 @@
             </svg>
         </span>
     </h5>
-<button class="btn btn-outline-primary fw-bold border-3 px-4 shadow-sm mb-2" 
+<button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
         type="button" 
         data-bs-toggle="collapse" 
         data-bs-target="#collapseLineas" 
         aria-expanded="false">
     <i class="bi bi-list-ul me-2"></i>Lista de líneas
+</button>
+
+
+
+<button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
+        type="button" 
+        data-bs-toggle="collapse" 
+        data-bs-target="#collapseObligados" 
+        aria-expanded="false">
+    <i class="bi bi-list-ul me-2"></i>Lista de Obligados Solidarios
+</button>
+
+
+<button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
+        type="button" 
+        data-bs-toggle="collapse" 
+        data-bs-target="#collapseRepresentantes" 
+        aria-expanded="false">
+    <i class="bi bi-list-ul me-2"></i>Lista de Representantes Legales
 </button>
 
 <div class="collapse" id="collapseLineas">
@@ -149,6 +168,119 @@
         </div>
     </div>
 </div>
+<div class="collapse" id="collapseObligados">
+    <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
+        <div class="list-group list-group-flush">
+                        <h2>Lista de Obligados Solidarios del Expediente </h2>
+
+            {% for linea in lista_obls %}
+            <hr class="m-2">
+            <div class="list-group-item d-flex justify-content-between align-items-center py-0">
+                <div>
+                    <span class="text-secondary small d-block">Nombre</span>
+                    <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+                </div>
+                
+   
+                <div class="text-center">
+                    <span class="text-secondary small d-block">Anexar</span>
+                    <button class="btn btn-white text-primary p-1 border border-primary border-3 rounded rounded-3 " data-bs-toggle="modal" data-bs-target="#linea-{{linea.id}}-modal"><strong>Anexar a expediente</strong> </button>
+                </div>
+                <div class="modal fade" id="linea-{{linea.id}}-modal" tabindex="-1" aria-labelledby="linea-{{linea.id}}-modalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header bg-tercero text-white">
+                        <h3 class="modal-title" id="linea-{{linea.id}}-modalLabel ">Apartados de linea 1</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                <h5>
+                    Se crearan las secciones 
+                    <span class="text-quinto text-decoration-underline" style="color: #ff5733; font-weight: bold;">Información de Garantias</span> 
+                    y 
+                    <span class="text-quinto text-decoration-underline" style="color: #ff5733; font-weight: bold;">Contratos</span> 
+                    para la linea: 
+                    <strong class="text-primary" style="color: #007bff;">{{linea.numero}}</strong>
+                    para el expediente del socio 
+                    <strong class="text-primary" style="color: #007bff;">{{expediente.socio.nombre}}</strong>
+                </h5>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary text-white">Crear apartados</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                                
+                            </div>
+            {% empty %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay líneas registradas
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="collapse" id="collapseRepresentantes">
+    <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
+         <div class="list-group list-group-flush">
+                        <h2>Lista de Representantes Legales del Expediente </h2>
+
+            {% for linea in lista_reps %}
+            <hr class="m-2">
+            <div class="list-group-item d-flex justify-content-between align-items-center py-0">
+                <div>
+                    <span class="text-secondary small d-block">Nombre</span>
+                    <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+                </div>
+                
+   
+                <div class="text-center">
+                    <span class="text-secondary small d-block">Anexar</span>
+                    <button class="btn btn-white text-primary p-1 border border-primary border-3 rounded rounded-3 " data-bs-toggle="modal" data-bs-target="#linea-{{linea.id}}-modal"><strong>Anexar a expediente</strong> </button>
+                </div>
+                <div class="modal fade" id="linea-{{linea.id}}-modal" tabindex="-1" aria-labelledby="linea-{{linea.id}}-modalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header bg-tercero text-white">
+                        <h3 class="modal-title" id="linea-{{linea.id}}-modalLabel ">Apartados de linea 1</h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                <h5>
+                    Se crearan las secciones 
+                    <span class="text-quinto text-decoration-underline" style="color: #ff5733; font-weight: bold;">Información de Garantias</span> 
+                    y 
+                    <span class="text-quinto text-decoration-underline" style="color: #ff5733; font-weight: bold;">Contratos</span> 
+                    para la linea: 
+                    <strong class="text-primary" style="color: #007bff;">{{linea.numero}}</strong>
+                    para el expediente del socio 
+                    <strong class="text-primary" style="color: #007bff;">{{expediente.socio.nombre}}</strong>
+                </h5>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary text-white">Crear apartados</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                                
+                            </div>
+            {% empty %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay líneas registradas
+            </div>
+            {% endfor %}
+            
+        </div>
+    </div>
+</div>
+    
     <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
