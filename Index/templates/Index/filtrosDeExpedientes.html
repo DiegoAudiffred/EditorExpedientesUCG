@@ -1,14 +1,14 @@
 <div class="row d-flex align-items-end" id="filtros-expedientes" data-url="{% url 'Index:filtrar_expedientes_ajax' %}">
-    <div class="col-10">
+    <div class="col-12 col-lg-10">
         <h1 class="text-secondary fnSuperiorRegularTitle2">Panel de expedientes</h1>
     </div>
-    <div class="col-2 my-auto">
+    <div class="col-12 col-lg-2 my-auto">
         <a href="{% url 'Index:crearExpediente' %}"
             class="btn btn-sm btn-secondary me-2 text-primary w-100 fw-bold border border-3 rounded rounded-pill border-quinto w-100">Crear
             Expediente</a>
     </div>
 
-    <div class="col-2">
+    <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle text-quinto">Estatus</div>
         <select name="estatus" id="estatus-select"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
@@ -19,7 +19,7 @@
         </select>
     </div>
 
-    <div class="col-2">
+    <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle text-quinto">Asignado</div>
         <select name="usuarios" id="usuarios-select"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
@@ -30,25 +30,25 @@
         </select>
     </div>
 
-    <div class="col-3">
+    <div class="col-lg-3 col-6">
         <div class="fnSuperiorRegularTitle text-quinto">Nombre</div>
         <input type="text" id="socio-input"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero"
             placeholder="Buscar por nombre">
     </div>
 
-    <div class="col-2">
+    <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle text-quinto"> Desde</div>
         <input type="date" id="fecha-inicio-input" name="fecha_inicio"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
 
-    <div class="col-2">
+    <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle text-quinto"> Hasta</div>
         <input type="date" id="fecha-fin-input" name="fecha_fin"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
-    <div class="col-1 p-0">
+    <div class="col-lg-1 col-6">
         <button id="boton-reset-datos" class="btn bg-quinto text-white rounded rounded-4 py-1  w-100">
             Reiniciar
         </button>

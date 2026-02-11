@@ -704,7 +704,8 @@ def obtener_lineas_socio(request, socio_id):
 def exportarExcel(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     
-    ruta_directorio = fr"C:\Users\Diego Audiffred\Downloads\Lista de proyectos\PlataformaExpedientes\drAlejandro\static"
+    #ruta_directorio = fr"C:\Users\Diego Audiffred\Downloads\Lista de proyectos\PlataformaExpedientes\drAlejandro\static"
+    ruta_directorio = fr"C:\Users\Administrador\Desktop\EditorExpedientesUCG\static"
     ruta_plantilla = os.path.join(ruta_directorio, "FormatoParaExpedientes.xlsx")
     
     try:
