@@ -117,7 +117,12 @@
         </tbody>
     </table>
 </div>
-
+<div>
+<!-- <form method="POST" enctype="multipart/form-data" action="{% url 'Index:cargaInicial' %}">
+    {% csrf_token %}
+    <input type="file" name="archivo_excel" accept=".csv" required>
+    <button type="submit">Cargar Datos</button>
+</form></div> -->
 {% if show_modal_error %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {

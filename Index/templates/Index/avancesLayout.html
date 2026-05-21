@@ -2,50 +2,90 @@
 {% load static %}
 
 {% block body %}
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="container mt-4">
     <h2 class="mb-4">Progreso Detallado de Expedientes por Usuario y Estado</h2>
+    
+    {% if request.user.roles == "Administrador" or request.user.roles == "Gerente Centro de Negocios" %}
     <div class="row">
         {% for username, data in data_por_usuario.items %}
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-light">
-                    <h4>{{ username }} - Avance Total: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
-                </div>
-                <div class="card-body d-flex flex-column align-items-center">
-
-                    <div style="max-width: 250px; max-height: 250px; margin-bottom: 15px;">
-                        {% if data.total > 0 %}
-                            <canvas id="chart-{{ username }}"></canvas>
-                        {% else %}
-                            <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
-                        {% endif %}
+            {% if not data.grafica_barras %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-light">
+                        <h4>{{ username }} - Avance Total: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
                     </div>
-                    
-                    <p class="mt-3 text-center">
-                        Total de Expedientes: <strong>{{ data.total }}</strong>
-                    </p>
-                    
-                    <ul class="list-group list-group-flush w-100 mt-2">
-                        {% for estado_nombre, estado_data in data.estados.items %}
-                            {% if estado_data.count > 0 %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span style="color: {{ estado_data.color }}; font-weight: bold;">{{ estado_nombre }}</span>
-                                    <span class="badge" style="background-color: {{ estado_data.color }}; color: white; font-weight: bold;">
-                                        {{ estado_data.count }}
-                                    </span>
-                                </li>
+                    <div class="card-body d-flex flex-column align-items-center">
+                        <div style="max-width: 250px; max-height: 250px; margin-bottom: 15px;">
+                            {% if data.total > 0 %}
+                                <canvas id="chart-{{ username }}"></canvas>
+                            {% else %}
+                                <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
                             {% endif %}
-                        {% endfor %}
-                    </ul>
-
+                        </div>
+                        <p class="mt-3 text-center">
+                            Total de Expedientes: <strong>{{ data.total }}</strong>
+                        </p>
+                        <ul class="list-group list-group-flush w-100 mt-2">
+                            {% for estado_nombre, estado_data in data.estados.items %}
+                                {% if estado_data.count > 0 %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span style="color: {{ estado_data.color }}; font-weight: bold;">{{ estado_nombre }}</span>
+                                        <span class="badge" style="background-color: {{ estado_data.color }}; color: white; font-weight: bold;">
+                                            {{ estado_data.count }}
+                                        </span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
+            {% endif %}
         {% endfor %}
     </div>
+    {% endif %}
+
+    {% if request.user.roles == "Administrador" or request.user.roles == "Gerente de Credito" %}
+    <div class="row">
+        {% for username, data in data_por_usuario.items %}
+            {% if data.grafica_barras %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-light">
+                        <h4>{{ username }} - Avance Total: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
+                    </div>
+                    <div class="card-body d-flex flex-column align-items-center">
+                        <div style="width: 100%; min-height: 250px; margin-bottom: 15px;">
+                            {% if data.total > 0 %}
+                                <canvas id="chart-{{ username }}"></canvas>
+                            {% else %}
+                                <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
+                            {% endif %}
+                        </div>
+                        <p class="mt-3 text-center">
+                            Total de Expedientes: <strong>{{ data.total }}</strong>
+                        </p>
+                        <ul class="list-group list-group-flush w-100 mt-2">
+                            {% for estado_nombre, estado_data in data.estados.items %}
+                                {% if estado_data.count > 0 %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span style="color: {{ estado_data.color }}; font-weight: bold;">{{ estado_nombre }}</span>
+                                        <span class="badge" style="background-color: {{ estado_data.color }}; color: white; font-weight: bold;">
+                                            {{ estado_data.count }}
+                                        </span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 
 {{ data_por_usuario|json_script:"user-data-estados" }}
@@ -58,7 +98,7 @@
 
     const dataUsuarios = JSON.parse(dataElement.textContent);
 
-    function createProgressChart(canvasId, estadosData) {
+    function createProgressChart(canvasId, estadosData, usarBarras) {
         const ctx = document.getElementById(canvasId).getContext('2d');
         
         const labels = [];
@@ -78,25 +118,45 @@
             return;
         }
 
+        const chartType = usarBarras ? 'bar' : 'doughnut';
+        
+        const chartPlugins = usarBarras ? {
+            legend: {
+                display: false
+            }
+        } : {
+            legend: {
+                position: 'bottom',
+            }
+        };
+
+        const chartScales = usarBarras ? {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        } : {};
+
         new Chart(ctx, {
-            type: 'doughnut',
+            type: chartType,
             data: {
                 labels: labels,
                 datasets: [{
                     data: dataCounts,
                     backgroundColor: backgroundColors,
-                    borderColor: '#fff',
+                    borderColor: usarBarras ? backgroundColors : '#fff',
                     borderWidth: 2,
-                    hoverOffset: 4
+                    hoverOffset: usarBarras ? 0 : 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                scales: chartScales,
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                    },
+                    ...chartPlugins,
                     tooltip: {
                         callbacks: {
                             label: function(context) {
@@ -104,7 +164,9 @@
                                 if (label) {
                                     label += ': ';
                                 }
-                                if (context.parsed !== null) {
+                                if (context.parsed.y !== undefined) {
+                                    label += context.parsed.y;
+                                } else if (context.parsed !== null) {
                                     label += context.parsed;
                                 }
                                 return label;
@@ -122,10 +184,9 @@
             
             if (data.total > 0) {
                 const canvasId = `chart-${username}`;
-                createProgressChart(canvasId, data.estados);
+                createProgressChart(canvasId, data.estados, data.grafica_barras);
             }
         }
     }
 </script>
-
 {% endblock %}

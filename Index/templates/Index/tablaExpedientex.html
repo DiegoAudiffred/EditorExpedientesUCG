@@ -1,10 +1,13 @@
 <table class="table">
-    <thead>
+    <thead class="bg-tercero text-quinto">
         <tr>
             <th>ID</th>
             <th>Socio</th>
+            <th>Número</th>
             <th>Estatus</th>
-            <th>Asignado</th>
+            <th>Ejecutivo</th>
+            <th>Credito</th>
+
             <th>Fecha de creación</th>
             <th>Editar</th>
 
@@ -13,10 +16,18 @@
     <tbody>
         {% for expediente in expedientes %}
         <tr style="background-color: {{expediente.estatus.color}};" class="">
-            <td>{{ expediente.id }}</td>
+            <td>{{ expediente.socio.id }}</td>
+
             <td>{{ expediente.socio.nombre }}</td>
+            <td>{{ expediente.socio.numeroKepler }}</td>
+
             <td>{{ expediente.estatus.nombre }}</td>
-            <td>{{ expediente.usuario.username }}</td>
+            <td>{{ expediente.usuario.nombreCompleto }}</td>
+            {% if expediente.usuarioCredito %}
+            <td>{{ expediente.usuarioCredito.nombreCompleto }}</td>
+            {% else %}
+            <td>Sin asignar</td>
+            {% endif %}
             <td>{{ expediente.fecha }}</td>
             <td><a href="{% url 'Index:editarExpediente' expediente.id %}"
                     class="btn  rounded rounded-4 bg-tercero text-white"> Editar expediente</a></td>

@@ -1,15 +1,9 @@
-<div class="row d-flex align-items-end" id="filtros-expedientes" data-url="{% url 'Index:filtrar_expedientes_ajax' %}">
-    <div class="col-12 col-lg-10">
-        <h1 class="text-secondary fnSuperiorRegularTitle2">Panel de expedientes</h1>
-    </div>
-    <div class="col-12 col-lg-2 my-auto">
-        <a href="{% url 'Index:crearExpediente' %}"
-            class="btn btn-sm btn-secondary me-2 text-primary w-100 fw-bold border border-3 rounded rounded-pill border-quinto w-100">Crear
-            Expediente</a>
-    </div>
+<div class="row d-flex align-items-end justify-content-end border border-3 rounded-4 shadow-lg border-primary my-3"
+    id="filtros-expedientes" data-url="{% url 'Index:filtrar_expedientes_ajax' %}">
+
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle text-quinto">Estatus</div>
+        <div class="fnSuperiorRegularTitle3 text-quinto">Estatus</div>
         <select name="estatus" id="estatus-select"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
             <option value="0">Todos</option>
@@ -20,35 +14,45 @@
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle text-quinto">Asignado</div>
+        <div class="fnSuperiorRegularTitle3 text-quinto">E.Negocios</div>
         <select name="usuarios" id="usuarios-select"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
             <option value="0">Cualquiera</option>
             {% for option in usuarios %}
-            <option value="{{option.id}}">{{option.username}}</option>
+            <option value="{{option.id}}">{{option.nombreCompleto}}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-lg-2 col-6">
+        <div class="fnSuperiorRegularTitle3 text-quinto">E.Credito</div>
+        <select name="usuariosCredito" id="usuariosCredito-select"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
+            <option value="0">Cualquiera</option>
+            {% for option in usuariosCredito %}
+            <option value="{{option.id}}">{{option.nombreCompleto}}</option>
             {% endfor %}
         </select>
     </div>
 
-    <div class="col-lg-3 col-6">
-        <div class="fnSuperiorRegularTitle text-quinto">Nombre</div>
+    <div class="col-lg-2 col-6">
+        <div class="fnSuperiorRegularTitle3 text-quinto">N. de socio</div>
         <input type="text" id="socio-input"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero"
             placeholder="Buscar por nombre">
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle text-quinto"> Desde</div>
+        <div class="fnSuperiorRegularTitle3 text-quinto"> Desde</div>
         <input type="date" id="fecha-inicio-input" name="fecha_inicio"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle text-quinto"> Hasta</div>
+        <div class="fnSuperiorRegularTitle3 text-quinto"> Hasta</div>
         <input type="date" id="fecha-fin-input" name="fecha_fin"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
-    <div class="col-lg-1 col-6">
+    <div class="col-lg-2 col-6 py-2">
         <button id="boton-reset-datos" class="btn bg-quinto text-white rounded rounded-4 py-1  w-100">
             Reiniciar
         </button>
@@ -56,119 +60,7 @@
 
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    /* $(document).ready(function () {
-         const filtrosContainer = document.getElementById('filtros-expedientes');
- 
-         if (!filtrosContainer) {
-             console.error("Error: No se encontró el contenedor con id 'filtros-expedientes'.");
-             return;
-         }
- 
-         const filterUrl = filtrosContainer.dataset.url;
-         console.log("URL de Filtro:", filterUrl);
- 
-         const estatusSelect = document.getElementById('estatus-select');
-         const usuariosSelect = document.getElementById('usuarios-select');
-         const socioInput = document.getElementById('socio-input');
- 
-         const fechaInicioInput = document.getElementById('fecha-inicio-input');
-         const fechaFinInput = document.getElementById('fecha-fin-input');
- 
- 
-         const botonReset = document.getElementById('boton-reset-datos');
- 
- 
-         function ejecutarFiltro() {
-             console.log("¡Filtro disparado!");
- 
- 
-             const estatus = estatusSelect.value;
-             const usuarios = usuariosSelect.value;
-             const socio = socioInput.value;
-             const fechaInicio = fechaInicioInput.value;
-             const fechaFin = fechaFinInput.value;
- 
-             const params = {
-                 'estatus': estatus,
-                 'usuarios': usuarios,
-                 'socio': socio,
-                 'fecha_inicio': fechaInicio,
-                 'fecha_fin': fechaFin
-             };
- 
-             $.ajax({
-                 url: filterUrl,
-                 type: 'GET',
-                 data: params,
-                 success: function (response) {
-                     $('#resultados-expedientes').html(response);
-                 },
-                 error: function (xhr, status, error) {
-                     console.error("Error en la solicitud AJAX:", error);
-                 }
-             });
-         }
- 
-         function resetearFiltros() {
-             if (estatusSelect) estatusSelect.value = "0";
-             if (usuariosSelect) usuariosSelect.value = "0";
- 
-             if (socioInput) socioInput.value = "";
-             if (fechaInicioInput) fechaInicioInput.value = "";
-             if (fechaFinInput) fechaFinInput.value = "";
- 
-             ejecutarFiltro();
-             console.log("Filtros Reiniciados y Solicitud AJAX enviada.");
-         }
- 
- 
-         if (estatusSelect && usuariosSelect && socioInput && fechaInicioInput && fechaFinInput) {
- 
-             estatusSelect.addEventListener('change', ejecutarFiltro);
-             usuariosSelect.addEventListener('change', ejecutarFiltro);
-             fechaInicioInput.addEventListener('change', ejecutarFiltro);
-             fechaFinInput.addEventListener('change', ejecutarFiltro);
- 
-             let timeoutId;
-             socioInput.addEventListener('input', function () {
-                 clearTimeout(timeoutId);
-                 timeoutId = setTimeout(ejecutarFiltro, 100);
-             });
-         } else {
-             console.error("Error: Faltan elementos de filtro (selects/input). Revisa IDs.");
-         }
- 
-         if (botonReset) {
-             botonReset.addEventListener('click', resetearFiltros);
-         } else {
-             console.error("Error: No se encontró el botón con id 'boton-reset-datos'.");
-         }
-     });
-     $(document).on('click', '.paginar', function () {
-         const page = $(this).data('page');
- 
-         const params = {
-             'estatus': $('#estatus-select').val(),
-             'usuarios': $('#usuarios-select').val(),
-             'socio': $('#socio-input').val(),
-             'fecha_inicio': $('#fecha-inicio-input').val(),
-             'fecha_fin': $('#fecha-fin-input').val(),
-             'page': page
-         };
- 
-         $.ajax({
-             url: $('#filtros-expedientes').data('url'),
-             type: 'GET',
-             data: params,
-             success: function (response) {
-                 $('#resultados-expedientes').html(response);
-             }
-         });
-     });
- */
 
-</script>
 <script>
     $(document).ready(function () {
         const filtrosContainer = document.getElementById('filtros-expedientes');
@@ -179,6 +71,7 @@
 
         const estatusSelect = document.getElementById('estatus-select');
         const usuariosSelect = document.getElementById('usuarios-select');
+        const usuariosCreditoSelect = document.getElementById('usuariosCredito-select');
         const socioInput = document.getElementById('socio-input');
         const fechaInicioInput = document.getElementById('fecha-inicio-input');
         const fechaFinInput = document.getElementById('fecha-fin-input');
@@ -188,6 +81,7 @@
             const params = {
                 'estatus': estatusSelect.value,
                 'usuarios': usuariosSelect.value,
+                'usuariosCredito': usuariosCreditoSelect.value,
                 'socio': socioInput.value,
                 'fecha_inicio': fechaInicioInput.value,
                 'fecha_fin': fechaFinInput.value,
@@ -210,6 +104,7 @@
         function resetearFiltros() {
             estatusSelect.value = "0";
             usuariosSelect.value = "0";
+            usuariosCreditoSelect.value = "0";
             socioInput.value = "";
             fechaInicioInput.value = "";
             fechaFinInput.value = "";
@@ -219,6 +114,7 @@
         // Triggers
         estatusSelect.addEventListener('change', () => ejecutarFiltro(1));
         usuariosSelect.addEventListener('change', () => ejecutarFiltro(1));
+        usuariosCreditoSelect.addEventListener('change', () => ejecutarFiltro(1));
         fechaInicioInput.addEventListener('change', () => ejecutarFiltro(1));
         fechaFinInput.addEventListener('change', () => ejecutarFiltro(1));
 

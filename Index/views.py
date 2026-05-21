@@ -1,3 +1,4 @@
+import csv
 from io import BytesIO
 import mimetypes
 import os
@@ -8,6 +9,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from openpyxl import load_workbook
+import openpyxl
 from Index.forms import *
 from db.models import *
 from django.contrib.auth import authenticate,login,logout
@@ -45,12 +47,13 @@ def index(request):
 def expedientesLayout(request):
     expedientes = Expediente.objects.all().order_by('-id').filter(eliminado = False)
     estatus = Estado.objects.all()
-    usuarios = User.objects.all()
-    
+    usuarios = User.objects.exclude(roles__in=['Administrador', 'Credito', 'Gerente de Credito'])   
+    usuariosCredito = User.objects.filter(roles__in=['Credito','Gerente de Credito']) 
     contexto = {
         'expedientes': expedientes,
         'estatus': estatus,
         'usuarios': usuarios,
+        'usuariosCredito': usuariosCredito,
     }
     return render(request, 'Index/expedientesLayout.html',contexto)
 
@@ -58,6 +61,7 @@ def expedientesLayout(request):
 def filtrar_expedientes_ajax(request):
     estatus_id = request.GET.get('estatus', '0')
     usuario_id = request.GET.get('usuarios', '0')
+    usaurioCredito_id = request.GET.get('usuariosCredito', '0')
     socio_query = request.GET.get('socio', '').strip()
 
     fecha_inicio = request.GET.get('fecha_inicio')
@@ -72,6 +76,9 @@ def filtrar_expedientes_ajax(request):
 
     if usuario_id != '0':
         expedientes = expedientes.filter(usuario_id=usuario_id)
+
+    if usaurioCredito_id != '0':
+        expedientes = expedientes.filter(usuario_id=usaurioCredito_id)
 
     if socio_query:
         expedientes = expedientes.filter(
@@ -173,6 +180,7 @@ def editarExpediente(request, id):
     usuarios = User.objects.all()
     rep_form = CrearRepresentante()
     obl_form = CrearObligado()
+    lin_form = LineaCrearForm()
     if request.method == "POST":
         post = request.POST
         datos_agrupados = {}
@@ -275,6 +283,7 @@ def editarExpediente(request, id):
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
     context['rep_form']=rep_form
     context["obl_form"]=obl_form
+    context["lin_form"]=lin_form
     lista_reps = RepresentanteLegal.objects.filter(expedientes=expediente)
     lista_obls = ObligadoSolidario.objects.filter(expedientes=expediente)
     context['lista_reps']=lista_reps
@@ -525,24 +534,24 @@ def _generar_con_debug_extremo(seccion_obj, area_socio):
 @login_required(login_url='/login/')    
 def expediente_eliminar(request,id):
     expediente = Expediente.objects.get(id=id)
-    expediente.eliminado = True
-    expediente.save()
+    expediente.delete()
+    #expediente.eliminado = True
+    #expediente.save()
     return redirect('Index:expedientesLayout')
 
 
 
 def correroParaRevision(expediente):
-    #scortes@ucg.com.mx 
-    # "daudiffred@ucg.com.mx" 
-    destinatario = "bvillanueva@ucg.com.mx"
-    dominio = "http://192.168.0.132:8000/expedientes/editarExpediente/"
+  
+    destinatario = ["portiz@ucg.com.mx","dCorrea@ucg.com.mx", "mrubio@ucg.com.mx"]
+    dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
     url_final = f"{dominio}{expediente.id}/"
-    asunto = "Informe listo para revisión"
+    asunto = "Expediente listo para revisión"
     
     cuerpo_texto = f"""
-    Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} esta listo para su revisión. 
+    Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} esta listo para su revisión. 
     Atte {expediente.usuario.username}.
-    Ingrese directamente: {url_final}
+    Ingrese directamente o copie la url en su navegador(recuerde haber iniciado sesión con anterioridad): {url_final}
     """
 
     cuerpo_html = f"""
@@ -704,7 +713,7 @@ def obtener_lineas_socio(request, socio_id):
 def exportarExcel(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     
-    ruta_directorio = fr"C:\Users\Administrador\Desktop\EditorExpedientesUCG\static"
+    ruta_directorio = fr"C:\Users\Diego Audiffred\Downloads\Lista de proyectos\PlataformaExpedientes\drAlejandro\static"
     ruta_plantilla = os.path.join(ruta_directorio, "FormatoParaExpedientes.xlsx")
     
     try:
@@ -890,8 +899,16 @@ def exportarPDF(request, id):
 
 @login_required(login_url='/login/')    
 def avances(request):
-    usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Ejecutivo de Negocios']).distinct()    
-    estados = Estado.objects.all().order_by('id')
+    if request.user.roles == 'Gerente Centro de Negocios':
+        usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios','Gerente Centro de Negocios']).distinct()
+        estados = Estado.objects.all().order_by('id')
+    elif request.user.roles == 'Gerente de Credito':
+        usuarios = User.objects.filter(roles__in=['Credito','Gerente de Credito']).distinct()
+        estados = Estado.objects.exclude(nombre='Nuevo').order_by('id')
+    elif request.user.roles == 'Administrador':
+        usuarios = User.objects.all()
+        estados = Estado.objects.all().order_by('id')
+    
     data_por_usuario = {}
     
     for us in usuarios:
@@ -917,10 +934,13 @@ def avances(request):
         else:
             porcentaje_completado = 0
             
+        es_credito = us.roles in ['Credito', 'Gerente de Credito']
+            
         data_por_usuario[us.username] = {
             'total': numExpedientes,
             'porcentaje': round(porcentaje_completado, 2),
-            'estados': conteo_por_estado 
+            'estados': conteo_por_estado,
+            'grafica_barras': es_credito
         }
             
     context = {
@@ -1167,3 +1187,35 @@ def editarLinea(request, id):
     
     context = {'form': form, 'exito': exito}
     return render(request, 'Index/editarLinea.html', context)
+
+
+def cargaInicial(request):
+    if request.method == 'POST':
+        try:
+            archivo = request.FILES['archivo_excel']
+            print("Archivo recibido:", archivo.name)
+            
+            contenido_texto = archivo.read().decode('utf-8').splitlines()
+            lector_csv = csv.reader(contenido_texto)
+            
+            next(lector_csv, None)
+            
+            for index, row in enumerate(lector_csv, start=2):
+                print(f"Fila {index} leída: {row}")
+                
+                if not row or not any(field.strip() for field in row):
+                    print(f"Fila {index} está vacía, saltando...")
+                    continue
+                    
+                print(f"Intentando guardar: Kepler={row[0]}, Nombre={row[1]}, Tipo={row[2]}")
+                Socio.objects.create(
+                    numeroKepler=row[0],
+                    nombre=row[1],
+                    tipoPersona=row[2]
+                )
+                print(f"Fila {index} guardada con éxito.")
+                
+        except Exception as e:
+            print("Se produjo un error durante la carga:", str(e))
+            
+    return redirect('Index:administrador')

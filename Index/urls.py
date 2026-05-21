@@ -50,5 +50,6 @@ urlpatterns = [
     path("lineas/editarLinea/<int:id>/",views.editarLinea,name='editarLinea'),
     #path('lineas/eliminar/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
     #path('lineas/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
+    path('cargaInicial/', views.cargaInicial, name='cargaInicial')
 
 ] 

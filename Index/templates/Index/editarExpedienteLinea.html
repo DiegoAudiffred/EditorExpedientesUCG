@@ -1,0 +1,139 @@
+{% load static %}
+
+
+<div class="tab-pane fade" id="seccion-agregarLinea" role="tabpanel">
+    <h2> Agregar Lineas
+    </h2>
+    <hr>
+
+        <div class="mb-4">
+            <div class="row border border-3 border-quinto rounded rounded-3">
+                <div class="col-12 p-3">
+                    <label>Crear una linea:</label>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1" id="contenedor-select-rep">
+                            {{ lin_form }}
+                        </div>
+                        <button type="button" class="btn btn-secondary ms-2 text-white border border-primary"
+                            onclick="agregarRep()">
+                            Agregar
+                        </button>
+                    </div>
+                </div>
+                <div id="rep-list" class="col-12"></div>
+
+            </div>
+            <div class="col-12 text-end">
+    <button type="button" onclick="enviarRepresentantes()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
+    Agregar Linea
+</button>
+
+            </div>
+        </div>
+</div>
+
+<script>
+    let lineas = [];
+
+    function syncHidden() {
+        document.getElementsByName("lineas")[0].value = reps.join("||");
+    }
+
+    function render() {
+        const repList = document.getElementById("rep-list");
+        repList.innerHTML = reps.map((x, i) => `
+            <div class="input-group my-2 w-100">
+                <span class="input-group-text bg-primary text-white">Rep.</span>
+                <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
+                <button class="btn btn-primary" type="button" onclick="reps.splice(${i},1); render();">X</button>
+            </div>
+        `).join("");
+
+        const oblList = document.getElementById("obl-list");
+        oblList.innerHTML = obls.map((x, i) => `
+            <div class="input-group my-2 w-100">
+                <span class="input-group-text bg-primary text-white">Obl.</span>
+                <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
+                <button class="btn btn-primary" type="button" onclick="obls.splice(${i},1); render();">X</button>
+            </div>
+        `).join("");
+
+        syncHidden();
+    }
+
+    function agregarRep() {
+        const select = document.querySelector('[name="representante_selector"]');
+        const valor = select.options[select.selectedIndex].text;
+
+
+        const nombreParaAgregar = select.value === "" ? "" : valor;
+
+        reps.push(nombreParaAgregar);
+        render();
+        select.value = "";
+    }
+
+    function agregarObl() {
+        const select = document.querySelector('[name="obligado_selector"]');
+        const valor = select.options[select.selectedIndex].text;
+
+        const nombreParaAgregar = select.value === "" ? "" : valor;
+
+        obls.push(nombreParaAgregar);
+        render();
+        select.value = "";
+    }
+    async function enviarRepresentantes() {
+    const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    const formData = new FormData();
+    formData.append('representantes', reps.join("||"));
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Representantes guardados correctamente");
+            location.reload(); 
+        } else {
+            alert("Error al guardar");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+async function enviarObligados() {
+    const url = "{% url 'Index:agregarObligados' expediente.id %}";
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    const formData = new FormData();
+    formData.append('obligados', obls.join("||"));
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Obligados guardados correctamente");
+            location.reload();
+        } else {
+            alert("Error al guardar");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+</script>

@@ -246,10 +246,18 @@
                      <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
                 role="presentation">
                 <button class="nav-link text-quinto"
-                    id="tab-agregarObligado" data-bs-toggle="tab" data-bs-target="#seccion-agregarRepresentante"
+                    id="tab-agregarRepresentante" data-bs-toggle="tab" data-bs-target="#seccion-agregarRepresentante"
                     type="button" role="tab">
                     Agregar Representante Legal +
                                 </button>
+            </li>
+                                    <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+                role="presentation">
+                <button class="nav-link text-quinto"
+                    id="tab-agregarLinea" data-bs-toggle="tab" data-bs-target="#seccion-agregarLinea"
+                    type="button" role="tab">
+                    Agregar Linea +
+                </button>
             </li>
         </ul>
 
@@ -329,6 +337,7 @@
             {% endfor %}
             
             {% include 'Index/editarExpedienteRepObl.html' %}
+            {% include 'Index/editarExpedienteLinea.html' %}
         </div>
         <h4> Total de registros llenados: {{totalRegistrosLlenos}} de {{totalRegistros}}</h4>
 
@@ -337,7 +346,8 @@
             <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a
                 PDF</a>
             <a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}"
-                target="_blank">Exportar a Excel</a> <a class="btn btn-cuarto mx-2 text-white"
+                target="_blank">Exportar a Excel</a> 
+                <a class="btn btn-cuarto mx-2 text-white"
                 href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"

@@ -30,7 +30,7 @@ def cargar_apartados_default(sender, **kwargs):
             "1.16":{"descripcion": "FORMATO DE IDENTIFICACION DE COACREDITADOS Y OBLIGADOS SOLIDARIOS (Solo en caso de no ser socio)", "area_aplicacion": "Ambas"}, 
             "1.17": {"descripcion": "IDENTIFICACIÓN VIGENTE DEL OBLIGADO SOLIDARIO / GARANTE (INE, pasaporte o cédula profesional no mayor a 10 años). Requiere ser cotejado.", "area_aplicacion": "Ambas"},
             "1.18": {"descripcion": "CURP. Requiere ser cotejado", "area_aplicacion": "Ambas"},
-            "1.19": {"descripcion": "ACTA DE NACIMIENTO Y ACTA DE MATRIMONIO ( En su caso) (Requieren ser cotejados)", "area_aplicacion": "Fisicas"},
+            "1.19": {"descripcion": "ACTA DE NACIMIENTO Y ACTA DE MATRIMONIO ( En su caso) (Requieren ser cotejados)", "area_aplicacion": "Ambas"},
             "1.20": {"descripcion": "DICTAMEN JURIDICO ACTUALIZADO Y/O CARTA DE NO MODIFICACIÓN DE PODERES", "area_aplicacion": "Ambas"},
             "1.21": {"descripcion": "VERIFICACIÓN DE SOCIEDAD. Vigencia máxima: 12 meses", "area_aplicacion": "Ambas"},
             "1.22": {"descripcion": "ACTA CONSTITUTIVA, SUS MODIFICACIONES Y PODERES (Copias legibles cuando se trate de aumentos de capital, cambio de apoderados, modificación de objeto y/o denominación social, etc). Requiere ser cotejado.", "area_aplicacion": "Ambas"},

@@ -60,14 +60,13 @@ class User(AbstractUser):
         ('Ejecutivo de Servicios', 'Ejecutivo de Servicios'), #Andres,Maru
         ('Administrador', 'Administrador'), #Servilleta 
         ('Credito', 'Credito'), #Pao,etc
-        ('Juridico', 'Juridico'), #Los de la 41 xd
-        ('Visitante', 'Visitante'), #Los de la 41 xd
-
+        ('Gerente de Credito', 'Gerente de Credito'),
+        ('Gerente Centro de Negocios', 'Gerente Centro de Negocios')
     )
 
 
     username = models.CharField('Usuario',max_length=20, unique=True, blank=False, null=False,default="Nuevo")
-    
+    nombreCompleto = models.CharField('NombreCompleto',max_length=100, blank=True, null=True)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 
     roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Administrador')
@@ -107,20 +106,14 @@ class Estado(models.Model):
 
 
 class Expediente(models.Model):
-    socio = models.ForeignKey(Socio,on_delete=models.CASCADE,null=False,blank=False)
-    estatus = models.ForeignKey(Estado,on_delete=models.CASCADE)
-    usuario = models.ForeignKey(User,blank=True,null=True,on_delete=CASCADE)
+    socio = models.ForeignKey(Socio, on_delete=models.CASCADE, null=False, blank=False)
+    estatus = models.ForeignKey(Estado, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(User, related_name='centroNegocios', blank=True, null=True, on_delete=models.CASCADE)
+    usuarioCredito = models.ForeignKey(User, related_name='credito', blank=True, null=True, on_delete=models.CASCADE)
+    usuarioArchivo = models.ForeignKey(User, related_name='Archivado', blank=True, null=True, on_delete=models.CASCADE)
     fecha = models.DateField(auto_now_add=True, blank=True)
     eliminado = models.BooleanField(default=False)
-    fases = (
-        ('1', 'Centro de Negocios'), 
-        ('2', 'Creditos'), 
-        ('3', 'Administrador'),  
-        ('4', 'Credito'),
-        ('5', 'Juridico'), 
-        ('6', 'Visitante'), 
 
-    )
     def __str__(self):
         return f"{self.socio}"
     
@@ -205,4 +198,4 @@ class RegistroSeccion(models.Model): #El renglon
         unique_together = ('seccion', 'apartado') 
 
     def __str__(self):
-        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave}"
+        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} {self.seccion.expediente.socio}"
