@@ -227,6 +227,31 @@ class LineaCrearForm(forms.ModelForm):
             self.fields['vigente'].widget.attrs.update({'class': check_style})
 
 
+class CitaForm(forms.ModelForm):
+    class Meta:
+        model = Cita
+        fields = ['dia', 'hora', 'expedientes']
+        widgets = {
+            'dia': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'}
+            ),
+            'hora': forms.TimeInput(
+                attrs={'type': 'time', 'class': 'form-control'}
+            ),
+       'expedientes': forms.SelectMultiple(
+                attrs={'class': 'form-select selectorBuscador', 'style': 'width: 100%'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['dia'].label = "Día de la cita"
+        self.fields['hora'].label = "Hora de inicio"
+        self.fields['expedientes'].queryset = Expediente.objects.filter(
+            estatus__nombre='Recepción'
+        ).order_by('-id')
+
+
 
 class ModificarEstados(forms.ModelForm):
     class Meta:

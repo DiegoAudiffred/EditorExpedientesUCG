@@ -4,12 +4,18 @@
 
 <div class="container py-4">
     {% if expediente.eliminado == False %}
-    <h2>
-        #{{ expediente.pk }}
-        Estatus actual:
-        <span style="background-color: {{ expediente.estatus.color }};" class="rounded rounded-3 px-3 fw-bold">
+    <div class="row">
+        <div class="col-12 fnSuperiorRegularTitle">
+          
+        Expediente del socio <b class="text-tercero">{{expediente.socio}}</b> - {{expediente.socio.numeroKepler}}
+
+        </div>
+<div class="col-6 fnSuperiorRegularTitle4">
+               Estatus actual:
+        <span style="background-color: {{ expediente.estatus.color }};" class="rounded rounded-3 px-3 fw-bold py-2">
             {{ expediente.estatus }}
         </span>
+       
         <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#statusModal">
             <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none"
                 xmlns="http://www.w3.org/2000/svg">
@@ -23,22 +29,23 @@
                 </g>
             </svg>
         </span>
-    </h2>
 
-    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    </div>
+    
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-tercero text-white">
                     <h5 class="modal-title" id="statusModalLabel">Cambiar status del expediente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="{% url 'Index:expediente_cambiar_status' expediente.id %}">
+                <form method="POST" action="{% url 'Index:cambiarEstado' expediente.id %}">
                     {% csrf_token %}
                     <div class="modal-body">
                         <label class="form-label fw-bold">Nuevo Estatus:</label>
                         <select name="estatus" class="form-select text-black fnSuperiorRegularTitle1">
                             {% for estado in estados %}
-                            <option value="{{ estado.id }}" style="background-color: {{ estado.color }};"
+                            <option value="{{ estado.nombre }}" style="background-color: {{ estado.color }};"
                                 class="text-black fnSuperiorRegularTitle3" {% if estado.id == expediente.estatus_id %}selected{% endif %}>
                                 {{ estado.nombre }}
                             </option>
@@ -54,23 +61,198 @@
             </div>
         </div>
     </div>
+    <div class="col-6">
+         {% if expediente.estatus.nombre == 'Recepción'%}
+            <h5 class="mb-3">{% if cita.asignada %} Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
+  
+    {% else %} Sin cita asignada {% endif %}</h5>
+         {% endif %}
 
-    <h4 class="mb-3">Expediente del socio: <b>{{expediente.socio}}</b> {{expediente.socio.numeroKepler}}</h4>
-    <h5 class="mb-3">Asignado a: <b>{{expediente.usuario}}</b>
-        <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModal">
-            <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                <g id="SVGRepo_iconCarrier">
-                    <path d="M8.29289 3.70711L1 11V15H5L12.2929 7.70711L8.29289 3.70711Z" fill="#010C80"></path>
-                    <path
-                        d="M9.70711 2.29289L13.7071 6.29289L15.1716 4.82843C15.702 4.29799 16 3.57857 16 2.82843C16 1.26633 14.7337 0 13.1716 0C12.4214 0 11.702 0.297995 11.1716 0.828428L9.70711 2.29289Z"
-                        fill="#010C80"></path>
-                </g>
-            </svg>
-        </span>
+    </div>
+    
+    <div class="col-6 my-2">
+ <h5 class="mb-3">Personal de centro de negocios asignado a: <b class="text-tercero" data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModal">{{expediente.usuario}}</b>
+       
     </h5>
+       <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-tercero text-white">
+                    <h5 class="modal-title" id="asignadoModalLabel">Cambiar encargado del expediente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form method="POST" action="{% url 'Index:expediente_cambiar_usuario' expediente.id %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <label class="form-label fw-bold">Encargado:</label>
+                        <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
+                            {% for usuario in usuarios %}
+                            <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuario_id %}selected{% endif %}>
+                                {{ usuario.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+    </div>
+   
+    <div class="col-6 my-2">
+             <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero " data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModalCredito">{{expediente.usuarioCredito}}</b>
+       
+    </h5>
+       <div class="modal fade" id="asignadoModalCredito" tabindex="-1" aria-labelledby="asignadoModalCreditoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-tercero text-white">
+                    <h5 class="modal-title" id="asignadoModalCreditoLabel">Cambiar encargado del expediente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form method="POST" action="{% url 'Index:cambiarUsuarioCredito' expediente.id %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <label class="form-label fw-bold">Encargado:</label>
+                        <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
+                            {% for usuario in usuariosCreditos %}
+                            <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuarioCredito_id %}selected{% endif %}>
+                                {{ usuario.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+
+ 
+
+
+{% if expediente.estatus.nombre == 'Recepción' %}
+<button type="button" class="btnCrearCita btn btn-primary fw-bold border-3 px-4 shadow-sm mb-2" 
+        data-bs-toggle="modal" data-bs-target="#modalCita">
+    Citas
+</button>
+
+<div class="modal fade" id="modalCita" tabindex="-1" aria-labelledby="modalCitaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCitaLabel">Gestionar Cita para Expediente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" id="citaTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold" id="existentes-tab" data-bs-toggle="tab" data-bs-target="#existentes" type="button" role="tab" aria-controls="existentes" aria-selected="true">
+                            Citas Existentes
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="nueva-tab" data-bs-toggle="tab" data-bs-target="#nueva" type="button" role="tab" aria-controls="nueva" aria-selected="false">
+                            Crear Nueva Cita
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="citaTabsContent">
+                    
+                    <div class="tab-pane fade show active" id="existentes" role="tabpanel" aria-labelledby="existentes-tab">
+                        <p class="text-muted small mb-3">Selecciona una de las citas ya programadas en el sistema para asociarla a este expediente:</p>
+                        {% if citasDisponibles %}
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                               <table class="table table-hover align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Fecha</th>
+            <th>Hora de Inicio</th>
+            <th>Estatus</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cita in citasDisponibles %}
+        <tr>
+            <td class="fw-medium">{{ cita.dia|date:"d/m/Y" }}</td>
+            <td>{{ cita.hora|time:"H:i" }} hrs.</td>
+            <td>
+                {% if expediente in cita.expedientes.all %}
+                    <span class="badge bg-primary text-white fw-bold px-2.5 py-1.5 border border-success-subtle">
+                        Asignada a este expediente
+                    </span>
+                {% else %}
+                                        <span class="badge bg-green text-white fw-bold px-2.5 py-1.5 border border-success-subtle">
+Disponible</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if expediente in cita.expedientes.all %}
+                    <form action="{% url 'Index:desasociarCitaExistente' expediente.id cita.id %}" method="POST" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger fw-bold px-3">
+                            Desasignar
+                        </button>
+                    </form>
+                {% else %}
+                    <form action="{% url 'Index:asociarCitaExistente' expediente.id cita.id %}" method="POST" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success fw-bold px-3">
+                            Asignar esta cita
+                        </button>
+                    </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning mb-0" role="alert">
+                                No hay citas pendientes agendadas en el sistema. Ve a la pestaña "Crear Nueva Cita".
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- PESTAÑA 2: Crear Nueva Cita -->
+                    <div class="tab-pane fade" id="nueva" role="tabpanel" aria-labelledby="nueva-tab">
+                        <form action="{% url 'Index:crearCita' expediente.id %}" method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                {{ cita_form }}
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Agendar y Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endif %}
 <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
         type="button" 
         data-bs-toggle="collapse" 
@@ -192,35 +374,7 @@
     </div>
 </div>
     
-    <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-tercero text-white">
-                    <h5 class="modal-title" id="asignadoModalLabel">Cambiar encargado del expediente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <form method="POST" action="{% url 'Index:expediente_cambiar_usuario' expediente.id %}">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <label class="form-label fw-bold">Encargado:</label>
-                        <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
-                            {% for usuario in usuarios %}
-                            <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuario_id %}selected{% endif %}>
-                                {{ usuario.username }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-    </div>
+ 
     <form method="post" novalidate id="main-edit-form">
         {% csrf_token %}
 
@@ -237,7 +391,7 @@
             {% endfor %}
                         <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
                 role="presentation">
-                <button class="nav-link text-quinto"
+                <button class="nav-link text-quinto btn-"
                     id="tab-agregarObligado" data-bs-toggle="tab" data-bs-target="#seccion-agregarObligado"
                     type="button" role="tab">
                     Agregar Obligado Solidario +
@@ -275,11 +429,11 @@
                             <table class="table table-sm table-striped mb-0">
                                 <thead class="table-secondary">
                                     <tr>
-                                        <th style="min-width:160px">Clave</th>
-                                        <th>Descripción</th>
-                                        <th style="min-width:140px">Fecha</th>
-                                        <th style="min-width:140px">Estatus</th>
-                                        <th>Comentario</th>
+                                        <th style="width: 50px;">Clave</th>
+                                        <th style="width: 400px;">Descripción</th>
+                                        <th style="width: 120px;">Fecha</th>
+                                        <th style="width: 100px;">Estatus</th>
+                                        <th style="width: 250px;">Comentario</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -316,9 +470,16 @@
                                             </select>
                                         </td>
                                         <td>
+                                            {% if request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Administrador'%}
                                             <input class="form-control form-control-sm" type="text"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentario"
                                                 value="{{ registro.comentario|default_if_none:'' }}">
+                                            {% endif %}
+                                            {% if request.user.roles == 'Credito' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Administrador'%}
+                                                    <input class="form-control form-control-sm" type="text"
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentarioCredito"
+                                                value="{{ registro.comentarioCredito|default_if_none:'' }}">
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% endwith %}
@@ -455,5 +616,19 @@
         }
     });
 </script>
+<!-- Agrega las librerias al principio o final de tu archivo -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
+<script>
+// Inicializa el buscador cuando el modal de Bootstrap se termine de abrir por completo
+document.getElementById('modalCita').addEventListener('shown.bs.modal', function () {
+    $('.selectorBuscador').select2({
+        dropdownParent: $('#modalCita'), // Crucial para que despliegue por encima del modal
+        placeholder: "Escribe para buscar expedientes...",
+        allowClear: true
+    });
+});
+</script>
 {% endblock %}

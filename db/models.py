@@ -94,7 +94,7 @@ class Socio(models.Model):
   
     
 class Estado(models.Model):
-    nombre = models.CharField("Nombre", max_length=30, unique=True, null=True)
+    nombre = models.CharField("Nombre", max_length=30,  null=True)
     
     color = ColorField(
         default='#FFFFFF', 
@@ -117,6 +117,11 @@ class Expediente(models.Model):
     def __str__(self):
         return f"{self.socio}"
     
+class Cita(models.Model):
+    dia = models.DateField(null=True, blank=True)
+    hora = models.TimeField(null=True, blank=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Citas",blank=True,null=True)
+       
 class RepresentanteLegal(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
     expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes",blank=True,null=True)
@@ -132,7 +137,9 @@ class ObligadoSolidario(models.Model):
 class Linea(models.Model):
     tipoLinea = (
         ("Libre","Libre"),
-        ("Back","Back")
+        ("Back","Back"),
+        ("Hipotecaria","Hipotecaria"),
+        ("Fidusiaria","Fidusiaria"),
     )    
 
     expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=False,blank=False)
@@ -192,6 +199,7 @@ class RegistroSeccion(models.Model): #El renglon
     fecha = models.DateField(null=True, blank=True)
     estatus = models.CharField(max_length=20, null=True, blank=True)
     comentario = models.TextField(null=True, blank=True)
+    comentarioCredito = models.TextField(null=True, blank=True)
 
     class Meta:
         # ESTO EVITA DUPLICADOS Y ERRORES DE LÓGICA
@@ -199,3 +207,10 @@ class RegistroSeccion(models.Model): #El renglon
 
     def __str__(self):
         return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} {self.seccion.expediente.socio}"
+    
+class CambiosEstados(models.Model):
+    fecha = models.DateField(auto_now_add=True, blank=True)
+    hora = models.TimeField(auto_now_add=True, blank=True)
+    expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)

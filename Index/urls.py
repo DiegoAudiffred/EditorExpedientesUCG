@@ -16,17 +16,21 @@ urlpatterns = [
     path('expediente/crear/', views.crearExpediente, name='crearExpediente'),
     path('expediente/eliminar/<int:id>/', views.expediente_eliminar, name='expediente_eliminar'),
     path("expedientes/editarExpediente/<int:id>/",views.editarExpediente,name='editarExpediente'),
-    path('expediente/cambiarStatus/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
+    path('expediente/cambiarStatus/<int:id>/', views.cambiarEstado, name='cambiarEstado'),
     path('expediente/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
+    path('expediente/cambiarUsuarioCredito/<int:id>/', views.cambiarUsuarioCredito, name='cambiarUsuarioCredito'),
+
     path('expediente/exportarExcel/<int:id>/',views.exportarExcel,name ='exportarExcel'),
     path('expediente/exportarPDF/<int:id>/',views.exportarPDF,name ='exportarPDF'),
     path('obtener-lineas-socio/<int:socio_id>/',views.obtener_lineas_socio,name ='obtener_lineas_socio'),
     #Agregar Obligados y Reps
     path('expediente/agregarObligados/<int:id>/',views.agregarObligados,name ='agregarObligados'),
     path('expediente/agregarRepresentantes/<int:id>/',views.agregarRepresentantes,name ='agregarRepresentantes'),
+    path('expediente/crearCita/<int:id>/',views.crearCita,name ='crearCita'),
 
+    path('expediente/asociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.asociarCitaExistente, name='asociarCitaExistente'),
     path('editar/', views.editar_layout, name='editar_layout'),
-
+path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
 
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     
@@ -48,8 +52,8 @@ urlpatterns = [
     path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),
     path('lineas/crear/', views.lineaCrear, name='lineaCrear'),
     path("lineas/editarLinea/<int:id>/",views.editarLinea,name='editarLinea'),
-    #path('lineas/eliminar/<int:id>/', views.expediente_cambiar_status, name='expediente_cambiar_status'),
+    #path('lineas/eliminar/<int:id>/', views.cambiarEstado, name='cambiarEstado'),
     #path('lineas/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
-    path('cargaInicial/', views.cargaInicial, name='cargaInicial')
-
+    path('cargaInicial/', views.cargaInicial, name='cargaInicial'),
+    path('juntasIndex/',views.juntasIndex,name='juntasIndex')
 ] 

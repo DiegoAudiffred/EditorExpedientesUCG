@@ -1,0 +1,40 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+{% block body %}
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-10  ">
+            <h1 class="text-secondary fnSuperiorRegularTitle2">Panel de Juntas</h1>
+        </div>
+        <div class="col-2 my-auto">
+            <a href="" class="btn btn-primary w-100 ">Crear junta</a>
+        </div>
+        <div class=" col-12">
+            {% for cita in juntas %}
+            <div class="card">
+                <div class="card-header fnSuperiorRegularTitle3">
+                    <p class="m-0">Junta del dia {{ cita.dia }} a las {{ cita.hora }}</p>
+                </div>
+                <div class="card-body">
+                    Expedientes entregados:
+                    <ul>
+                        {% for expediente in cita.expedientes.all %}
+                        <li>{{ expediente }}</li>
+                        {% empty %}
+                        <li>No hay expedientes asignados a esta junta.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button href="" class="btn btn-primary">Editar expedientes de la junta</button>
+                    <button href="" class="btn btn-secondary text-white">Borrar junta</button>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -24,7 +24,9 @@ import smtplib
 from email.message import EmailMessage
 from django.db.models.functions import Cast
 from django.db import transaction
-
+from django.core.mail import EmailMessage, SafeMIMEText, get_connection
+from icalendar import Calendar, Event
+from datetime import date, datetime, time, timedelta
 from django.db.models import FloatField
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
@@ -49,12 +51,13 @@ def expedientesLayout(request):
     estatus = Estado.objects.all()
     usuarios = User.objects.exclude(roles__in=['Administrador', 'Credito', 'Gerente de Credito'])   
     usuariosCredito = User.objects.filter(roles__in=['Credito','Gerente de Credito']) 
+ 
     contexto = {
-        'expedientes': expedientes,
-        'estatus': estatus,
-        'usuarios': usuarios,
-        'usuariosCredito': usuariosCredito,
-    }
+            'expedientes': expedientes,
+            'estatus': estatus,
+            'usuarios': usuarios,
+            'usuariosCredito': usuariosCredito,
+        }
     return render(request, 'Index/expedientesLayout.html',contexto)
 
 
@@ -177,10 +180,27 @@ def editarExpediente(request, id):
     lineasLista = Linea.objects.filter(expediente=expediente)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     estados = Estado.objects.all()
-    usuarios = User.objects.all()
+    usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Gerente Centro de Negocios'])
+    usuariosCreditos = User.objects.filter(roles__in=['Credito','Gerente de Credito'])
     rep_form = CrearRepresentante()
     obl_form = CrearObligado()
     lin_form = LineaCrearForm()
+    cita_form = CitaForm()
+
+    ahora_local = timezone.localtime(timezone.now())
+    hoy = ahora_local.date()
+    hora_actual = ahora_local.time()
+
+
+    citasDisponibles = Cita.objects.filter(
+        Q(dia__gt=hoy) | 
+        Q(dia=hoy, hora__gte=hora_actual)
+    ).order_by('dia', 'hora')    
+
+    citaAsignada = Cita.objects.filter(
+    Q(expedientes=expediente),
+).order_by('dia', 'hora').first()    
+    
     if request.method == "POST":
         post = request.POST
         datos_agrupados = {}
@@ -221,6 +241,9 @@ def editarExpediente(request, id):
             if 'comentario' in campos:
                 registro.comentario = campos['comentario']
 
+            if 'comentarioCredito' in campos:
+                registro.comentarioCredito = campos['comentarioCredito']
+            
             if 'fecha' in campos:
                 val_fecha = campos['fecha']
                 if val_fecha:
@@ -245,6 +268,9 @@ def editarExpediente(request, id):
         'expediente': expediente,
         'lineasLista': lineasLista,
         'secciones': [],
+        'citasDisponibles': citasDisponibles,
+        'citaAsignada': citaAsignada,
+        'usuariosCreditos': usuariosCreditos,
     }
     
     totalRegistros = 0
@@ -284,6 +310,7 @@ def editarExpediente(request, id):
     context['rep_form']=rep_form
     context["obl_form"]=obl_form
     context["lin_form"]=lin_form
+    context['cita_form']=cita_form
     lista_reps = RepresentanteLegal.objects.filter(expedientes=expediente)
     lista_obls = ObligadoSolidario.objects.filter(expedientes=expediente)
     context['lista_reps']=lista_reps
@@ -340,7 +367,6 @@ def checarRuta(ruta, secciones):
             ruta_busqueda = mapeo_secciones.get(prefijo)
             if not ruta_busqueda or not os.path.exists(ruta_busqueda):
                 continue
-            #print(ruta_busqueda)
             archivo_mas_reciente = None
             mtime_maximo = 0
 
@@ -366,7 +392,6 @@ def checarRuta(ruta, secciones):
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
-    #print(resultados)
     return resultados
             
 
@@ -385,7 +410,20 @@ def expediente_cambiar_usuario(request, id):
 
 
     return redirect('Index:editarExpediente', id=expediente.id)
+        
+@login_required(login_url='/login/')
+def cambiarUsuarioCredito(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
 
+    if request.method == "POST":
+        nuevo_usuarios_id = request.POST.get("usuario")
+
+        if nuevo_usuarios_id:
+            expediente.usuarioCredito_id = nuevo_usuarios_id
+            expediente.save()
+
+
+    return redirect('Index:editarExpediente', id=expediente.id)
 @login_required(login_url='/login/')
 def expediente_llenar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -604,16 +642,122 @@ def correroParaRevision(expediente):
     except Exception as e:
         print("Error al enviar correo:", e)
 
+def mandarCorreoRechazo(id):
+    from email.message import EmailMessage
+    expediente = get_object_or_404(Expediente, pk=id)
+    seccionesConComentarios = []
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+    
+    for seccion in secciones:
+        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        for apartado in apartados:
+            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            
+            if registro is not None:
+                if registro.comentarioCredito:
+                    seccionesConComentarios.append({
+                        'nombreSeccion': str(seccion.tituloSeccion),
+                        'claveApartado': str(apartado.clave),
+                        'comentario': str(registro.comentarioCredito)
+                    })
+                    
+    destinatario = [expediente.usuario.email,expediente.usuarioCredito.email,"daudiffred@ucg.com.mx"]
+    #destinatario = ["daudiffred@ucg.com.mx"]    
+    dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
+    url_final = f"{dominio}{expediente.id}/"
+    asunto = f"RECHAZO: Expediente {expediente.id} - {expediente.socio.nombre}"
+    
+    comentarios_texto = ""
+    for item in seccionesConComentarios:
+        comentarios_texto += f"\n- [{item['nombreSeccion']} - {item['claveApartado']}]: {item['comentario']}"
+
+    cuerpo_texto = f"""
+    Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido rechazado. 
+    Atte {expediente.usuarioCredito.nombreCompleto}.
+    Ingrese directamente o copie la url en su navegador(recuerde haber iniciado sesión con anterioridad): {url_final}
+
+    Detalles de las observaciones encontradas:
+    {comentarios_texto}
+    """
+
+    cuerpo_html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                <p>Estimado usuario,</p>
+                <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido rechazado.</p>
+                <p>Atte {expediente.usuarioCredito.username}.</p>
+                <div style="margin: 30px 0; text-align: center;">
+                    <a href="{url_final}" 
+                       style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Revisar Expediente
+                    </a>
+                </div>
+                <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
+                    <ul style="margin-bottom: 0; padding-left: 20px;">
+    """
+
+    for item in seccionesConComentarios:
+        cuerpo_html += f"""
+                        <li style="margin-bottom: 10px;">
+                            <strong>{item['nombreSeccion']} (Clave: {item['claveApartado']}):</strong> {item['comentario']}
+                        </li>
+        """
+
+    cuerpo_html += f"""
+                    </ul>
+                </div>
+          
+                <hr style="border: 0; border-top: 1px solid #eee;">
+                <p style="font-size: 0.8em; color: #999; text-align: center;">
+                    Este es un mensaje automático, por favor no responda a este correo.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    SMTP_HOST = "ucg.com.mx"
+    SMTP_PORT = 587
+    USUARIO = "informacion@ucg.com.mx"
+    CONTRASENA = "UcG911_@!#"
+    
+    mensaje = EmailMessage()
+    mensaje["From"] = USUARIO
+    mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
+    mensaje["Subject"] = asunto
+    
+    mensaje.set_content(cuerpo_texto)
+    mensaje.add_alternative(cuerpo_html, subtype="html")
+
+    try:
+        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        servidor.starttls()
+        servidor.login(USUARIO, CONTRASENA)
+        servidor.send_message(mensaje)
+        servidor.quit()
+        print("Correo enviado correctamente")
+    except Exception as e:
+        print("Error al enviar correo:", e)
+
 @login_required(login_url='/login/')
-def expediente_cambiar_status(request, id):
+def cambiarEstado(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
 
     if request.method == "POST":
-        nuevo_estatus_id = request.POST.get("estatus")
-        if nuevo_estatus_id and  nuevo_estatus_id != str(expediente.estatus.id)  :
-            if nuevo_estatus_id == "2" :
-                correroParaRevision(expediente)
-            expediente.estatus_id = nuevo_estatus_id
+        nuevo_estatus_nombre = request.POST.get("estatus")
+        if nuevo_estatus_nombre and  nuevo_estatus_nombre != str(expediente.estatus.nombre):
+            if nuevo_estatus_nombre == "Completo" :
+                pass
+                #correroParaRevision(expediente)
+            if nuevo_estatus_nombre == 'Recepción':
+                pass 
+            if nuevo_estatus_nombre == 'Rechazado':
+                mandarCorreoRechazo(expediente.id)
+            getEstado = Estado.objects.get(nombre=nuevo_estatus_nombre)
+            expediente.estatus = getEstado
+            
             expediente.save()
     return redirect('Index:editarExpediente', id=expediente.id)
 
@@ -1193,7 +1337,6 @@ def cargaInicial(request):
     if request.method == 'POST':
         try:
             archivo = request.FILES['archivo_excel']
-            print("Archivo recibido:", archivo.name)
             
             contenido_texto = archivo.read().decode('utf-8').splitlines()
             lector_csv = csv.reader(contenido_texto)
@@ -1219,3 +1362,178 @@ def cargaInicial(request):
             print("Se produjo un error durante la carga:", str(e))
             
     return redirect('Index:administrador')
+#"UcG911_@!#"
+
+def enviarInvitacionCita(cita, expediente, esCancelacion=False):
+    fechaInicio = datetime.combine(cita.dia, cita.hora)
+    fechaFin = fechaInicio + timedelta(hours=1)
+    
+    cal = Calendar()
+    cal.add('prodid', '-//Plataforma de Expedientes//mx//')
+    cal.add('version', '2.0')
+    
+    metodo = 'CANCEL' if esCancelacion else 'REQUEST'
+    cal.add('method', metodo)
+    
+    evento = Event()
+    evento.add('dtstart', fechaInicio)
+    evento.add('dtend', fechaFin)
+    evento.add('dtstamp', datetime.now())
+    evento.add('uid', f"cita-{cita.id}-{expediente.id}@plataformaexpedientes.com")
+    
+    if esCancelacion:
+        evento.add('status', 'CANCELLED')
+        evento.add('summary', f"CANCELACIÓN: CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()}")
+        
+        evento.add('description', "Hola, se ha cancelado la cita que estaba programada para este expediente.")
+        asunto = f"CANCELACIÓN: CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()} -- {cita.dia}"
+        cuerpo = "Hola, se ha cancelado la cita que estaba programada para este expediente."
+    else:
+        evento.add('status', 'CONFIRMED')
+        evento.add('summary', f"CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()}")
+        evento.add('description', "Cita programada para el expediente del socio.")
+        asunto = f"Confirmación de Cita: {cita.dia} a las {cita.hora} hrs"
+        cuerpo = "Hola, adjunto a este correo encontrarás la invitación para la cita programada."
+        
+    cal.add_component(evento)
+    
+    SMTP_HOST = "ucg.com.mx"
+    SMTP_PORT = 465
+    USUARIO = "informacion@ucg.com.mx"
+    CONTRASENA = "UcG911_@!#"
+    
+    destinatariosRaw = [
+        #getattr(getattr(expediente, 'usuarioCredito', None), 'email', None),
+        #getattr(getattr(expediente, 'usuario', None), 'email', None),
+        # 'bvillanueva@ucg.com.mx'
+        #'daudiffred@ucg.com.mx'
+    ]
+    destinatarios = list(set([correo for correo in destinatariosRaw if correo]))
+
+    if not destinatarios:
+        return
+
+    try:
+        conexion = get_connection(
+            host=SMTP_HOST,
+            port=SMTP_PORT,
+            username=USUARIO,
+            password=CONTRASENA,
+            use_tls=False,
+            use_ssl=True,
+            timeout=10
+        )
+        
+        for correoDestino in destinatarios:
+            email = EmailMessage(
+                subject=asunto,
+                body=cuerpo,
+                from_email=USUARIO,
+                to=[correoDestino],
+                connection=conexion
+            )
+            
+            ics_contenido = cal.to_ical().decode('utf-8')
+            parte_calendario = SafeMIMEText(ics_contenido, 'calendar', 'utf-8')
+            parte_calendario.set_param('method', metodo)
+            parte_calendario.set_param('charset', 'UTF-8')
+            
+            email.attach(parte_calendario)
+            email.attach(
+                'invitacion-cita.ics',
+                cal.to_ical(),
+                f'text/calendar; charset=UTF-8; method={metodo}'
+            )
+            
+            email.send()
+        
+        print("Correos enviados de forma individual correctamente")
+        
+    except Exception as e:
+        if SMTP_PORT == 465:
+            try:
+                conexion_alterna = get_connection(
+                    host=SMTP_HOST,
+                    port=587,
+                    username=USUARIO,
+                    password=CONTRASENA,
+                    use_tls=True,
+                    use_ssl=False,
+                    timeout=10
+                )
+                
+                for correoDestino in destinatarios:
+                    email = EmailMessage(
+                        subject=asunto,
+                        body=cuerpo,
+                        from_email=USUARIO,
+                        to=[correoDestino],
+                        connection=conexion_alterna
+                    )
+                    
+                    ics_contenido = cal.to_ical().decode('utf-8')
+                    parte_calendario = SafeMIMEText(ics_contenido, 'calendar', 'utf-8')
+                    parte_calendario.set_param('method', metodo)
+                    parte_calendario.set_param('charset', 'UTF-8')
+                    
+                    email.attach(parte_calendario)
+                    email.attach(
+                        'invitacion-cita.ics',
+                        cal.to_ical(),
+                        f'text/calendar; charset=UTF-8; method={metodo}'
+                    )
+                    
+                    email.send()
+                
+                print("Correos enviados de forma individual por puerto alterno 587")
+            except Exception as e_alt:
+                print("Error en ambos puertos. Primario (465):", e, "Secundario (587):", e_alt)
+        else:
+            print("Error al enviar correo:", e)
+
+def crearCita(request, id):
+    if request.method == "POST":
+        cita_form = CitaForm(request.POST)
+        if cita_form.is_valid():
+            expediente = get_object_or_404(Expediente, pk=id)
+            cita = cita_form.save()
+            cita.expedientes.add(expediente)
+            
+            enviarInvitacionCita(cita, expediente, esCancelacion=False)
+            
+    return redirect('Index:editarExpediente', id)
+
+
+def asociarCitaExistente(request, expedienteId, citaId):
+    if request.method == "POST":
+        expediente = get_object_or_404(Expediente, pk=expedienteId)
+        cita = get_object_or_404(Cita, pk=citaId)
+        cita.expedientes.add(expediente)
+        
+        enviarInvitacionCita(cita, expediente, esCancelacion=False)
+        messages.success(request, 'El expediente fue vinculado y se envió la invitación a Outlook.')
+        
+    return redirect('Index:editarExpediente', expedienteId)
+
+
+def desasociarCitaExistente(request, expedienteId, citaId):
+    if request.method == "POST":
+        expediente = get_object_or_404(Expediente, pk=expedienteId)
+        cita = get_object_or_404(Cita, pk=citaId)
+        cita.expedientes.remove(expediente)
+        
+        enviarInvitacionCita(cita, expediente, esCancelacion=True)
+        messages.success(request, 'La cita fue desasignada y se envió la notificación de cancelación.')
+        
+    return redirect('Index:editarExpediente', expedienteId)
+
+
+def juntasIndex(request):
+    juntas = Cita.objects.all().prefetch_related('expedientes').order_by('dia')
+    citaForm = CitaForm()
+
+    context = {
+        'juntas': juntas,
+        'citaForm': citaForm,
+    }
+    return render(request, 'Index/juntasLayout.html', context)

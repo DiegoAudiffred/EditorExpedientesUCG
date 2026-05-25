@@ -22,7 +22,11 @@
             <td>{{ expediente.socio.numeroKepler }}</td>
 
             <td>{{ expediente.estatus.nombre }}</td>
+            {% if expediente.usuario %}
             <td>{{ expediente.usuario.nombreCompleto }}</td>
+            {% else %}
+            <td>Sin asignar</td>
+            {% endif %}
             {% if expediente.usuarioCredito %}
             <td>{{ expediente.usuarioCredito.nombreCompleto }}</td>
             {% else %}
