@@ -1,4 +1,5 @@
 import csv
+import email
 from io import BytesIO
 import mimetypes
 import os
@@ -175,7 +176,6 @@ def agregarObligados(request, id):
     return JsonResponse({'status': 'error'}, status=400)
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
-
     expediente = get_object_or_404(Expediente, pk=id)
     lineasLista = Linea.objects.filter(expediente=expediente)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
@@ -184,13 +184,12 @@ def editarExpediente(request, id):
     usuariosCreditos = User.objects.filter(roles__in=['Credito','Gerente de Credito'])
     rep_form = CrearRepresentante()
     obl_form = CrearObligado()
-    lin_form = LineaCrearForm()
+    lin_form = LineaCrearForm(expedienteInstance=expediente)
     cita_form = CitaForm()
 
     ahora_local = timezone.localtime(timezone.now())
     hoy = ahora_local.date()
     hora_actual = ahora_local.time()
-
 
     citasDisponibles = Cita.objects.filter(
         Q(dia__gt=hoy) | 
@@ -198,8 +197,8 @@ def editarExpediente(request, id):
     ).order_by('dia', 'hora')    
 
     citaAsignada = Cita.objects.filter(
-    Q(expedientes=expediente),
-).order_by('dia', 'hora').first()    
+        Q(expedientes=expediente),
+    ).order_by('dia', 'hora').first()    
     
     if request.method == "POST":
         post = request.POST
@@ -276,11 +275,18 @@ def editarExpediente(request, id):
     totalRegistros = 0
     totalRegistrosLlenos = 0
 
+    es_credito = request.user.roles in ['Credito', 'Gerente de Credito']
+    estatus_recepcion = expediente.estatus.nombre == "Recepción"
+
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave')
         
         filas = []
         for registro in registros_existentes:
+            if es_credito and estatus_recepcion:
+                if not registro.estatus or registro.estatus.strip() == "" or registro.estatus.strip().upper() == "N/A":
+                    continue
+
             totalRegistros += 1
 
             if registro.estatus and registro.estatus != "": 
@@ -302,21 +308,56 @@ def editarExpediente(request, id):
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
-
         })
         
     context['totalRegistros'] = totalRegistros
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
-    context['rep_form']=rep_form
-    context["obl_form"]=obl_form
-    context["lin_form"]=lin_form
-    context['cita_form']=cita_form
+    context['rep_form'] = rep_form
+    context["obl_form"] = obl_form
+    context["lin_form"] = lin_form
+    context['cita_form'] = cita_form
     lista_reps = RepresentanteLegal.objects.filter(expedientes=expediente)
     lista_obls = ObligadoSolidario.objects.filter(expedientes=expediente)
-    context['lista_reps']=lista_reps
-    context["lista_obls"]=lista_obls
+    context['lista_reps'] = lista_reps
+    context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
 
+@login_required(login_url='/login/')
+def lineaCrear(request, id):
+    expedienteInstance = get_object_or_404(Expediente, pk=id)
+    
+    if request.method == "POST":
+        lineasData = request.POST.get('lineas', '')
+        
+        if lineasData:
+            listaSegmentada = lineasData.split('||')
+            
+            for bloque in listaSegmentada:
+                if not bloque.strip():
+                    continue
+                
+                try:
+                    partes = bloque.split('::')
+                    numero = partes[0]
+                    monto = partes[1]
+                    tipoLineaId = partes[2]
+                    vigente = partes[3] == 'true'
+                    
+                    Linea.objects.create(
+                        expediente=expedienteInstance,
+                        numero=numero,
+                        monto=monto,
+                        tipoLinea=tipoLineaId,
+                        vigente=vigente
+                    )
+                except (IndexError, ValueError):
+                    continue
+                    
+            return JsonResponse({'status': 'success'}, status=200)
+            
+        return JsonResponse({'status': 'error', 'message': 'No data'}, status=400)
+        
+    return JsonResponse({'status': 'error'}, status=405)
 @login_required
 def servirArchivo(request):
     ruta_archivo = request.GET.get('ruta')
@@ -579,20 +620,21 @@ def expediente_eliminar(request,id):
 
 
 
-def correroParaRevision(expediente):
-  
+def correoParaRevision(expediente):
     destinatario = ["portiz@ucg.com.mx","dCorrea@ucg.com.mx", "mrubio@ucg.com.mx"]
     dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
-    url_final = f"{dominio}{expediente.id}/"
+    urlFinal = f"{dominio}{expediente.id}/"
     asunto = "Expediente listo para revisión"
     
-    cuerpo_texto = f"""
+    usuarioNombre = expediente.usuario.username if expediente.usuario else "Sistema"
+    
+    cuerpoTexto = f"""
     Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} esta listo para su revisión. 
-    Atte {expediente.usuario.username}.
-    Ingrese directamente o copie la url en su navegador(recuerde haber iniciado sesión con anterioridad): {url_final}
+    Atte {usuarioNombre}.
+    Ingrese directamente o copie la url en su navegador(recuerde haber iniciado sesión con anterioridad): {urlFinal}
     """
 
-    cuerpo_html = f"""
+    cuerpoHtml = f"""
     <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
             <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
@@ -600,14 +642,14 @@ def correroParaRevision(expediente):
                 <p>Estimado usuario,</p>
                 <p>Le informamos que el expediente <strong>{expediente.id}</strong> del socio <strong>{expediente.socio.nombre}</strong> está listo para su revisión.</p>
                 <div style="margin: 30px 0; text-align: center;">
-                    <a href="{url_final}" 
+                    <a href="{urlFinal}" 
                        style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
                         Revisar Expediente
                     </a>
                 </div>
                 <p style="font-size: 0.9em; color: #555;">
                     Atentamente,<br>
-                    <strong>{expediente.usuario.username}</strong>
+                    <strong>{usuarioNombre}</strong>
                 </p>
                 <hr style="border: 0; border-top: 1px solid #eee;">
                 <p style="font-size: 0.8em; color: #999; text-align: center;">
@@ -623,14 +665,13 @@ def correroParaRevision(expediente):
     USUARIO = "informacion@ucg.com.mx"
     CONTRASENA = "UcG911_@!#"
 
-    mensaje = EmailMessage()
+    mensaje = email.message.EmailMessage()
     mensaje["From"] = USUARIO
     mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
     mensaje["Subject"] = asunto
     
-    mensaje.set_content(cuerpo_texto)
-
-    mensaje.add_alternative(cuerpo_html, subtype="html")
+    mensaje.set_content(cuerpoTexto)
+    mensaje.add_alternative(cuerpoHtml, subtype="html")
 
     try:
         servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
@@ -641,7 +682,6 @@ def correroParaRevision(expediente):
         print("Correo enviado correctamente")
     except Exception as e:
         print("Error al enviar correo:", e)
-
 def mandarCorreoRechazo(id):
     from email.message import EmailMessage
     expediente = get_object_or_404(Expediente, pk=id)
@@ -749,8 +789,8 @@ def cambiarEstado(request, id):
         nuevo_estatus_nombre = request.POST.get("estatus")
         if nuevo_estatus_nombre and  nuevo_estatus_nombre != str(expediente.estatus.nombre):
             if nuevo_estatus_nombre == "Completo" :
-                pass
-                #correroParaRevision(expediente)
+                
+                correoParaRevision(expediente)
             if nuevo_estatus_nombre == 'Recepción':
                 pass 
             if nuevo_estatus_nombre == 'Rechazado':
@@ -1047,16 +1087,26 @@ def avances(request):
         usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios','Gerente Centro de Negocios']).distinct()
         estados = Estado.objects.all().order_by('id')
     elif request.user.roles == 'Gerente de Credito':
-        usuarios = User.objects.filter(roles__in=['Credito','Gerente de Credito']).distinct()
+        usuarios = User.objects.filter(roles__in=['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']).distinct()
         estados = Estado.objects.exclude(nombre='Nuevo').order_by('id')
     elif request.user.roles == 'Administrador':
         usuarios = User.objects.all()
         estados = Estado.objects.all().order_by('id')
+    else:
+        usuarios = User.objects.none()
+        estados = Estado.objects.none()
     
     data_por_usuario = {}
-    
+
     for us in usuarios:
-        expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
+        rol_limpio = us.roles.strip() if us.roles else ""
+        es_credito = rol_limpio in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']
+
+        if es_credito:
+            expedientes_totales = Expediente.objects.filter(usuarioCredito=us, eliminado=False)
+        else:
+            expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
+
         numExpedientes = expedientes_totales.count()
         
         conteo_por_estado = {}
@@ -1078,8 +1128,6 @@ def avances(request):
         else:
             porcentaje_completado = 0
             
-        es_credito = us.roles in ['Credito', 'Gerente de Credito']
-            
         data_por_usuario[us.username] = {
             'total': numExpedientes,
             'porcentaje': round(porcentaje_completado, 2),
@@ -1093,6 +1141,7 @@ def avances(request):
     }
     
     return render(request, 'Index/avancesLayout.html', context)
+
 
 @login_required(login_url='/login/')
 #@user_passes_test(is_admin)
@@ -1290,25 +1339,7 @@ def filtrar_representantes_ajax(request):
     }
 
     return render(request, 'Index/tablasLineas.html', context)
-#Metodo para crear una linea
-@login_required(login_url='/login/')
-def lineaCrear(request):
-    exito=False
 
-
-    if request.method == "POST":
-        form = LineaCrearForm(request.POST)
-        if form.is_valid():
-            form.save(commit=True)
-            messages.success(request, f"Línea creada con éxito.")
-            exito = True
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{error}")
-    form = LineaCrearForm()
-    context = {'form': form, 'exito': exito}
-    return render(request, 'Index/crearLinea.html',context)
 
 #Metodo para editar una linea
 @login_required(login_url='/login/')
@@ -1530,10 +1561,37 @@ def desasociarCitaExistente(request, expedienteId, citaId):
 
 def juntasIndex(request):
     juntas = Cita.objects.all().prefetch_related('expedientes').order_by('dia')
-    citaForm = CitaForm()
+    cita_form = CitaForm()
+
+    juntas_con_forms = []
+    for junta in juntas:
+        juntas_con_forms.append({
+            'cita': junta,
+            'form_editar': CitaForm(instance=junta)
+        })
 
     context = {
-        'juntas': juntas,
-        'citaForm': citaForm,
+        'juntas_con_forms': juntas_con_forms,
+        'cita_form': cita_form,
     }
     return render(request, 'Index/juntasLayout.html', context)
+
+def crearJunta(request):
+    if request.method == 'POST':
+        form = CitaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('Index:juntasIndex')
+
+def editarJunta(request, cita):
+    instancia_cita = get_object_or_404(Cita, pk=cita)
+    if request.method == 'POST':
+        form = CitaForm(request.POST, instance=instancia_cita)
+        if form.is_valid():
+            form.save()
+            return redirect('Index:juntasIndex')
+
+def eliminarJunta(request, cita):
+    if request.method == 'POST':
+        Cita.objects.filter(id=cita).delete()
+        return redirect('Index:juntasIndex')

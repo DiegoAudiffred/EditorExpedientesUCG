@@ -19,7 +19,7 @@
                     <div class="card-body d-flex flex-column align-items-center">
                         <div style="max-width: 250px; max-height: 250px; margin-bottom: 15px;">
                             {% if data.total > 0 %}
-                                <canvas id="chart-{{ username }}"></canvas>
+                                <canvas id="chart-dona-{{ username }}"></canvas>
                             {% else %}
                                 <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
                             {% endif %}
@@ -59,7 +59,7 @@
                     <div class="card-body d-flex flex-column align-items-center">
                         <div style="width: 100%; min-height: 250px; margin-bottom: 15px;">
                             {% if data.total > 0 %}
-                                <canvas id="chart-{{ username }}"></canvas>
+                                <canvas id="chart-barra-{{ username }}"></canvas>
                             {% else %}
                                 <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
                             {% endif %}
@@ -99,7 +99,10 @@
     const dataUsuarios = JSON.parse(dataElement.textContent);
 
     function createProgressChart(canvasId, estadosData, usarBarras) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
+        const canvasTag = document.getElementById(canvasId);
+        if (!canvasTag) return;
+        
+        const ctx = canvasTag.getContext('2d');
         
         const labels = [];
         const dataCounts = [];
@@ -118,29 +121,45 @@
             return;
         }
 
-        const chartType = usarBarras ? 'bar' : 'doughnut';
-        
-        const chartPlugins = usarBarras ? {
-            legend: {
-                display: false
-            }
-        } : {
-            legend: {
-                position: 'bottom',
+        let chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== undefined) {
+                                label += context.parsed.y;
+                            } else if (context.parsed !== null) {
+                                label += context.parsed;
+                            }
+                            return label;
+                        }
+                    }
+                }
             }
         };
 
-        const chartScales = usarBarras ? {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    stepSize: 1
+        if (usarBarras) {
+            chartOptions.plugins.legend = { display: false };
+            chartOptions.scales = {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
                 }
-            }
-        } : {};
+            };
+        } else {
+            chartOptions.plugins.legend = { position: 'bottom' };
+        }
 
         new Chart(ctx, {
-            type: chartType,
+            type: usarBarras ? 'bar' : 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
@@ -151,39 +170,16 @@
                     hoverOffset: usarBarras ? 0 : 4
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: chartScales,
-                plugins: {
-                    ...chartPlugins,
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== undefined) {
-                                    label += context.parsed.y;
-                                } else if (context.parsed !== null) {
-                                    label += context.parsed;
-                                }
-                                return label;
-                            }
-                        }
-                    }
-                }
-            }
+            options: chartOptions
         });
     }
 
     for (const username in dataUsuarios) {
         if (dataUsuarios.hasOwnProperty(username)) {
             const data = dataUsuarios[username];
-            
             if (data.total > 0) {
-                const canvasId = `chart-${username}`;
+                const prefix = data.grafica_barras ? 'chart-barra-' : 'chart-dona-';
+                const canvasId = `${prefix}${username}`;
                 createProgressChart(canvasId, data.estados, data.grafica_barras);
             }
         }

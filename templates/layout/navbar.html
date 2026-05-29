@@ -93,19 +93,24 @@
                     <a class="nav-link fnSuperiorRegular text-tercero"
                         href="{% url 'Index:lineasLayout'%}">Lineas</a>
                 </li>
-                <li class="nav-item">
+                {% if request.user.roles == "Administrador" or request.user.roles == "Gerente Centro de Negocios" or request.user.roles == "Gerente de Credito" %}
+                      <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:avances'%}">Avances</a>
                 </li>
+                {% endif %}
+                
                          <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:juntasIndex'%}">Juntas</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:editar_layout'%}">Ajustes</a>
                 </li>
-                <li class="nav-item">
+                {% if request.user.roles == "Administrador" %}
+                      <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero"
                         href="{% url 'Index:administrador'%}">Administrador</a>
                 </li>
+                {% endif %} 
                 {% if request.user.is_authenticated %}
                 <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="" data-bs-toggle="modal"

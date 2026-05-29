@@ -61,14 +61,19 @@
             </div>
         </div>
     </div>
-    <div class="col-6">
-         {% if expediente.estatus.nombre == 'Recepción'%}
-            <h5 class="mb-3">{% if cita.asignada %} Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
+    <div class="col-3">
+         {% if expediente.estatus.nombre == 'Completo'%}
+            <h5 class="mb-3">{% if citaAsignada %} Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
   
-    {% else %} Sin cita asignada {% endif %}</h5>
+    {% else %} Sin cita asignada  {% endif %}</h5>
          {% endif %}
 
     </div>
+        <div class="col-3">
+ {% if expediente.estatus.nombre == 'Completo'%}
+            <a href="" class="btn btn-primary fw-bold">He recibido el expediente fisico</a>
+         {% endif %}
+            </div>
     
     <div class="col-6 my-2">
  <h5 class="mb-3">Personal de centro de negocios asignado a: <b class="text-tercero" data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModal">{{expediente.usuario}}</b>
@@ -145,8 +150,8 @@
  
 
 
-{% if expediente.estatus.nombre == 'Recepción' %}
-<button type="button" class="btnCrearCita btn btn-primary fw-bold border-3 px-4 shadow-sm mb-2" 
+     {% if expediente.estatus.nombre == 'Completo'%}
+     <button type="button" class="btnCrearCita btn btn-primary fw-bold border-3 px-4 shadow-sm mb-2" 
         data-bs-toggle="modal" data-bs-target="#modalCita">
     Citas
 </button>
@@ -232,7 +237,6 @@ Disponible</span>
                         {% endif %}
                     </div>
 
-                    <!-- PESTAÑA 2: Crear Nueva Cita -->
                     <div class="tab-pane fade" id="nueva" role="tabpanel" aria-labelledby="nueva-tab">
                         <form action="{% url 'Index:crearCita' expediente.id %}" method="POST">
                             {% csrf_token %}
@@ -622,10 +626,9 @@ Disponible</span>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-// Inicializa el buscador cuando el modal de Bootstrap se termine de abrir por completo
 document.getElementById('modalCita').addEventListener('shown.bs.modal', function () {
     $('.selectorBuscador').select2({
-        dropdownParent: $('#modalCita'), // Crucial para que despliegue por encima del modal
+        dropdownParent: $('#modalCita'), 
         placeholder: "Escribe para buscar expedientes...",
         allowClear: true
     });

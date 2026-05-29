@@ -212,19 +212,23 @@ class CrearRepresentante(forms.ModelForm):
 class LineaCrearForm(forms.ModelForm):
     class Meta:
         model = Linea
-        fields = ['expediente', 'numero','monto','tipoLinea','vigente'] 
+        fields = ['expediente', 'numero', 'monto', 'tipoLinea', 'vigente'] 
         widgets = {
-            'expediente': forms.Select(attrs={'class': 'form-control'}),
+            'expediente': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
             'numero': forms.TextInput(attrs={'class': 'form-control'}),
             'monto': forms.NumberInput(attrs={'class': 'form-control'}),
             'tipoLinea': forms.Select(attrs={'class': 'form-control'}),
-
-
         }
+        
     def __init__(self, *args, **kwargs):
-            super(LineaCrearForm, self).__init__(*args, **kwargs)
-            check_style = 'form-check-input fs-2 my-0'
-            self.fields['vigente'].widget.attrs.update({'class': check_style})
+        expedienteInstance = kwargs.pop('expedienteInstance', None)
+        super(LineaCrearForm, self).__init__(*args, **kwargs)
+        check_style = 'form-check-input fs-2 my-0'
+        self.fields['vigente'].widget.attrs.update({'class': check_style})
+        
+        if expedienteInstance:
+            self.fields['expediente'].queryset = Expediente.objects.filter(pk=expedienteInstance.pk)
+            self.fields['expediente'].initial = expedienteInstance
 
 
 class CitaForm(forms.ModelForm):
@@ -233,12 +237,14 @@ class CitaForm(forms.ModelForm):
         fields = ['dia', 'hora', 'expedientes']
         widgets = {
             'dia': forms.DateInput(
+                format='%Y-%m-%d',
                 attrs={'type': 'date', 'class': 'form-control'}
             ),
             'hora': forms.TimeInput(
+                format='%H:%M',
                 attrs={'type': 'time', 'class': 'form-control'}
             ),
-       'expedientes': forms.SelectMultiple(
+            'expedientes': forms.SelectMultiple(
                 attrs={'class': 'form-select selectorBuscador', 'style': 'width: 100%'}
             ),
         }
@@ -247,12 +253,16 @@ class CitaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['dia'].label = "Día de la cita"
         self.fields['hora'].label = "Hora de inicio"
-        self.fields['expedientes'].queryset = Expediente.objects.filter(
-            estatus__nombre='Recepción'
-        ).order_by('-id')
-
-
-
+        
+        from django.db.models import Q
+        if self.instance and self.instance.pk:
+            self.fields['expedientes'].queryset = Expediente.objects.filter(
+                Q(estatus__nombre='Recepción') | Q(Expedientes_Citas=self.instance)
+            ).distinct().order_by('-id')
+        else:
+            self.fields['expedientes'].queryset = Expediente.objects.filter(
+                estatus__nombre='Recepción'
+            ).order_by('-id')
 class ModificarEstados(forms.ModelForm):
     class Meta:
         model = Estado

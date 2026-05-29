@@ -104,3 +104,5 @@ STORAGES = {
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'db.User'
+USE_L10N = False
+

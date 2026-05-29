@@ -1,139 +1,131 @@
 {% load static %}
 
-
 <div class="tab-pane fade" id="seccion-agregarLinea" role="tabpanel">
-    <h2> Agregar Lineas
-    </h2>
+    <h2> Agregar Líneas </h2>
     <hr>
-
-        <div class="mb-4">
-            <div class="row border border-3 border-quinto rounded rounded-3">
-                <div class="col-12 p-3">
-                    <label>Crear una linea:</label>
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1" id="contenedor-select-rep">
-                            {{ lin_form }}
+    <div class="mb-4">
+        <div class="row border border-3 border-quinto rounded rounded-3">
+            <div class="col-12 p-3">
+                <div id="contenedor-formulario-linea" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Expediente:</label>
+                        {{ lin_form.expediente }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Número:</label>
+                        {{ lin_form.numero }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Monto:</label>
+                        {{ lin_form.monto }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de Línea:</label>
+                        {{ lin_form.tipoLinea }}
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center pt-4">
+                        <div class="form-check">
+                            {{ lin_form.vigente }}
+                            <label class="form-check-label ms-2" for="id_vigente">Vigente</label>
                         </div>
-                        <button type="button" class="btn btn-secondary ms-2 text-white border border-primary"
-                            onclick="agregarRep()">
-                            Agregar
+                        <button type="button" class="btn btn-secondary ms-auto text-white border border-primary" onclick="agregarLineaLista()">
+                            Agregar a la Lista
                         </button>
                     </div>
                 </div>
-                <div id="rep-list" class="col-12"></div>
-
             </div>
-            <div class="col-12 text-end">
-    <button type="button" onclick="enviarRepresentantes()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
-    Agregar Linea
-</button>
-
-            </div>
+            <div id="linea-list" class="col-12 p-3"></div>
         </div>
+        <div class="col-12 text-end">
+            <button type="button" onclick="enviarLineasToServer()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
+                Guardar Todas las Líneas
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
-    let lineas = [];
+    let coleccionLineas = [];
 
-    function syncHidden() {
-        document.getElementsByName("lineas")[0].value = reps.join("||");
-    }
-
-    function render() {
-        const repList = document.getElementById("rep-list");
-        repList.innerHTML = reps.map((x, i) => `
-            <div class="input-group my-2 w-100">
-                <span class="input-group-text bg-primary text-white">Rep.</span>
-                <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-                <button class="btn btn-primary" type="button" onclick="reps.splice(${i},1); render();">X</button>
+    function renderLineas() {
+        const contenedorListado = document.getElementById("linea-list");
+        contenedorListado.innerHTML = coleccionLineas.map((item, index) => `
+            <div class="alert alert-info d-flex justify-content-between align-items-center my-2 w-100">
+                <div>
+                    <strong>Num:</strong> ${item.numero} | 
+                    <strong>Monto:</strong> $${item.monto} | 
+                    <strong>Tipo:</strong> ${item.tipoTexto} | 
+                    <strong>Vigente:</strong> ${item.vigente ? 'Sí' : 'No'}
+                </div>
+                <button class="btn btn-danger btn-sm" type="button" onclick="removerLineaLista(${index})">X</button>
             </div>
         `).join("");
-
-        const oblList = document.getElementById("obl-list");
-        oblList.innerHTML = obls.map((x, i) => `
-            <div class="input-group my-2 w-100">
-                <span class="input-group-text bg-primary text-white">Obl.</span>
-                <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
-                <button class="btn btn-primary" type="button" onclick="obls.splice(${i},1); render();">X</button>
-            </div>
-        `).join("");
-
-        syncHidden();
     }
 
-    function agregarRep() {
-        const select = document.querySelector('[name="representante_selector"]');
-        const valor = select.options[select.selectedIndex].text;
+    function agregarLineaLista() {
+        const inputNumero = document.querySelector('[name="numero"]');
+        const inputMonto = document.querySelector('[name="monto"]');
+        const selectTipo = document.querySelector('[name="tipoLinea"]');
+        const checkVigente = document.querySelector('[name="vigente"]');
 
-
-        const nombreParaAgregar = select.value === "" ? "" : valor;
-
-        reps.push(nombreParaAgregar);
-        render();
-        select.value = "";
-    }
-
-    function agregarObl() {
-        const select = document.querySelector('[name="obligado_selector"]');
-        const valor = select.options[select.selectedIndex].text;
-
-        const nombreParaAgregar = select.value === "" ? "" : valor;
-
-        obls.push(nombreParaAgregar);
-        render();
-        select.value = "";
-    }
-    async function enviarRepresentantes() {
-    const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    const formData = new FormData();
-    formData.append('representantes', reps.join("||"));
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken
-            },
-            body: formData
-        });
-
-        if (response.ok) {
-            alert("Representantes guardados correctamente");
-            location.reload(); 
-        } else {
-            alert("Error al guardar");
+        if (!inputNumero.value || !inputMonto.value || !selectTipo.value) {
+            alert("Por favor completa los campos de la línea.");
+            return;
         }
-    } catch (error) {
-        console.error("Error:", error);
+
+        const lineaObjeto = {
+            numero: inputNumero.value.trim(),
+            monto: inputMonto.value.trim(),
+            tipoId: selectTipo.value,
+            tipoTexto: selectTipo.options[selectTipo.selectedIndex].text,
+            vigente: checkVigente.checked
+        };
+
+        coleccionLineas.push(lineaObjeto);
+        renderLineas();
+
+        inputNumero.value = "";
+        inputMonto.value = "";
+        selectTipo.value = "";
+        checkVigente.checked = false;
     }
-}
 
-async function enviarObligados() {
-    const url = "{% url 'Index:agregarObligados' expediente.id %}";
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    const formData = new FormData();
-    formData.append('obligados', obls.join("||"));
+    function removerLineaLista(index) {
+        coleccionLineas.splice(index, 1);
+        renderLineas();
+    }
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken
-            },
-            body: formData
-        });
-
-        if (response.ok) {
-            alert("Obligados guardados correctamente");
-            location.reload();
-        } else {
-            alert("Error al guardar");
+    async function enviarLineasToServer() {
+        if (coleccionLineas.length === 0) {
+            alert("No hay líneas agregadas para guardar.");
+            return;
         }
-    } catch (error) {
-        console.error("Error:", error);
+
+        const url = "{% url 'Index:lineaCrear' expediente.id %}";
+        const tokenCsrf = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : "";
+
+        const payloadSerializado = coleccionLineas.map(x => `${x.numero}::${x.monto}::${x.tipoId}::${x.vigente}`).join("||");
+
+        const datosFormulario = new FormData();
+        datosFormulario.append('lineas', payloadSerializado);
+
+        try {
+            const respuesta = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': tokenCsrf
+                },
+                body: datosFormulario
+            });
+
+            if (respuesta.ok) {
+                alert("Todas las líneas se guardaron correctamente.");
+                location.reload();
+            } else {
+                alert("Ocurrió un error al procesar la solicitud.");
+            }
+        } catch (fallo) {
+            console.error("Error en Fetch:", fallo);
+        }
     }
-}
 </script>

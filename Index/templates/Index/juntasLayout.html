@@ -3,38 +3,129 @@
 {% block body %}
 <div class="container">
 
-
     <div class="row">
-        <div class="col-10  ">
+        <div class="col-10">
             <h1 class="text-secondary fnSuperiorRegularTitle2">Panel de Juntas</h1>
         </div>
         <div class="col-2 my-auto">
-            <a href="" class="btn btn-primary w-100 ">Crear junta</a>
+            <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#crearJuntaModal">Crear junta</button>
+
+            <div class="modal fade" id="crearJuntaModal" tabindex="-1" aria-labelledby="crearJuntaModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="crearJuntaModalLabel">Nueva Junta</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form action="{% url 'Index:crearJunta' %}" method="POST">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="mb-3 container-select2">
+                                    {{ cita_form }}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Agendar y Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class=" col-12">
-            {% for cita in juntas %}
-            <div class="card">
+
+        <div class="col-12">
+            {% if not juntas_con_forms %}
+            <p>Sin juntas</p>
+            {% else %}
+            {% for item in juntas_con_forms %}
+            <div class="card mb-3">
                 <div class="card-header fnSuperiorRegularTitle3">
-                    <p class="m-0">Junta del dia {{ cita.dia }} a las {{ cita.hora }}</p>
+                    <p class="m-0">Junta del dia {{ item.cita.dia }} a las {{ item.cita.hora }}</p>
                 </div>
                 <div class="card-body">
                     Expedientes entregados:
                     <ul>
-                        {% for expediente in cita.expedientes.all %}
+                        {% for expediente in item.cita.expedientes.all %}
                         <li>{{ expediente }}</li>
                         {% empty %}
                         <li>No hay expedientes asignados a esta junta.</li>
                         {% endfor %}
                     </ul>
                 </div>
-                <div class="card-footer">
-                    <button href="" class="btn btn-primary">Editar expedientes de la junta</button>
-                    <button href="" class="btn btn-secondary text-white">Borrar junta</button>
+                <div class="card-footer d-flex gap-2">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editarJuntaModal{{ item.cita.id }}">Editar expedientes de la junta</button>
+                    <button class="btn btn-secondary text-white" data-bs-toggle="modal" data-bs-target="#eliminarJuntaModal{{ item.cita.id }}">Borrar junta</button>
                 </div>
+            </div>
 
+            <div class="modal fade" id="editarJuntaModal{{ item.cita.id }}" tabindex="-1" aria-labelledby="editarJuntaModalLabel{{ item.cita.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editarJuntaModalLabel{{ item.cita.id }}">Editar Junta</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form action="{% url 'Index:editarJunta' item.cita.id %}" method="POST">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="mb-3 container-select2">
+                                    {{ item.form_editar }}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="eliminarJuntaModal{{ item.cita.id }}" tabindex="-1" aria-labelledby="eliminarJuntaModalLabel{{ item.cita.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="eliminarJuntaModalLabel{{ item.cita.id }}">Confirmar Eliminación</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form action="{% url 'Index:eliminarJunta' item.cita.id %}" method="POST">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                ¿Está seguro de que desea eliminar la junta del día <strong>{{ item.cita.dia }}</strong> a las <strong>{{ item.cita.hora }}</strong>? Esta acción no se puede deshacer.
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-danger">Eliminar de todos modos</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
             {% endfor %}
+            {% endif %} 
         </div>
     </div>
 </div>
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).on('shown.bs.modal', '.modal', function () {
+    var modalId = $(this).attr('id');
+    $(this).find('select').each(function() {
+        if ($(this).hasClass('select2-hidden-accessible')) {
+            $(this).select2('destroy');
+        }
+        $(this).select2({
+            dropdownParent: $('#' + modalId),
+            placeholder: "Escribe para buscar expedientes...",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+});
+</script>
 {% endblock %}

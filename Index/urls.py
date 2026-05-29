@@ -50,10 +50,13 @@ path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', view
     #Lineas
     path("lineas/",views.lineasLayout,name='lineasLayout'),
     path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),
-    path('lineas/crear/', views.lineaCrear, name='lineaCrear'),
+    path('lineas/crear/<int:id>/', views.lineaCrear, name='lineaCrear'),
     path("lineas/editarLinea/<int:id>/",views.editarLinea,name='editarLinea'),
     #path('lineas/eliminar/<int:id>/', views.cambiarEstado, name='cambiarEstado'),
     #path('lineas/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
     path('cargaInicial/', views.cargaInicial, name='cargaInicial'),
-    path('juntasIndex/',views.juntasIndex,name='juntasIndex')
+    path('juntasIndex/',views.juntasIndex,name='juntasIndex'),
+    path('junta/editar/<int:cita>/', views.editarJunta, name='editarJunta'),
+    path('junta/crear/', views.crearJunta, name='crearJunta'),
+    path('junta/eliminar/<int:cita>/', views.eliminarJunta, name='eliminarJunta'),
 ] 

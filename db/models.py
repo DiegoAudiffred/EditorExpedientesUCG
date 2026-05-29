@@ -134,19 +134,41 @@ class ObligadoSolidario(models.Model):
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
     def __str__(self):
         return self.nombre
+class Garantia(models.Model):
+    garantias = (
+        ("Hipotecaria","Hipotecaria"),
+        ("Prendaria","Prendaria"),
+        ("Colateral","Colateral"),
+        ("Avales","Avales"),
+        ("Fiduciaria","Fiduciaria"),
+        ("Sin garantia","Sin garantia")
+    )
+    nombre = models.CharField(choices=garantias,blank=False,default="Cuenta Corriente", max_length=50,unique=True, null=False)
+
+    def __str__(self):
+        return self.nombre
+
+
 class Linea(models.Model):
     tipoLinea = (
-        ("Libre","Libre"),
-        ("Back","Back"),
-        ("Hipotecaria","Hipotecaria"),
-        ("Fidusiaria","Fidusiaria"),
+        ("Cuenta Corriente","Cuenta Corriente"),
+        ("Simple","Simple"),
+        ("Habilitacion","Habilitacion"),
+        ("Refaccionario","Refaccionario"),
+        ("Factoraje", "Factoraje"),
+        ("Quirografario","Quirografario"),
+        ("Linea de descuento","Linea de descuento")
     )    
+    
+
 
     expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=False,blank=False)
     numero = models.CharField("Numero", max_length=10, blank=False,null=False,unique=True)
     monto = models.IntegerField(default=0,blank=False,null=False)  
     vigente = models.BooleanField(default=True)
-    tipoLinea = models.CharField(choices=tipoLinea,blank=False,default="Libre")
+    tipoLinea = models.CharField(choices=tipoLinea,blank=False,default="Cuenta Corriente", max_length=50)
+    tipoGarantia = models.ManyToManyField(Garantia, blank=True, related_name="lineas")
+    
     def __str__(self):
         return self.numero
     
