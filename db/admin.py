@@ -13,3 +13,6 @@ admin.site.register(ObligadoSolidario)
 admin.site.register(RepresentanteLegal)
 admin.site.register(Cita)
 admin.site.register(Garantia)
+admin.site.register(EstadosFechas)
+# Register your models here.
+

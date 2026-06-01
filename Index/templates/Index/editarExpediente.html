@@ -7,16 +7,16 @@
     <div class="row">
         <div class="col-12 fnSuperiorRegularTitle">
           
-        Expediente del socio <b class="text-tercero">{{expediente.socio}}</b> - {{expediente.socio.numeroKepler}}
+        <b class="text-tercero">{{expediente.socio}}</b> - {{expediente.socio.numeroKepler}}
 
         </div>
-<div class="col-6 fnSuperiorRegularTitle4">
+<div class="col-6 my-2 fnSuperiorRegularTitle4">
                Estatus actual:
         <span style="background-color: {{ expediente.estatus.color }};" class="rounded rounded-3 px-3 fw-bold py-2">
             {{ expediente.estatus }}
         </span>
-       
-        <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#statusModal">
+        {% if request.user.roles == 'Administrador' %}
+               <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#statusModal">
             <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none"
                 xmlns="http://www.w3.org/2000/svg">
                 <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -29,10 +29,7 @@
                 </g>
             </svg>
         </span>
-
-    </div>
-    
-<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+        <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-tercero text-white">
@@ -61,21 +58,46 @@
             </div>
         </div>
     </div>
-    <div class="col-3">
+        {% endif %}
+
+ 
+
+    </div>
+    
+
+    <div class="col-6 my-2">
          {% if expediente.estatus.nombre == 'Completo'%}
-            <h5 class="mb-3">{% if citaAsignada %} Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
+            <h4 class="mb-3 fw-bold">{% if citaAsignada %} Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
   
-    {% else %} Sin cita asignada  {% endif %}</h5>
+    {% else %} Sin cita asignada  {% endif %}</h4>
          {% endif %}
 
     </div>
-        <div class="col-3">
- {% if expediente.estatus.nombre == 'Completo'%}
-            <a href="" class="btn btn-primary fw-bold">He recibido el expediente fisico</a>
+        <div class="col-4 my-2">
+ {% if expediente.estatus.nombre == 'Completo' %}
+            {% if  request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href="{% url 'Index:recepcionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">He recibido el expediente fisico</a>
+         {% endif %}
+
+{% endif %}
+         {% if expediente.estatus.nombre == 'Nuevo' %}
+            <a href="{% url 'Index:enviarExpediente' expediente.id %}" class="btn btn-primary fw-bold">Enviar expediente a crédito</a>
+
+         {% endif %}
+            </div>
+            <div class="col-4 my-2">
+                                     {% if  request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">He recibido el expediente fisico c/observaciones</a>
+         {% endif %}
+
+            </div>
+            <div class="col-4 my-2">
+  {% if  request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
          {% endif %}
             </div>
     
-    <div class="col-6 my-2">
+    <div class="col-6 my-2 my-2">
  <h5 class="mb-3">Personal de centro de negocios asignado a: <b class="text-tercero" data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModal">{{expediente.usuario}}</b>
        
     </h5>

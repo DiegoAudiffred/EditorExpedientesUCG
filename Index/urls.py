@@ -29,8 +29,12 @@ urlpatterns = [
     path('expediente/crearCita/<int:id>/',views.crearCita,name ='crearCita'),
 
     path('expediente/asociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.asociarCitaExistente, name='asociarCitaExistente'),
+    path('expediente/recibirExpediente/<int:expedienteID>/<str:observaciones>', views.recepcionExpediente, name='recepcionExpediente'),
+    #enviarExpediente
+    path('expediente/enviarExpediente/<int:expedienteID>/', views.enviarExpediente, name='enviarExpediente'),
+    
     path('editar/', views.editar_layout, name='editar_layout'),
-path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
+    path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
 
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     

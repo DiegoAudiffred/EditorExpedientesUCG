@@ -111,12 +111,21 @@ class Expediente(models.Model):
     usuario = models.ForeignKey(User, related_name='centroNegocios', blank=True, null=True, on_delete=models.CASCADE)
     usuarioCredito = models.ForeignKey(User, related_name='credito', blank=True, null=True, on_delete=models.CASCADE)
     usuarioArchivo = models.ForeignKey(User, related_name='Archivado', blank=True, null=True, on_delete=models.CASCADE)
-    fecha = models.DateField(auto_now_add=True, blank=True)
+    fechaCreacion = models.DateField(auto_now_add=True, blank=True)
+    usuarioNegocios = models.ForeignKey(User, related_name='negocios', blank=True, null=True, on_delete=models.CASCADE)
+
     eliminado = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.socio}"
-    
+class EstadosFechas(models.Model):
+    expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
+    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
+    fecha = models.DateField(null=True, blank=True)
+    hora = models.TimeField(auto_now_add=True, blank=True,null=True)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, blank=True,null=True)
+
+
 class Cita(models.Model):
     dia = models.DateField(null=True, blank=True)
     hora = models.TimeField(null=True, blank=True)
@@ -229,10 +238,3 @@ class RegistroSeccion(models.Model): #El renglon
 
     def __str__(self):
         return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} {self.seccion.expediente.socio}"
-    
-class CambiosEstados(models.Model):
-    fecha = models.DateField(auto_now_add=True, blank=True)
-    hora = models.TimeField(auto_now_add=True, blank=True)
-    expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
-    estado = models.ForeignKey(Estado, on_delete=models.CASCADE)

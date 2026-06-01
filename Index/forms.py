@@ -103,7 +103,7 @@ class ExpedienteCrearForm(forms.ModelForm):
     socio = forms.ModelChoiceField(
         queryset=Socio.objects.all(), 
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control',  'id': 'id_socio'}), #'onchange': 'cargarLineas()'
+        widget=forms.Select(attrs={'class': 'form-control',  'id': 'id_socio'}), 
         empty_label="--- Seleccionar Socio Existente ---"
     )
 
@@ -134,21 +134,23 @@ class ExpedienteCrearForm(forms.ModelForm):
 
     class Meta:
         model = Expediente
-        fields = ['socio', 'usuario',] 
+        fields = ['socio', 'usuario', 'usuarioNegocios'] 
         widgets = {
             'usuario': forms.Select(attrs={'class': 'form-control'}),
+            'usuarioNegocios': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['usuario'].queryset = User.objects.filter(roles__in=['Ejecutivo de Servicios'])
+        self.fields['usuarioNegocios'].queryset = User.objects.filter(roles__in=['Ejecutivo de Negocios','Gerente Centro de Negocios'])
+        
         if 'socio' in self.data:
             try:
                 socio_id = int(self.data.get('socio'))
-                #self.fields['socio_linea'].queryset = Linea.objects.filter(socio_id=socio_id)
             except (ValueError, TypeError):
                 pass
         elif self.instance.pk and self.instance.socio:
-            #self.fields['socio_linea'].queryset = self.instance.socio.linea_set.all()
             pass
 
     def clean(self):

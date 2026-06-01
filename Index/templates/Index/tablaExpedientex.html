@@ -5,10 +5,9 @@
             <th>Socio</th>
             <th>Número</th>
             <th>Estatus</th>
-            <th>Ejecutivo</th>
+            <th>Ejecutivo de Servicio</th>
             <th>Credito</th>
 
-            <th>Fecha de creación</th>
             <th>Editar</th>
 
         </tr>
@@ -32,7 +31,6 @@
             {% else %}
             <td>Sin asignar</td>
             {% endif %}
-            <td>{{ expediente.fecha }}</td>
             <td><a href="{% url 'Index:editarExpediente' expediente.id %}"
                     class="btn  rounded rounded-4 bg-tercero text-white"> Editar expediente</a></td>
 
