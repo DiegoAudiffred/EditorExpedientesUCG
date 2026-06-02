@@ -127,18 +127,22 @@ class EstadosFechas(models.Model):
 
 
 class Cita(models.Model):
+    listaEstatus = (('Aceptada','Aceptada'),('Rechazada','Rechazada'),('Pendiente','Pendiente'))
     dia = models.DateField(null=True, blank=True)
     hora = models.TimeField(null=True, blank=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Citas",blank=True,null=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Citas")
+    usuario = models.ForeignKey(User, related_name='usuario', blank=True, null=True, on_delete=models.CASCADE)
+    estatusCR = models.CharField(choices=listaEstatus,default='Pendiente')
+    estatusCN = models.CharField(choices=listaEstatus,default='Pendiente')
        
 class RepresentanteLegal(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes",blank=True,null=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes")
     def __str__(self):
         return self.nombre
 class ObligadoSolidario(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados",blank=True,null=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados")
 
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
     def __str__(self):

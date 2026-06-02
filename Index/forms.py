@@ -236,7 +236,7 @@ class LineaCrearForm(forms.ModelForm):
 class CitaForm(forms.ModelForm):
     class Meta:
         model = Cita
-        fields = ['dia', 'hora', 'expedientes']
+        fields = ['dia', 'hora', 'expedientes', 'usuario']
         widgets = {
             'dia': forms.DateInput(
                 format='%Y-%m-%d',
@@ -252,19 +252,61 @@ class CitaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
         self.fields['dia'].label = "Día de la cita"
         self.fields['hora'].label = "Hora de inicio"
         
         from django.db.models import Q
         if self.instance and self.instance.pk:
             self.fields['expedientes'].queryset = Expediente.objects.filter(
-                Q(estatus__nombre='Recepción') | Q(Expedientes_Citas=self.instance)
+                Q(estatus__nombre='Completo') | Q(Expedientes_Citas=self.instance)
             ).distinct().order_by('-id')
         else:
             self.fields['expedientes'].queryset = Expediente.objects.filter(
-                estatus__nombre='Recepción'
+                estatus__nombre='Completo'
             ).order_by('-id')
+        
+        if user:
+            self.fields['usuario'].queryset = User.objects.filter(pk=user.pk)
+            self.fields['usuario'].initial = user.pk
+            self.fields['usuario'].label = ""
+            self.fields['usuario'].widget = forms.Select(attrs={
+                'class': 'form-control',
+                'style': 'display: none;'
+            })
+            
+            self.fields['usuario_nombre_visual'] = forms.CharField(
+                initial=user.username,
+                required=False,
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control',
+                    'readonly': 'readonly',
+                    'style': 'background-color: #e9ecef;'
+                }),
+                label="Usuario"
+            )
+            
+        elif self.instance and hasattr(self.instance, 'usuario') and self.instance.usuario:
+            self.fields['usuario'].queryset = User.objects.filter(pk=self.instance.usuario.pk)
+            self.fields['usuario'].initial = self.instance.usuario.pk
+            self.fields['usuario'].label = ""
+            self.fields['usuario'].widget = forms.Select(attrs={
+                'class': 'form-control',
+                'style': 'display: none;'
+            })
+            
+            self.fields['usuario_nombre_visual'] = forms.CharField(
+                initial=self.instance.usuario.username,
+                required=False,
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control',
+                    'readonly': 'readonly',
+                    'style': 'background-color: #e9ecef;'
+                }),
+                label="Usuario"
+            )
 class ModificarEstados(forms.ModelForm):
     class Meta:
         model = Estado

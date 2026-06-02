@@ -1,0 +1,40 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow border-0 text-center p-4">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" fill="#28a745" class="bi bi-calendar-check" viewBox="0 0 16 16">
+                            <path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                        </svg>
+                    </div>
+                    
+                    <h2 class="card-title text-success mb-3">¡Cita Aceptada con Éxito!</h2>
+                    
+                    <p class="card-text text-muted mb-4 fs-5">
+                        La cita para la entrega del expediente del socio 
+                        <strong>{{ expediente.socio.numeroKepler }} - {{ expediente.socio.nombre.upper }}</strong> 
+                        ha sido confirmada correctamente en el sistema.
+                    </p>
+
+                    <div class="bg-light rounded p-3 mb-4 text-start border">
+                        <p class="mb-2 text-secondary"><strong>Fecha:</strong> {{ cita.dia }}</p>
+                        <p class="mb-0 text-secondary"><strong>Hora de inicio:</strong> {{ cita.hora }} hrs</p>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-primary btn-lg fw-bold shadow-sm">
+                            Volver al Expediente
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

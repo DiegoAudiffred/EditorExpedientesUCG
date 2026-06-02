@@ -19,6 +19,7 @@ urlpatterns = [
     path('expediente/cambiarStatus/<int:id>/', views.cambiarEstado, name='cambiarEstado'),
     path('expediente/cambiarUsuario/<int:id>/', views.expediente_cambiar_usuario, name='expediente_cambiar_usuario'),
     path('expediente/cambiarUsuarioCredito/<int:id>/', views.cambiarUsuarioCredito, name='cambiarUsuarioCredito'),
+    path('expediente/cambiarUsuarioNegocios/<int:id>/', views.cambiarUsuarioNegocios, name='cambiarUsuarioNegocios'),
 
     path('expediente/exportarExcel/<int:id>/',views.exportarExcel,name ='exportarExcel'),
     path('expediente/exportarPDF/<int:id>/',views.exportarPDF,name ='exportarPDF'),
@@ -32,6 +33,8 @@ urlpatterns = [
     path('expediente/recibirExpediente/<int:expedienteID>/<str:observaciones>', views.recepcionExpediente, name='recepcionExpediente'),
     #enviarExpediente
     path('expediente/enviarExpediente/<int:expedienteID>/', views.enviarExpediente, name='enviarExpediente'),
+    path('expediente/rechazarExpediente/<int:expedienteID>/', views.rechazarExpediente, name='rechazarExpediente'),
+    
     
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
@@ -63,4 +66,6 @@ urlpatterns = [
     path('junta/editar/<int:cita>/', views.editarJunta, name='editarJunta'),
     path('junta/crear/', views.crearJunta, name='crearJunta'),
     path('junta/eliminar/<int:cita>/', views.eliminarJunta, name='eliminarJunta'),
+    path('expedientes/editarExpediente/Rechazar/<int:id>', views.rechazarCita, name='rechazarCita'),
+    path('expedientes/editarExpediente/Aceptar/<int:id>', views.aceptarCita, name='aceptarCita'),
 ] 

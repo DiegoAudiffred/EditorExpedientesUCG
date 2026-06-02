@@ -6,401 +6,479 @@
     {% if expediente.eliminado == False %}
     <div class="row">
         <div class="col-12 fnSuperiorRegularTitle">
-          
-        <b class="text-tercero">{{expediente.socio}}</b> - {{expediente.socio.numeroKepler}}
+
+            <b class="text-tercero">{{expediente.socio}}</b> - {{expediente.socio.numeroKepler}}
 
         </div>
-<div class="col-6 my-2 fnSuperiorRegularTitle4">
-               Estatus actual:
-        <span style="background-color: {{ expediente.estatus.color }};" class="rounded rounded-3 px-3 fw-bold py-2">
-            {{ expediente.estatus }}
-        </span>
-        {% if request.user.roles == 'Administrador' %}
-               <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#statusModal">
-            <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                <g id="SVGRepo_iconCarrier">
-                    <path d="M8.29289 3.70711L1 11V15H5L12.2929 7.70711L8.29289 3.70711Z" fill="#010C80"></path>
-                    <path
-                        d="M9.70711 2.29289L13.7071 6.29289L15.1716 4.82843C15.702 4.29799 16 3.57857 16 2.82843C16 1.26633 14.7337 0 13.1716 0C12.4214 0 11.702 0.297995 11.1716 0.828428L9.70711 2.29289Z"
-                        fill="#010C80"></path>
-                </g>
-            </svg>
-        </span>
-        <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-tercero text-white">
-                    <h5 class="modal-title" id="statusModalLabel">Cambiar status del expediente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST" action="{% url 'Index:cambiarEstado' expediente.id %}">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <label class="form-label fw-bold">Nuevo Estatus:</label>
-                        <select name="estatus" class="form-select text-black fnSuperiorRegularTitle1">
-                            {% for estado in estados %}
-                            <option value="{{ estado.nombre }}" style="background-color: {{ estado.color }};"
-                                class="text-black fnSuperiorRegularTitle3" {% if estado.id == expediente.estatus_id %}selected{% endif %}>
-                                {{ estado.nombre }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-secondary text-white"
-                            data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-        {% endif %}
-
- 
-
-    </div>
-    
-
-    <div class="col-6 my-2">
-         {% if expediente.estatus.nombre == 'Completo'%}
-            <h4 class="mb-3 fw-bold">{% if citaAsignada %} Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
-  
-    {% else %} Sin cita asignada  {% endif %}</h4>
-         {% endif %}
-
-    </div>
-        <div class="col-4 my-2">
- {% if expediente.estatus.nombre == 'Completo' %}
-            {% if  request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href="{% url 'Index:recepcionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">He recibido el expediente fisico</a>
-         {% endif %}
-
-{% endif %}
-         {% if expediente.estatus.nombre == 'Nuevo' %}
-            <a href="{% url 'Index:enviarExpediente' expediente.id %}" class="btn btn-primary fw-bold">Enviar expediente a crédito</a>
-
-         {% endif %}
-            </div>
-            <div class="col-4 my-2">
-                                     {% if  request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">He recibido el expediente fisico c/observaciones</a>
-         {% endif %}
-
-            </div>
-            <div class="col-4 my-2">
-  {% if  request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
-         {% endif %}
-            </div>
-    
-    <div class="col-6 my-2 my-2">
- <h5 class="mb-3">Personal de centro de negocios asignado a: <b class="text-tercero" data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModal">{{expediente.usuario}}</b>
-       
-    </h5>
-       <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-tercero text-white">
-                    <h5 class="modal-title" id="asignadoModalLabel">Cambiar encargado del expediente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <form method="POST" action="{% url 'Index:expediente_cambiar_usuario' expediente.id %}">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <label class="form-label fw-bold">Encargado:</label>
-                        <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
-                            {% for usuario in usuarios %}
-                            <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuario_id %}selected{% endif %}>
-                                {{ usuario.username }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-    </div>
-    </div>
-   
-    <div class="col-6 my-2">
-             <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero " data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#asignadoModalCredito">{{expediente.usuarioCredito}}</b>
-       
-    </h5>
-       <div class="modal fade" id="asignadoModalCredito" tabindex="-1" aria-labelledby="asignadoModalCreditoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-tercero text-white">
-                    <h5 class="modal-title" id="asignadoModalCreditoLabel">Cambiar encargado del expediente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <form method="POST" action="{% url 'Index:cambiarUsuarioCredito' expediente.id %}">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <label class="form-label fw-bold">Encargado:</label>
-                        <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
-                            {% for usuario in usuariosCreditos %}
-                            <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuarioCredito_id %}selected{% endif %}>
-                                {{ usuario.username }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-    </div>
-    </div>
-    </div>
-
-
- 
-
-
-     {% if expediente.estatus.nombre == 'Completo'%}
-     <button type="button" class="btnCrearCita btn btn-primary fw-bold border-3 px-4 shadow-sm mb-2" 
-        data-bs-toggle="modal" data-bs-target="#modalCita">
-    Citas
-</button>
-
-<div class="modal fade" id="modalCita" tabindex="-1" aria-labelledby="modalCitaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalCitaLabel">Gestionar Cita para Expediente</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            
-            <div class="modal-body">
-                <ul class="nav nav-tabs mb-3" id="citaTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-semibold" id="existentes-tab" data-bs-toggle="tab" data-bs-target="#existentes" type="button" role="tab" aria-controls="existentes" aria-selected="true">
-                            Citas Existentes
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-semibold" id="nueva-tab" data-bs-toggle="tab" data-bs-target="#nueva" type="button" role="tab" aria-controls="nueva" aria-selected="false">
-                            Crear Nueva Cita
-                        </button>
-                    </li>
-                </ul>
-
-                <div class="tab-content" id="citaTabsContent">
-                    
-                    <div class="tab-pane fade show active" id="existentes" role="tabpanel" aria-labelledby="existentes-tab">
-                        <p class="text-muted small mb-3">Selecciona una de las citas ya programadas en el sistema para asociarla a este expediente:</p>
-                        {% if citasDisponibles %}
-                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                               <table class="table table-hover align-middle">
-    <thead class="table-light">
-        <tr>
-            <th>Fecha</th>
-            <th>Hora de Inicio</th>
-            <th>Estatus</th>
-            <th>Acción</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for cita in citasDisponibles %}
-        <tr>
-            <td class="fw-medium">{{ cita.dia|date:"d/m/Y" }}</td>
-            <td>{{ cita.hora|time:"H:i" }} hrs.</td>
-            <td>
-                {% if expediente in cita.expedientes.all %}
-                    <span class="badge bg-primary text-white fw-bold px-2.5 py-1.5 border border-success-subtle">
-                        Asignada a este expediente
-                    </span>
-                {% else %}
-                                        <span class="badge bg-green text-white fw-bold px-2.5 py-1.5 border border-success-subtle">
-Disponible</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if expediente in cita.expedientes.all %}
-                    <form action="{% url 'Index:desasociarCitaExistente' expediente.id cita.id %}" method="POST" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger fw-bold px-3">
-                            Desasignar
-                        </button>
-                    </form>
-                {% else %}
-                    <form action="{% url 'Index:asociarCitaExistente' expediente.id cita.id %}" method="POST" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-success fw-bold px-3">
-                            Asignar esta cita
-                        </button>
-                    </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-                            </div>
-                        {% else %}
-                            <div class="alert alert-warning mb-0" role="alert">
-                                No hay citas pendientes agendadas en el sistema. Ve a la pestaña "Crear Nueva Cita".
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="tab-pane fade" id="nueva" role="tabpanel" aria-labelledby="nueva-tab">
-                        <form action="{% url 'Index:crearCita' expediente.id %}" method="POST">
+        <div class="col-7 my-2 fnSuperiorRegularTitle4">
+            Estatus actual:
+            <span style="background-color: {{ expediente.estatus.color }};" class="rounded rounded-3 px-3 fw-bold py-2">
+                {{ expediente.estatus }}
+            </span>
+            {% if request.user.roles == 'Administrador' %}
+            <span data-bs-toggle="modal" style="cursor: pointer;" data-bs-target="#statusModal">
+                <svg class="mx-2" width="25px" height="25px" viewBox="0 0 16 16" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                    <g id="SVGRepo_iconCarrier">
+                        <path d="M8.29289 3.70711L1 11V15H5L12.2929 7.70711L8.29289 3.70711Z" fill="#010C80"></path>
+                        <path
+                            d="M9.70711 2.29289L13.7071 6.29289L15.1716 4.82843C15.702 4.29799 16 3.57857 16 2.82843C16 1.26633 14.7337 0 13.1716 0C12.4214 0 11.702 0.297995 11.1716 0.828428L9.70711 2.29289Z"
+                            fill="#010C80"></path>
+                    </g>
+                </svg>
+            </span>
+            <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-tercero text-white">
+                            <h5 class="modal-title" id="statusModalLabel">Cambiar status del expediente</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="{% url 'Index:cambiarEstado' expediente.id %}">
                             {% csrf_token %}
-                            <div class="mb-3">
-                                {{ cita_form }}
+                            <div class="modal-body">
+                                <label class="form-label fw-bold">Nuevo Estatus:</label>
+                                <select name="estatus" class="form-select text-black fnSuperiorRegularTitle1">
+                                    {% for estado in estados %}
+                                    <option value="{{ estado.nombre }}" style="background-color: {{ estado.color }};"
+                                        class="text-black fnSuperiorRegularTitle3" {% if estado.id == expediente.estatus_id %}selected{% endif %}>
+                                        {{ estado.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <div class="d-flex justify-content-end gap-2">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn btn-primary">Agendar y Enviar</button>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-secondary text-white"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
                             </div>
                         </form>
                     </div>
-
                 </div>
             </div>
-            
+            {% endif %}
+
+
+
+        </div>
+
+
+<div class="col-5 my-2">
+    {% if expediente.estatus.nombre == 'Completo' %}
+        {% if citaAsignada %} 
+            <h4 class="mb-3 fw-bold" 
+                data-bs-toggle="popover" 
+                data-bs-trigger="hover focus"
+                data-bs-html="true" 
+                data-bs-placement="top"
+                data-bs-custom-class="{% if citaAsignada.estatus == 'Rechazada' %}popover-red{% elif citaAsignada.estatus == 'Aceptada' %}popover-green{% else %}popover-white{% endif %}"
+                data-bs-content="Centro de negocios: <b>{{ citaAsignada.estatusCN }}</b><br>Crédito: <b>{{ citaAsignada.estatusCR }}</b>"
+                style="cursor: pointer; display: inline-block;">
+                Cita asignada: <span class="text-primary">{{ citaAsignada.dia }}</span> a las <span class="text-red">{{ citaAsignada.hora }}</span>
+            </h4>
+        {% else %} 
+            <h4 class="mb-3 fw-bold">Sin cita asignada</h4>
+        {% endif %}
+
+        
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+                var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+                    return new bootstrap.Popover(popoverTriggerEl)
+                })
+            });
+        </script>
+    {% endif %}
+</div>
+    
+        <div class="col-4 my-2">
+            {% if expediente.estatus.nombre == 'Completo' %}
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href="{% url 'Index:recepcionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">He
+                recibido el expediente fisico</a>
+            {% endif %}
+
+            {% endif %}
+            {% if expediente.estatus.nombre == 'Nuevo' %}
+            <a href="{% url 'Index:enviarExpediente' expediente.id %}" class="btn btn-primary fw-bold">Enviar expediente
+                a crédito</a>
+
+            {% endif %}
+        </div>
+        <div class="col-4 my-2">
+            {% if expediente.estatus.nombre == 'Completo' %}
+                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+
+            <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">He
+                recibido el expediente fisico c/observaciones</a>
+            {% endif %}
+            {% endif %}
+
+        </div>
+        <div class="col-4 my-2">
+{% if expediente.estatus.nombre == 'Completo' %}
+                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href="{% url 'Index:rechazarExpediente' expediente.id %}"
+                class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
+            {% endif %}            {% endif %}
+
+        </div>
+
+        <div class="col-4 my-2 my-2">
+            <h5 class="mb-3">Ejecutivo de Servicios asignado: <b class="text-tercero" data-bs-toggle="modal"
+                    style="cursor: pointer;" data-bs-target="#asignadoModal">{{expediente.usuario}}</b>
+
+            </h5>
+            <div class="modal fade" id="asignadoModal" tabindex="-1" aria-labelledby="asignadoModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-tercero text-white">
+                            <h5 class="modal-title" id="asignadoModalLabel">Cambiar encargado del expediente</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <form method="POST" action="{% url 'Index:expediente_cambiar_usuario' expediente.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <label class="form-label fw-bold">Encargado:</label>
+                                <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
+                                    {% for usuario in usuarios %}
+                                    <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuario_id %}selected{% endif %}>
+                                        {{ usuario.username }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-secondary"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-4 my-2">
+            <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero " data-bs-toggle="modal"
+                    style="cursor: pointer;" data-bs-target="#asignadoModalCredito">{{expediente.usuarioCredito}}</b>
+
+            </h5>
+            <div class="modal fade" id="asignadoModalCredito" tabindex="-1" aria-labelledby="asignadoModalCreditoLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-tercero text-white">
+                            <h5 class="modal-title" id="asignadoModalCreditoLabel">Cambiar encargado del expediente</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <form method="POST" action="{% url 'Index:cambiarUsuarioCredito' expediente.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <label class="form-label fw-bold">Encargado:</label>
+                                <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
+                                    {% for usuario in usuariosCreditos %}
+                                    <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuarioCredito_id %}selected{% endif %}>
+                                        {{ usuario.username }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-secondary"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4 my-2 my-2">
+            <h5 class="mb-3">Ejecutivo de Negocios asignado: <b class="text-tercero" data-bs-toggle="modal"
+                    style="cursor: pointer;" data-bs-target="#asignadoModalNegocios">{{expediente.usuarioNegocios}}</b> </h5>
+                          <div class="modal fade" id="asignadoModalNegocios" tabindex="-1" aria-labelledby="asignadoModalNegociosLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-tercero text-white">
+                            <h5 class="modal-title" id="asignadoModalNegociosLabel">Cambiar encargado del expediente</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <form method="POST" action="{% url 'Index:cambiarUsuarioNegocios' expediente.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <label class="form-label fw-bold">Encargado:</label>
+                                <select name="usuario" class="form-select text-black fnSuperiorRegularTitle1">
+                                    {% for usuario in usuariosNegocios %}
+                                    <option value="{{ usuario.id }}" class="text-black fnSuperiorRegularTitle3" {% if usuario.id == expediente.usuarioCredito_id %}selected{% endif %}>
+                                        {{ usuario.username }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-secondary"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-</div>
-{% endif %}
-<button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
-        type="button" 
-        data-bs-toggle="collapse" 
-        data-bs-target="#collapseLineas" 
-        aria-expanded="false">
-    <i class="bi bi-list-ul me-2"></i>Lista de líneas
-</button>
 
 
 
-<button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
-        type="button" 
-        data-bs-toggle="collapse" 
-        data-bs-target="#collapseObligados" 
-        aria-expanded="false">
-    <i class="bi bi-list-ul me-2"></i>Lista de Obligados Solidarios
-</button>
 
 
-<button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" 
-        type="button" 
-        data-bs-toggle="collapse" 
-        data-bs-target="#collapseRepresentantes" 
-        aria-expanded="false">
-    <i class="bi bi-list-ul me-2"></i>Lista de Representantes Legales
-</button>
+    {% if expediente.estatus.nombre == 'Completo'%}
+    <button type="button" class="btnCrearCita btn btn-primary fw-bold border-3 px-4 shadow-sm mb-2"
+        data-bs-toggle="modal" data-bs-target="#modalCita">
+        Citas
+    </button>
 
-<div class="collapse" id="collapseLineas">
-    <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
-        <div class="list-group list-group-flush">
-            {% for linea in lineasLista %}
-            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                <div>
-                    <span class="text-secondary small d-block">Número de línea</span>
-                    <span class="fw-bold h6 mb-0">{{ linea.numero }}</span>
+    <div class="modal fade" id="modalCita" tabindex="-1" aria-labelledby="modalCitaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCitaLabel">Gestionar Cita para Expediente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                
-                <div class="text-center">
-                    <span class="text-secondary small d-block">Monto</span>
-                    <span class="fw-bold text-dark">${{ linea.monto }}</span>
+
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" id="citaTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-semibold" id="existentes-tab" data-bs-toggle="tab"
+                                data-bs-target="#existentes" type="button" role="tab" aria-controls="existentes"
+                                aria-selected="true">
+                                Citas Existentes
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-semibold" id="nueva-tab" data-bs-toggle="tab"
+                                data-bs-target="#nueva" type="button" role="tab" aria-controls="nueva"
+                                aria-selected="false">
+                                Crear Nueva Cita
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="citaTabsContent">
+
+                        <div class="tab-pane fade show active" id="existentes" role="tabpanel"
+                            aria-labelledby="existentes-tab">
+                            <p class="text-muted small mb-3">Selecciona una de las citas ya programadas en el sistema
+                                para asociarla a este expediente:</p>
+                            {% if citasDisponibles %}
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Hora de Inicio</th>
+                                            <th>Estatus</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for cita in citasDisponibles %}
+                                        <tr>
+                                            <td class="fw-medium">{{ cita.dia|date:"d/m/Y" }}</td>
+                                            <td>{{ cita.hora|time:"H:i" }} hrs.</td>
+                                            <td>
+                                                {% if expediente in cita.expedientes.all %}
+                                                <span
+                                                    class="badge bg-primary text-white fw-bold px-2.5 py-1.5 border border-success-subtle">
+                                                    Asignada a este expediente
+                                                </span>
+                                                {% else %}
+                                                <span
+                                                    class="badge bg-green text-white fw-bold px-2.5 py-1.5 border border-success-subtle">
+                                                    Disponible</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if expediente in cita.expedientes.all %}
+                                                <form
+                                                    action="{% url 'Index:desasociarCitaExistente' expediente.id cita.id %}"
+                                                    method="POST" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-danger fw-bold px-3">
+                                                        Desasignar
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <form
+                                                    action="{% url 'Index:asociarCitaExistente' expediente.id cita.id %}"
+                                                    method="POST" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success fw-bold px-3">
+                                                        Asignar esta cita
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning mb-0" role="alert">
+                                No hay citas pendientes agendadas en el sistema. Ve a la pestaña "Crear Nueva Cita".
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="tab-pane fade" id="nueva" role="tabpanel" aria-labelledby="nueva-tab">
+                            <form action="{% url 'Index:crearCita' expediente.id %}" method="POST">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    {{ cita_form }}
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary">Agendar y Enviar</button>
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
                 </div>
-                    
-                <div class="text-center">
-                    <span class="text-secondary small d-block">Tipo</span>
-                    <span class="fw-bold text-dark">{{ linea.tipoLinea }}</span>
-                </div>
- 
-                <div class="text-end">
-                    {% if linea.vigente %}
+
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" type="button" data-bs-toggle="collapse"
+        data-bs-target="#collapseLineas" aria-expanded="false">
+        <i class="bi bi-list-ul me-2"></i>Lista de líneas
+    </button>
+
+
+
+    <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" type="button" data-bs-toggle="collapse"
+        data-bs-target="#collapseObligados" aria-expanded="false">
+        <i class="bi bi-list-ul me-2"></i>Lista de Obligados Solidarios
+    </button>
+
+
+    <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" type="button" data-bs-toggle="collapse"
+        data-bs-target="#collapseRepresentantes" aria-expanded="false">
+        <i class="bi bi-list-ul me-2"></i>Lista de Representantes Legales
+    </button>
+
+    <div class="collapse" id="collapseLineas">
+        <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
+            <div class="list-group list-group-flush">
+                {% for linea in lineasLista %}
+                <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <span class="text-secondary small d-block">Número de línea</span>
+                        <span class="fw-bold h6 mb-0">{{ linea.numero }}</span>
+                    </div>
+
+                    <div class="text-center">
+                        <span class="text-secondary small d-block">Monto</span>
+                        <span class="fw-bold text-dark">${{ linea.monto }}</span>
+                    </div>
+
+                    <div class="text-center">
+                        <span class="text-secondary small d-block">Tipo</span>
+                        <span class="fw-bold text-dark">{{ linea.tipoLinea }}</span>
+                    </div>
+
+                    <div class="text-end">
+                        {% if linea.vigente %}
                         <span class="badge rounded-pill bg-primary-subtle text-tercero border border-primary px-3">
                             Vigente
                         </span>
-                    {% else %}
+                        {% else %}
                         <span class="badge rounded-pill bg-red-subtle text-red border border-red px-3">
                             Vencida
                         </span>
-                    {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-4">
+                    No hay líneas registradas
+                </div>
+                {% endfor %}
             </div>
-            {% empty %}
-            <div class="list-group-item text-center text-muted py-4">
-                No hay líneas registradas
-            </div>
-            {% endfor %}
         </div>
     </div>
-</div>
-<div class="collapse" id="collapseObligados">
-    <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
-        <div class="list-group list-group-flush">
-                        <h2>Lista de Obligados Solidarios del Expediente </h2>
+    <div class="collapse" id="collapseObligados">
+        <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
+            <div class="list-group list-group-flush">
+                <h2>Lista de Obligados Solidarios del Expediente </h2>
 
-            {% for linea in lista_obls %}
-            <hr class="m-2">
-            <div class="list-group-item d-flex justify-content-between align-items-center py-0">
-                <div>
-                    <span class="text-secondary small d-block">Nombre</span>
-                    <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+                {% for linea in lista_obls %}
+                <hr class="m-2">
+                <div class="list-group-item d-flex justify-content-between align-items-center py-0">
+                    <div>
+                        <span class="text-secondary small d-block">Nombre</span>
+                        <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+                    </div>
+
+
+
+
                 </div>
-                
-   
-                
-                                
-                            </div>
-            {% empty %}
-            <div class="list-group-item text-center text-muted py-4">
-                No hay obligados solidarios registradas
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-4">
+                    No hay obligados solidarios registradas
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
     </div>
-</div>
 
-<div class="collapse" id="collapseRepresentantes">
-    <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
-         <div class="list-group list-group-flush">
-                        <h2>Lista de Representantes Legales del Expediente </h2>
+    <div class="collapse" id="collapseRepresentantes">
+        <div class="card card-body border-0 shadow-sm p-0 overflow-hidden">
+            <div class="list-group list-group-flush">
+                <h2>Lista de Representantes Legales del Expediente </h2>
 
-            {% for linea in lista_reps %}
-            <hr class="m-2">
-            <div class="list-group-item d-flex justify-content-between align-items-center py-0">
-                <div>
-                    <span class="text-secondary small d-block">Nombre</span>
-                    <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+                {% for linea in lista_reps %}
+                <hr class="m-2">
+                <div class="list-group-item d-flex justify-content-between align-items-center py-0">
+                    <div>
+                        <span class="text-secondary small d-block">Nombre</span>
+                        <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+                    </div>
+
+
+
+
+
                 </div>
-                
-   
-          
-                
-                                
-                            </div>
-            {% empty %}
-            <div class="list-group-item text-center text-muted py-4">
-                No hay representantes legales registrados
+                {% empty %}
+                <div class="list-group-item text-center text-muted py-4">
+                    No hay representantes legales registrados
+                </div>
+                {% endfor %}
+
             </div>
-            {% endfor %}
-            
         </div>
     </div>
-</div>
-    
- 
+
+
     <form method="post" novalidate id="main-edit-form">
         {% csrf_token %}
 
@@ -415,27 +493,24 @@ Disponible</span>
                 </button>
             </li>
             {% endfor %}
-                        <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
                 role="presentation">
-                <button class="nav-link text-quinto btn-"
-                    id="tab-agregarObligado" data-bs-toggle="tab" data-bs-target="#seccion-agregarObligado"
-                    type="button" role="tab">
+                <button class="nav-link text-quinto btn-" id="tab-agregarObligado" data-bs-toggle="tab"
+                    data-bs-target="#seccion-agregarObligado" type="button" role="tab">
                     Agregar Obligado Solidario +
                 </button>
             </li>
-                     <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
                 role="presentation">
-                <button class="nav-link text-quinto"
-                    id="tab-agregarRepresentante" data-bs-toggle="tab" data-bs-target="#seccion-agregarRepresentante"
-                    type="button" role="tab">
+                <button class="nav-link text-quinto" id="tab-agregarRepresentante" data-bs-toggle="tab"
+                    data-bs-target="#seccion-agregarRepresentante" type="button" role="tab">
                     Agregar Representante Legal +
-                                </button>
+                </button>
             </li>
-                                    <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
+            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
                 role="presentation">
-                <button class="nav-link text-quinto"
-                    id="tab-agregarLinea" data-bs-toggle="tab" data-bs-target="#seccion-agregarLinea"
-                    type="button" role="tab">
+                <button class="nav-link text-quinto" id="tab-agregarLinea" data-bs-toggle="tab"
+                    data-bs-target="#seccion-agregarLinea" type="button" role="tab">
                     Agregar Linea +
                 </button>
             </li>
@@ -469,16 +544,17 @@ Disponible</span>
                                         <td class="align-middle">{{ apartado.clave }}</td>
                                         <td class="align-middle">
                                             {% if fila.archivo_url %}
-                                                <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}" 
-                                                   target="_blank" 
-                                                   title="Click para abrir archivo"
-                                                   style="text-decoration: none; color: #0d6efd;">
-                                                    <i class="bi bi-file-earmark-pdf"></i> {{ apartado.descripcion|linebreaksbr }}
-                                                </a>
+                                            <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
+                                                target="_blank" title="Click para abrir archivo"
+                                                style="text-decoration: none; color: #0d6efd;">
+                                                <i class="bi bi-file-earmark-pdf"></i> {{
+                                                apartado.descripcion|linebreaksbr }}
+                                            </a>
                                             {% else %}
-                                                {{ apartado.descripcion|linebreaksbr }}
+                                            {{ apartado.descripcion|linebreaksbr }}
                                             {% endif %}
-                                        </td>                                        <td>
+                                        </td>
+                                        <td>
                                             <input type="date" class="form-control form-control-sm"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
                                                 value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
@@ -502,7 +578,7 @@ Disponible</span>
                                                 value="{{ registro.comentario|default_if_none:'' }}">
                                             {% endif %}
                                             {% if request.user.roles == 'Credito' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Administrador'%}
-                                                    <input class="form-control form-control-sm" type="text"
+                                            <input class="form-control form-control-sm" type="text"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentarioCredito"
                                                 value="{{ registro.comentarioCredito|default_if_none:'' }}">
                                             {% endif %}
@@ -522,7 +598,7 @@ Disponible</span>
                 </div>
             </div>
             {% endfor %}
-            
+
             {% include 'Index/editarExpedienteRepObl.html' %}
             {% include 'Index/editarExpedienteLinea.html' %}
         </div>
@@ -533,9 +609,9 @@ Disponible</span>
             <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a
                 PDF</a>
             <a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}"
-                target="_blank">Exportar a Excel</a> 
-                <a class="btn btn-cuarto mx-2 text-white"
-                href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar valores vacios</a>
+                target="_blank">Exportar a Excel</a>
+            <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
+                valores vacios</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
                 aria-hidden="true">
@@ -648,12 +724,12 @@ Disponible</span>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-document.getElementById('modalCita').addEventListener('shown.bs.modal', function () {
-    $('.selectorBuscador').select2({
-        dropdownParent: $('#modalCita'), 
-        placeholder: "Escribe para buscar expedientes...",
-        allowClear: true
+    document.getElementById('modalCita').addEventListener('shown.bs.modal', function () {
+        $('.selectorBuscador').select2({
+            dropdownParent: $('#modalCita'),
+            placeholder: "Escribe para buscar expedientes...",
+            allowClear: true
+        });
     });
-});
 </script>
 {% endblock %}
