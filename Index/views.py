@@ -622,22 +622,45 @@ def expediente_eliminar(request,id):
 
 
 
-def correoParaRevision(expediente):
-    destinatario = ["portiz@ucg.com.mx","dCorrea@ucg.com.mx", "mrubio@ucg.com.mx"]#"daudiffred@ucg.com.mx" 
+def correoParaRevision(expediente,reenviado):
+    destinatario = ["portiz@ucg.com.mx","dCorrea@ucg.com.mx", "mrubio@ucg.com.mx",]#"daudiffred@ucg.com.mx"
     dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
     urlFinal = f"{dominio}{expediente.id}/"
-    asunto = "Expediente listo para revisión"
     
-    usuarioNombre = expediente.usuario.username if expediente.usuario else "Sistema"
-    
-    cuerpoTexto = f"""
-    Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} esta listo para su revisión. 
-    Atte {usuarioNombre}.
-    Ingrese directamente o copie la url en su navegador(recuerde haber iniciado sesión con anterioridad): {urlFinal}
-    """
+    usuarioNombre = expediente.usuario.username 
+    if reenviado =='True':
 
-    cuerpoHtml = f"""
+        asunto = "Expediente corregido para revisión"
+        cuerpoHtml = f"""
     <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                <p>Estimado usuario,</p>
+                <p>Le informamos que el expediente <strong>{expediente.id}</strong> del socio <strong>{expediente.socio.nombre}</strong> ha sido corregido y está listo para su revisión.</p>
+                <div style="margin: 30px 0; text-align: center;">
+                    <a href="{urlFinal}" 
+                       style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Revisar Expediente
+                    </a>
+                </div>
+                <p style="font-size: 0.9em; color: #555;">
+                    Atentamente,<br>
+                    <strong>{usuarioNombre}</strong>
+                </p>
+                <hr style="border: 0; border-top: 1px solid #eee;">
+                <p style="font-size: 0.8em; color: #999; text-align: center;">
+                    Este es un mensaje automático, por favor no responda a este correo.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    else:    
+        asunto = "Expediente listo para revisión"
+        cuerpoHtml = f"""
+
+   <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
             <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
                 <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
@@ -661,7 +684,6 @@ def correoParaRevision(expediente):
         </body>
     </html>
     """
-
     SMTP_HOST = "ucg.com.mx"
     SMTP_PORT = 587
     USUARIO = "informacion@ucg.com.mx"
@@ -672,7 +694,6 @@ def correoParaRevision(expediente):
     mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
     mensaje["Subject"] = asunto
     
-    mensaje.set_content(cuerpoTexto)
     mensaje.add_alternative(cuerpoHtml, subtype="html")
 
     try:
@@ -1450,172 +1471,9 @@ def cargaInicial(request):
     return redirect('Index:administrador')
 
 
-def enviarInvitacionCita(cita, expediente, esCancelacion=False, esSugerencia=False):
-    fechaInicio = datetime.combine(cita.dia, cita.hora)
-    fechaFin = fechaInicio + timedelta(hours=1)
-
-    cal = Calendar()
-    cal.add('prodid', '-//Plataforma de Expedientes//mx//')
-    cal.add('version', '2.0')
-    
-    metodo = 'CANCEL' if esCancelacion else 'REQUEST'
-    cal.add('method', metodo)
-    
-    evento = Event()
-    evento.add('dtstart', fechaInicio)
-    evento.add('dtend', fechaFin)
-    evento.add('dtstamp', datetime.now())
-    evento.add('uid', f"cita-{cita.id}-{expediente.id}@plataformaexpedientes.com")
-    
-    if esCancelacion:
-        evento.add('status', 'CANCELLED')
-        evento.add('summary', f"CANCELACIÓN: CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()}")
-        evento.add('description', "Hola, se ha cancelado la cita que estaba programada para este expediente.")
-        asunto = f"CANCELACIÓN: CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()} -- {cita.dia}"
-        cuerpo = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #dc3545;">Cancelación de Cita</h2>
-            <p style="color: #555555; font-size: 16px; line-height: 1.5;">
-                Hola, se ha cancelado la cita que estaba programada para la entrega del expediente del socio 
-                <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong>.
-            </p>
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p style="margin: 5px 0; color: #333333;"><strong>Fecha Cancelada:</strong> {cita.dia}</p>
-                <p style="margin: 5px 0; color: #333333;"><strong>Hora Cancelada:</strong> {cita.hora} hrs</p>
-            </div>
-            <p style="color: #888888; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eeeeee; padding-top: 15px;">
-                Este es un correo automático generado por la Plataforma de Expedientes.
-            </p>
-        </div>
-        """
-    else:
-        evento.add('status', 'CONFIRMED')
-        evento.add('summary', f"CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()}")
-        evento.add('description', "Cita programada para el expediente del socio.")
-        
-        urlConfirmar = "http://192.168.0.29:8000/expedientes/editarExpediente/Aceptar/"
-        urlRechazar = "http://192.168.0.29:8000/expedientes/editarExpediente/Rechazar/"
-
-        url_finalurlConfirmar = f"{urlConfirmar}{expediente.id}"
-        url_finalurlurlRechazar = f"{urlRechazar}{expediente.id}"
-
-        if esSugerencia:
-            asunto = f"Nueva Sugerencia de Cita: {cita.dia} a las {cita.hora} hrs"
-            titulo_seccion = "Nueva Propuesta de Horario"
-            texto_explicativo = f"Hola, se ha sugerido un cambio de horario para la entrega del expediente del socio <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong> debido a que el horario anterior fue rechazado."
-        else:
-            asunto = f"Confirmación de Cita: {cita.dia} a las {cita.hora} hrs"
-            titulo_seccion = "Confirmación de Cita Programada"
-            texto_explicativo = f"Hola, se ha agendado una cita para la entrega del expediente del socio <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong>."
-
-        cuerpo = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #333333;">{titulo_seccion}</h2>
-            <p style="color: #555555; font-size: 16px; line-height: 1.5;">
-                {texto_explicativo}
-            </p>
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p style="margin: 5px 0; color: #333333;"><strong>Fecha Propuesta:</strong> {cita.dia}</p>
-                <p style="margin: 5px 0; color: #333333;"><strong>Hora Propuesta:</strong> {cita.hora} hrs</p>
-            </div>
-            <p style="color: #555555; font-size: 15px;">Por favor, responde a esta propuesta interactuando con los siguientes botones:</p>
-            <div style="margin-top: 25px; text-align: center;">
-                <a href="{url_finalurlConfirmar}" style="background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 4px; margin-right: 15px; display: inline-block;">Confirmar Cita</a>
-                <a href="{url_finalurlurlRechazar}" style="background-color: #dc3545; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">Rechazar / Sugerir Cambio</a>
-            </div>
-            <p style="color: #888888; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eeeeee; padding-top: 15px;">
-                Este es un correo automático generado por la Plataforma de Expedientes.
-            </p>
-        </div>
-        """
-        
-    cal.add_component(evento)
-    
-    SMTP_HOST = "ucg.com.mx"
-    SMTP_PORT = 465
-    USUARIO = "informacion@ucg.com.mx"
-    CONTRASENA = "UcG911_@!#"
-    
-    destinatariosCredito = ['portiz@ucg.com.mx','dcorrea@ucg.com.mx','mrubio@ucg.com.mx'] 
-    destinatariosRaw = [
-        getattr(getattr(expediente, 'usuarioCredito', None), 'email', None),
-        getattr(getattr(expediente, 'usuario', None), 'email', None),
-    ]
-
-    destinatarios = list(set([correo for correo in destinatariosRaw + destinatariosCredito if correo]))
-    #destinatarios = ['daudiffred@ucg.com.mx']
-    try:
-        conexion = get_connection(
-            host=SMTP_HOST,
-            port=SMTP_PORT,
-            username=USUARIO,
-            password=CONTRASENA,
-            use_tls=False,
-            use_ssl=True,
-            timeout=10
-        )
-        
-        for correoDestino in destinatarios:
-            email = EmailMessage(
-                subject=asunto,
-                body=cuerpo,
-                from_email=USUARIO,
-                to=[correoDestino],
-                connection=conexion
-            )
-            email.content_subtype = "html"
-            
-            ics_contenido = cal.to_ical().decode('utf-8')
-            parte_calendario = SafeMIMEText(ics_contenido, 'calendar', 'utf-8')
-            parte_calendario.set_param('method', metodo)
-            parte_calendario.set_param('charset', 'UTF-8')
-            
-            email.attach(parte_calendario)
-            email.attach(
-                'invitacion-cita.ics',
-                cal.to_ical(),
-                f'text/calendar; charset=UTF-8; method={metodo}'
-            )
-            
-            email.send()
-        
-        print("Correos enviados de forma individual correctamente")
-        
-    except Exception as e:
-        print("Error al enviar correo:", e)
-        
-def asociarCitaExistente(request, expedienteId, citaId):
-    if request.method == "POST":
-        expediente = get_object_or_404(Expediente, pk=expedienteId)
-        cita = get_object_or_404(Cita, pk=citaId)
-        cita.expedientes.add(expediente)
-        
-        enviarInvitacionCita(cita, expediente, esCancelacion=False,esSugerencia=False)
-        messages.success(request, 'El expediente fue vinculado y se envió la invitación a Outlook.')
-        
-    return redirect('Index:editarExpediente', expedienteId)
 
 
-def desasociarCitaExistente(request, expedienteId, citaId):
-    if request.method == "POST":
-        expediente = get_object_or_404(Expediente, pk=expedienteId)
-        cita = get_object_or_404(Cita, pk=citaId)
-        
-        enviarInvitacionCita(cita, expediente, esCancelacion=True,esSugerencia=False)
-        
-        cita.expedientes.remove(expediente)
-        
-        if not cita.expedientes.exists():
-            cita.estatusCN = 'Pendiente'
-            cita.estatusCR = 'Pendiente'
-            cita.dia = None
-            cita.hora = None
-            cita.save()
-            
-        messages.success(request, 'La cita fue desasignada y se envió la notificación de cancelación.')
-        
-    return redirect('Index:editarExpediente', expedienteId)
-
+@login_required(login_url='/login/')
 
 def juntasIndex(request):
     juntas = Cita.objects.all().prefetch_related('expedientes').order_by('-dia')
@@ -1633,6 +1491,7 @@ def juntasIndex(request):
         'cita_form': cita_form,
     }
     return render(request, 'Index/juntasLayout.html', context)
+@login_required(login_url='/login/')
 
 def crearJunta(request):
     if request.method == 'POST':
@@ -1640,6 +1499,7 @@ def crearJunta(request):
         if form.is_valid():
             form.save()
             return redirect('Index:juntasIndex')
+@login_required(login_url='/login/')
 
 def editarJunta(request, cita):
     instancia_cita = get_object_or_404(Cita, pk=cita)
@@ -1648,12 +1508,48 @@ def editarJunta(request, cita):
         if form.is_valid():
             form.save()
             return redirect('Index:juntasIndex')
+@login_required(login_url='/login/')
 
 def eliminarJunta(request, cita):
     if request.method == 'POST':
         Cita.objects.filter(id=cita).delete()
         return redirect('Index:juntasIndex')
     
+@login_required(login_url='/login/')
+
+def enviarExpediente(request, expedienteID,reenviado):
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+    if reenviado == 'True':
+        correoParaRevision(expediente,reenviado)
+        getEstado = Estado.objects.get(nombre='Recepción')
+        expediente.estatus = getEstado
+        expediente.save()
+    elif reenviado == 'False':
+        correoParaRevision(expediente,reenviado)
+        getEstado = Estado.objects.get(nombre='Completo')
+        expediente.estatus = getEstado
+        expediente.save()
+
+    darAlta(expediente,getEstado.nombre,request.user)
+    return redirect('Index:editarExpediente', expediente.id)
+
+
+@login_required(login_url='/login/')
+def cambiarUsuarioNegocios(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+
+    if request.method == "POST":
+        nuevo_usuarios_id = request.POST.get("usuario")
+
+        if nuevo_usuarios_id:
+            expediente.usuarioNegocios_id = nuevo_usuarios_id
+            expediente.save()
+
+
+    return redirect('Index:editarExpediente', id=expediente.id)
+
+@login_required(login_url='/login/')
+
 def recepcionExpediente(request, expedienteID,observaciones):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
     
@@ -1716,6 +1612,9 @@ def recepcionExpediente(request, expedienteID,observaciones):
                             'claveApartado': str(apartado.clave),
                             'comentario': str(registro.comentarioCredito)
                         })
+                        registro.estatus = 'rechazado'
+                        registro.save()
+
         
         comentarios_texto = ""
         for item in seccionesConComentarios:
@@ -1768,7 +1667,7 @@ def recepcionExpediente(request, expedienteID,observaciones):
         
  
 
-    destinatario = [ expediente.usuarioCredito.email] #,expediente.usuario.email 'daudiffred@ucg.com.mx'
+    destinatario = [expediente.usuario.email] #,expediente.usuario.email 'daudiffred@ucg.com.mx'  expediente.usuarioCredito.email,
     
     
     
@@ -1795,58 +1694,204 @@ def recepcionExpediente(request, expedienteID,observaciones):
         print("Error al enviar correo:", e)
     return redirect('Index:editarExpediente', expedienteID)
 
+def enviarInvitacionCita(cita, expediente, usuario_accion=None, esCancelacion=False, esSugerencia=False):
+    fechaInicio = datetime.combine(cita.dia, cita.hora)
+    fechaFin = fechaInicio + timedelta(hours=1)
 
-def enviarExpediente(request, expedienteID):
-    expediente = get_object_or_404(Expediente, pk=expedienteID)
-    correoParaRevision(expediente)
+    cal = Calendar()
+    cal.add('prodid', '-//Plataforma de Expedientes//mx//')
+    cal.add('version', '2.0')
+    
+    metodo = 'CANCEL' if esCancelacion else 'REQUEST'
+    cal.add('method', metodo)
+    
+    evento = Event()
+    evento.add('dtstart', fechaInicio)
+    evento.add('dtend', fechaFin)
+    evento.add('dtstamp', datetime.now())
+    evento.add('uid', f"cita-{cita.id}-{expediente.id}@plataformaexpedientes.com")
+    
+    rol_creador = getattr(usuario_accion, 'roles', None) if usuario_accion else None
 
-    getEstado = Estado.objects.get(nombre='Completo')
-    expediente.estatus = getEstado
-    expediente.save()
-    darAlta(expediente,getEstado.nombre,request.user)
+    if esCancelacion:
+        evento.add('status', 'CANCELLED')
+        evento.add('summary', f"CANCELACIÓN: CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()}")
+        evento.add('description', "Hola, se ha cancelado la cita que estaba programada para este expediente.")
+        asunto = f"CANCELACIÓN: CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()} -- {cita.dia}"
+    else:
+        evento.add('status', 'CONFIRMED')
+        evento.add('summary', f"CITA PARA ENTREGAR EXPEDIENTE DEL SOCIO: {expediente.socio.numeroKepler} {expediente.socio.nombre.upper()}")
+        evento.add('description', "Cita programada para el expediente del socio.")
+        
+        if esSugerencia:
+            asunto = f"Nueva Sugerencia de Cita: {cita.dia} a las {cita.hora} hrs"
+            titulo_seccion = "Nueva Propuesta de Horario"
+            texto_explicativo = f"Hola, se ha sugerido un cambio de horario para la entrega del expediente del socio <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong> debido a que el horario anterior fue rechazado."
+        else:
+            asunto = f"Confirmación de Cita: {cita.dia} a las {cita.hora} hrs"
+            titulo_seccion = "Confirmación de Cita Programada"
+            texto_explicativo = f"Hola, se ha agendado una cita para la entrega del expediente del socio <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong>."
 
-    return redirect('Index:editarExpediente', expediente.id)
+    cal.add_component(evento)
+    
+    SMTP_HOST = "ucg.com.mx"
+    SMTP_PORT = 465
+    USUARIO = "informacion@ucg.com.mx"
+    CONTRASENA = "UcG911_@!#"
+    
+    destinatariosCredito = ['portiz@ucg.com.mx', 'dcorrea@ucg.com.mx', 'mrubio@ucg.com.mx'] 
+    destinatariosRaw = [
+        getattr(getattr(expediente, 'usuarioCredito', None), 'email', None),
+        getattr(getattr(expediente, 'usuario', None), 'email', None),
+    ]
+
+    destinatarios = list(set([correo for correo in destinatariosRaw + destinatariosCredito if correo]))
+    
+    # Lista de pruebas
+    # destinatarios = ['daudiffred@ucg.com.mx']
+    
+    if not destinatarios:
+        return
+
+    try:
+        conexion = get_connection(
+            host=SMTP_HOST,
+            port=SMTP_PORT,
+            username=USUARIO,
+            password=CONTRASENA,
+            use_tls=False,
+            use_ssl=True,
+            timeout=10
+        )
+        
+        urlConfirmar = "http://192.168.0.29:8000/expedientes/editarExpediente/Aceptar/"
+        urlRechazar = "http://192.168.0.29:8000/expedientes/editarExpediente/Rechazar/"
+        url_finalurlConfirmar = f"{urlConfirmar}{expediente.id}"
+        url_finalurlurlRechazar = f"{urlRechazar}{expediente.id}"
+
+        for correoDestino in destinatarios:
+            if esCancelacion:
+                cuerpo = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                    <h2 style="color: #dc3545;">Cancelación de Cita</h2>
+                    <p style="color: #555555; font-size: 16px; line-height: 1.5;">
+                        Hola, se ha cancelado la cita que estaba programada para la entrega del expediente del socio 
+                        <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong>.
+                    </p>
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p style="margin: 5px 0; color: #333333;"><strong>Fecha Cancelada:</strong> {cita.dia}</p>
+                        <p style="margin: 5px 0; color: #333333;"><strong>Hora Cancelada:</strong> {cita.hora} hrs</p>
+                    </div>
+                    <p style="color: #888888; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eeeeee; padding-top: 15px;">
+                        Este es un correo automático generado por la Plataforma de Expedientes.
+                    </p>
+                </div>
+                """
+            else:
+                mostrar_botones = True
+                if rol_creador in ['Credito', 'Gerente de Credito', 'Gerente de Crédito']:
+                    if correoDestino in destinatariosCredito or correoDestino == getattr(getattr(expediente, 'usuarioCredito', None), 'email', None):
+                        mostrar_botones = False
+                elif rol_creador in ['Ejecutivo de Servicios', 'Gerente Centro de Negocios']:
+                    if correoDestino == getattr(getattr(expediente, 'usuario', None), 'email', None) or correoDestino not in destinatariosCredito:
+                        if correoDestino != getattr(getattr(expediente, 'usuarioCredito', None), 'email', None):
+                            mostrar_botones = False
+
+                if mostrar_botones:
+                    bloque_interaccion = f"""
+                    <p style="color: #555555; font-size: 15px;">Por favor, responde a esta propuesta interactuando con los siguientes botones:</p>
+                    <div style="margin-top: 25px; text-align: center;">
+                        <a href="{url_finalurlConfirmar}" style="background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 4px; margin-right: 15px; display: inline-block;">Confirmar Cita</a>
+                        <a href="{url_finalurlurlRechazar}" style="background-color: #dc3545; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;">Rechazar / Sugerir Cambio</a>
+                    </div>
+                    """
+                else:
+                    bloque_interaccion = f"""
+                    <p style="color: #666666; font-size: 14px; font-style: italic; background-color: #f0f0f0; padding: 10px; border-radius: 4px; border-left: 4px solid #a0a0a0;">
+                        Esperando respuesta de confirmación o cambio por parte de la contraparte del departamento correspondiente.
+                    </p>
+                    """
+
+                cuerpo = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                    <h2 style="color: #333333;">{titulo_seccion}</h2>
+                    <p style="color: #555555; font-size: 16px; line-height: 1.5;">
+                        {texto_explicativo}
+                    </p>
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p style="margin: 5px 0; color: #333333;"><strong>Fecha Propuesta:</strong> {cita.dia}</p>
+                        <p style="margin: 5px 0; color: #333333;"><strong>Hora Propuesta:</strong> {cita.hora} hrs</p>
+                    </div>
+                    {bloque_interaccion}
+                    <p style="color: #888888; font-size: 12px; margin-top: 30px; text-align: center; border-top: 1px solid #eeeeee; padding-top: 15px;">
+                        Este es un correo automático generado por la Plataforma de Expedientes.
+                    </p>
+                </div>
+                """
+
+            email = EmailMessage(
+                subject=asunto,
+                body=cuerpo,
+                from_email=USUARIO,
+                to=[correoDestino],
+                connection=conexion
+            )
+            email.content_subtype = "html"
+            
+            ics_contenido = cal.to_ical().decode('utf-8')
+            parte_calendario = SafeMIMEText(ics_contenido, 'calendar', 'utf-8')
+            parte_calendario.set_param('method', metodo)
+            parte_calendario.set_param('charset', 'UTF-8')
+            
+            email.attach(parte_calendario)
+            email.attach(
+                'invitacion-cita.ics',
+                cal.to_ical(),
+                f'text/calendar; charset=UTF-8; method={metodo}'
+            )
+            
+            email.send()
+        
+        print("Correos enviados de forma individual correctamente")
+        
+    except Exception as e:
+        print("Error al enviar correo:", e)
+@login_required(login_url='/login/')
+def asociarCitaExistente(request, expedienteId, citaId):
+    if request.method == "POST":
+        expediente = get_object_or_404(Expediente, pk=expedienteId)
+        cita = get_object_or_404(Cita, pk=citaId)
+        cita.expedientes.add(expediente)
+        
+        enviarInvitacionCita(cita, expediente, usuario_accion=request.user, esCancelacion=False, esSugerencia=False)
+        messages.success(request, 'El expediente fue vinculado y se envió la invitación a Outlook.')
+        
+    return redirect('Index:editarExpediente', expedienteId)
 
 
 @login_required(login_url='/login/')
-def cambiarUsuarioNegocios(request, id):
-    expediente = get_object_or_404(Expediente, pk=id)
-
+def desasociarCitaExistente(request, expedienteId, citaId):
     if request.method == "POST":
-        nuevo_usuarios_id = request.POST.get("usuario")
-
-        if nuevo_usuarios_id:
-            expediente.usuarioNegocios_id = nuevo_usuarios_id
-            expediente.save()
-
-
-    return redirect('Index:editarExpediente', id=expediente.id)
-
-
-def aceptarCita(request, id):
-    expediente = get_object_or_404(Expediente, pk=id)
-    usuario = request.user
-    cita = Cita.objects.filter(
-        Q(expedientes=expediente),
-    ).order_by('dia', 'hora').last()  
-    
-    if usuario.roles in ['Gerente de Credito', 'Credito']:
-        cita.estatusCR = 'Aceptada'
-    elif usuario.roles in ['Gerente Centro de Negocios', 'Ejecutivo de Servicios']:
-        cita.estatusCN = 'Aceptada'
-   
-    cita.save()
-    
-    if cita.estatusCR == 'Aceptada' and cita.estatusCN == 'Aceptada':
-        enviarCorreoCitaAceptada(cita, expediente)
+        expediente = get_object_or_404(Expediente, pk=expedienteId)
+        cita = get_object_or_404(Cita, pk=citaId)
         
-    context = { 
-        'expediente': expediente,
-        'cita': cita,
-    }
-    return render(request, 'Index/citaAceptada.html', context)
+        enviarInvitacionCita(cita, expediente, usuario_accion=request.user, esCancelacion=True, esSugerencia=False)
+        
+        cita.expedientes.remove(expediente)
+        
+        if not cita.expedientes.exists():
+            cita.estatusCN = 'Pendiente'
+            cita.estatusCR = 'Pendiente'
+            cita.dia = None
+            cita.hora = None
+            cita.save()
+            
+        messages.success(request, 'La cita fue desasignada y se envió la notificación de cancelación.')
+        
+    return redirect('Index:editarExpediente', expedienteId)
 
 
+@login_required(login_url='/login/')
 def rechazarCita(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     cita = Cita.objects.filter(
@@ -1869,7 +1914,7 @@ def rechazarCita(request, id):
             cita_modificada.save()
             form.save_m2m()
             
-            enviarInvitacionCita(cita_modificada, expediente, esCancelacion=False, esSugerencia=True)
+            enviarInvitacionCita(cita_modificada, expediente, usuario_accion=request.user, esCancelacion=False, esSugerencia=True)
             return redirect(reverse('Index:editarExpediente', args=[expediente.pk]))
     else:
         form = CitaForm(instance=cita, user=request.user)
@@ -1903,11 +1948,33 @@ def crearCita(request, id):
             cita_form.save_m2m()
             cita.expedientes.add(expediente)
             
-            enviarInvitacionCita(cita, expediente, esCancelacion=False, esSugerencia=False)
+            enviarInvitacionCita(cita, expediente, usuario_accion=request.user, esCancelacion=False, esSugerencia=False)
             
     return redirect('Index:editarExpediente', id)
+@login_required(login_url='/login/')
 
-
+def aceptarCita(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    usuario = request.user
+    cita = Cita.objects.filter(
+        Q(expedientes=expediente),
+    ).order_by('dia', 'hora').last()  
+    
+    if usuario.roles in ['Gerente de Credito', 'Credito']:
+        cita.estatusCR = 'Aceptada'
+    elif usuario.roles in ['Gerente Centro de Negocios', 'Ejecutivo de Servicios']:
+        cita.estatusCN = 'Aceptada'
+   
+    cita.save()
+    
+    if cita.estatusCR == 'Aceptada' and cita.estatusCN == 'Aceptada':
+        enviarCorreoCitaAceptada(cita, expediente)
+        
+    context = { 
+        'expediente': expediente,
+        'cita': cita,
+    }
+    return render(request, 'Index/citaAceptada.html', context)
 def enviarCorreoCitaAceptada(cita, expediente):
     asunto = f"Cita Confirmada : {cita.dia} a las {cita.hora} hrs"
     
@@ -1915,7 +1982,7 @@ def enviarCorreoCitaAceptada(cita, expediente):
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <h2 style="color: #28a745;">Cita Confirmada</h2>
         <p style="color: #555555; font-size: 16px; line-height: 1.5;">
-            Hola, les notificamos que ambos departamentos (Crédito y Centro de Negocios) están de acuerdo con el horario para la entrega y revisión del expediente del socio 
+            Notificamos que ambos departamentos (Crédito y Centro de Negocios) están de acuerdo con el horario para la entrega y revisión del expediente del socio 
             <strong>{expediente.socio.numeroKepler} - {expediente.socio.nombre.upper()}</strong>.
         </p>
         <div style="background-color: #f1fcf4; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px; margin: 20px 0;">
@@ -1971,6 +2038,21 @@ def enviarCorreoCitaAceptada(cita, expediente):
     except Exception as e:
         print("Error al enviar correo de aceptación:", e)
 
+def obtenerSeccionesVacios(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+    for seccion in secciones:
+        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        for apartado in apartados:
+            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            if registro:
+                if not registro.estatus:
+                    registro.estatus = 'N/A'
+                else:
+                    registro.estatus = registro.estatus
+                registro.save()
+    #"aqui me quede"            
+    return redirect('Index:editarExpediente', id=expediente.id)
 
 
 

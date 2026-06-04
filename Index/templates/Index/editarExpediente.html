@@ -105,8 +105,19 @@
 
             {% endif %}
             {% if expediente.estatus.nombre == 'Nuevo' %}
-            <a href="{% url 'Index:enviarExpediente' expediente.id %}" class="btn btn-primary fw-bold">Enviar expediente
+                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
+
+            <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold">Enviar expediente
                 a crédito</a>
+            {% endif %}
+
+            {% endif %}
+            {% if expediente.estatus.nombre == 'Recepción con observaciones' %}
+                            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
+
+            <a href="{% url 'Index:enviarExpediente' expediente.id True %}" class="btn btn-primary fw-bold">Reenviar expediente
+                a crédito</a>
+            {% endif %}
 
             {% endif %}
         </div>
@@ -533,14 +544,21 @@
                                         <th style="width: 50px;">Clave</th>
                                         <th style="width: 400px;">Descripción</th>
                                         <th style="width: 120px;">Fecha</th>
+                                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+
                                         <th style="width: 100px;">Estatus</th>
-                                        <th style="width: 250px;">Comentario</th>
+                                        {% endif %}
+                                        <th style="width: 250px;">Comentario C/Negocios</th>
+                                        
+                                        {% if expediente.estatus.nombre != 'Nuevo'%}
+                                        <th style="width: 250px;">Comentario Credito</th>
+                                        {% endif %}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for fila in item.filas %}
                                     {% with apartado=fila.apartado registro=fila.registro %}
-                                    <tr>
+                                    <tr class="{% if registro.estatus == 'rechazado' %} bg-yellow {% endif %}">
                                         <td class="align-middle">{{ apartado.clave }}</td>
                                         <td class="align-middle">
                                             {% if fila.archivo_url %}
@@ -555,11 +573,17 @@
                                             {% endif %}
                                         </td>
                                         <td>
+                                            {% if request.user == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
                                             <input type="date" class="form-control form-control-sm"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
                                                 value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
+                                            {% else %}
+                                                {{ fila.fecha_html }}
+                                            {% endif %}
                                         </td>
-                                        <td>
+                                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+                                        <td >
+
                                             <select class="form-select form-select-sm"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-estatus">
                                                 <option value="" {% if not registro or registro.estatus == '' %}selected{% endif %}>--</option>
@@ -571,18 +595,28 @@
                                                 <option value="N/A" {% if registro and registro.estatus == 'N/A' %}selected{% endif %}>N/A</option>
                                             </select>
                                         </td>
-                                        <td>
-                                            {% if request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Administrador'%}
+                                        {% endif %}
+
+                                     
+                                            {% if request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Administrador' %}
+                                               <td>
                                             <input class="form-control form-control-sm" type="text"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentario"
-                                                value="{{ registro.comentario|default_if_none:'' }}">
+                                                value="{{ registro.comentario|default_if_none:'' }}"></td>
+                                            {% else %}
+                                                <td >{{ registro.comentario }}</td>
                                             {% endif %}
-                                            {% if request.user.roles == 'Credito' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Administrador'%}
-                                            <input class="form-control form-control-sm" type="text"
+                                            
+                                            {% if expediente.estatus.nombre != 'Nuevo'%}
+
+                                            {% if request.user.roles == 'Credito' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Administrador' %}
+                                             <td><input class="form-control form-control-sm" type="text"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentarioCredito"
-                                                value="{{ registro.comentarioCredito|default_if_none:'' }}">
+                                                value="{{ registro.comentarioCredito|default_if_none:'' }}"></td> 
+                                            {% else %}
+                                                <td >{{ registro.comentarioCredito|default_if_none:''  }} </td>
                                             {% endif %}
-                                        </td>
+                                         {% endif %}
                                     </tr>
                                     {% endwith %}
                                     {% empty %}

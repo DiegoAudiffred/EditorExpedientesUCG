@@ -32,7 +32,7 @@ urlpatterns = [
     path('expediente/asociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.asociarCitaExistente, name='asociarCitaExistente'),
     path('expediente/recibirExpediente/<int:expedienteID>/<str:observaciones>', views.recepcionExpediente, name='recepcionExpediente'),
     #enviarExpediente
-    path('expediente/enviarExpediente/<int:expedienteID>/', views.enviarExpediente, name='enviarExpediente'),
+    path('expediente/enviarExpediente/<int:expedienteID>/<str:reenviado>', views.enviarExpediente, name='enviarExpediente'),
     path('expediente/rechazarExpediente/<int:expedienteID>/', views.rechazarExpediente, name='rechazarExpediente'),
     
     
