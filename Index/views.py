@@ -199,7 +199,7 @@ def editarExpediente(request, id):
 
     citaAsignada = Cita.objects.filter(
         Q(expedientes=expediente),
-    ).order_by('dia', 'hora').last()    #ultima cita sginada
+    ).order_by('dia', 'hora').last()    
     
     if request.method == "POST":
         post = request.POST
@@ -244,15 +244,26 @@ def editarExpediente(request, id):
             if 'comentarioCredito' in campos:
                 registro.comentarioCredito = campos['comentarioCredito']
             
-            if 'fecha' in campos:
-                val_fecha = campos['fecha']
-                if val_fecha:
-                    try:
-                        registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
-                    except ValueError:
+            if registro.es_fecha:
+                if 'fecha' in campos:
+                    val_fecha = campos['fecha']
+                    if val_fecha:
+                        try:
+                            registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
+                        except ValueError:
+                            registro.fecha = None
+                    else:
                         registro.fecha = None
-                else:
-                    registro.fecha = None
+            else:
+                if 'fecha' in campos:
+                    val_numero = campos['fecha']
+                    if val_numero:
+                        try:
+                            registro.numero = int(val_numero)
+                        except ValueError:
+                            registro.numero = None
+                    else:
+                        registro.numero = None
             
             registro.save()
 
@@ -278,7 +289,7 @@ def editarExpediente(request, id):
     totalRegistrosLlenos = 0
 
     es_credito = request.user.roles in ['Credito', 'Gerente de Credito']
-    estatus_recepcion = expediente.estatus.nombre == "Completo" #solo jalara los que esten en estatus de completo para las de credito
+    estatus_recepcion = expediente.estatus.nombre == "Completo"
 
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave')
@@ -295,8 +306,12 @@ def editarExpediente(request, id):
                 totalRegistrosLlenos += 1
 
             fecha_html = ""
-            if registro.fecha:
-                fecha_html = registro.fecha.strftime("%Y-%m-%d")
+            if registro.es_fecha:
+                if registro.fecha:
+                    fecha_html = registro.fecha.strftime("%Y-%m-%d")
+            else:
+                if registro.numero is not None:
+                    fecha_html = str(registro.numero)
             
             info_archivo = archivos_encontrados.get(registro.id)
             
@@ -323,7 +338,6 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
-
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
     expedienteInstance = get_object_or_404(Expediente, pk=id)
@@ -2038,7 +2052,9 @@ def enviarCorreoCitaAceptada(cita, expediente):
     except Exception as e:
         print("Error al enviar correo de aceptación:", e)
 
-def obtenerSeccionesVacios(request, id):
+def obtenerSeccionesVacios(id):
+    cont = 0
+    lista = []
     expediente = get_object_or_404(Expediente, pk=id)
     secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
     for seccion in secciones:
@@ -2047,14 +2063,60 @@ def obtenerSeccionesVacios(request, id):
             registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
             if registro:
                 if not registro.estatus:
-                    registro.estatus = 'N/A'
-                else:
-                    registro.estatus = registro.estatus
-                registro.save()
-    #"aqui me quede"            
-    return redirect('Index:editarExpediente', id=expediente.id)
+                    lista.append(registro)
+                    cont = cont+1
+  
+    print(lista)
+    print(cont)
+         
 
 
+from django.shortcuts import get_object_or_404, redirect
 
-
+def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID)
+    apartado_origen = get_object_or_404(ApartadoCatalogo, pk=apartadoID)
+    
+    registro_origen = get_object_or_404(RegistroSeccion, seccion=seccion_actual, apartado=apartado_origen)
+    
+    clave_origen = apartado_origen.clave
+    
+    apartados_hijos = ApartadoCatalogo.objects.filter(
+        tipoDeSeccion=apartado_origen.tipoDeSeccion,
+        clave__startswith=clave_origen
+    ).exclude(clave=clave_origen)
+    
+    if not apartados_hijos.exists():
+        nueva_clave = f"{clave_origen}1"
+    else:
+        max_sufijo = 0
+        longitud_origen = len(clave_origen)
         
+        for ap in apartados_hijos:
+            sufijo_texto = ap.clave[longitud_origen:]
+            if sufijo_texto.isdigit():
+                val = int(sufijo_texto)
+                if val > max_sufijo:
+                    max_sufijo = val
+                    
+        nueva_clave = f"{clave_origen}{max_sufijo + 1}"
+        
+    nuevo_apartado = ApartadoCatalogo.objects.create(
+        tipoDeSeccion=apartado_origen.tipoDeSeccion,
+        clave=nueva_clave,
+        descripcion=apartado_origen.descripcion,
+        areaDondeAplica=apartado_origen.areaDondeAplica
+    )
+    
+    nuevo_registro = RegistroSeccion.objects.create(
+        seccion=seccion_actual,
+        apartado=nuevo_apartado,
+        estatus=registro_origen.estatus,
+        comentario=registro_origen.comentario,
+        comentarioCredito=registro_origen.comentarioCredito,
+        es_fecha=registro_origen.es_fecha,
+        numero=registro_origen.numero if not registro_origen.es_fecha else None
+    )
+    
+    return redirect('Index:editarExpediente', expedienteID)

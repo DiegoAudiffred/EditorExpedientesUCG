@@ -541,9 +541,13 @@
                             <table class="table table-sm table-striped mb-0">
                                 <thead class="table-secondary">
                                     <tr>
+                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+
+                                        <th style="width: 10px;"></th>
+                                        {% endif %}
                                         <th style="width: 50px;">Clave</th>
                                         <th style="width: 400px;">Descripción</th>
-                                        <th style="width: 120px;">Fecha</th>
+                                        <th style="width: 120px;">Fecha o Numero</th>
                                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
 
                                         <th style="width: 100px;">Estatus</th>
@@ -559,30 +563,46 @@
                                     {% for fila in item.filas %}
                                     {% with apartado=fila.apartado registro=fila.registro %}
                                     <tr class="{% if registro.estatus == 'rechazado' %} bg-yellow {% endif %}">
-                                        <td class="align-middle">{{ apartado.clave }}</td>
+{% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+
+<th class="align-middle">
+    {% if fila.apartado.clave|length <= 4 %}
+        <a href="{% url 'Index:agregarRenglonExpediente' expediente.id item.seccion.pk fila.apartado.pk %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center p-0" style="width: 30px; height: 30px;" onclick="return confirm('Está por crear un nuevo apartado para {{ apartado.clave }}.\n\nSi no ha guardado sus cambios actuales, presione CANCELAR y guarde primero.\n\n¿Desea continuar de todos modos?');">+</a>
+    {% endif %}
+</th>            
+{% endif %}                          <td class="align-middle">{{ apartado.clave }}</td>
                                         <td class="align-middle">
                                             {% if fila.archivo_url %}
                                             <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
                                                 target="_blank" title="Click para abrir archivo"
                                                 style="text-decoration: none; color: #0d6efd;">
-                                                <i class="bi bi-file-earmark-pdf"></i> {{
-                                                apartado.descripcion|linebreaksbr }}
+                                                <i class="bi bi-file-earmark-pdf"></i> {{ apartado.descripcion }}
                                             </a>
                                             {% else %}
-                                            {{ apartado.descripcion|linebreaksbr }}
+                                            {{ apartado.descripcion}}
                                             {% endif %}
                                         </td>
-                                        <td>
-                                            {% if request.user == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
-                                            <input type="date" class="form-control form-control-sm"
-                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
-                                                value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
-                                            {% else %}
-                                                {{ fila.fecha_html }}
-                                            {% endif %}
-                                        </td>
+                               <td>
+    {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' %}
+        {% if fila.registro.es_fecha %}
+            <input type="date" class="form-control form-control-sm"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
+                   value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
+        {% else %}
+            <input type="number" class="form-control form-control-sm"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
+                   value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
+        {% endif %}
+    {% else %}
+        {% if fila.registro.es_fecha %}
+            {{ fila.fecha_html }}
+        {% else %}
+            {{ fila.registro.numero|default:"" }}
+        {% endif %}
+    {% endif %}
+</td>
                                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
-                                        <td >
+                                        <td>
 
                                             <select class="form-select form-select-sm"
                                                 name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-estatus">

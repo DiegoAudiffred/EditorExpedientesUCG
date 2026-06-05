@@ -34,7 +34,8 @@ urlpatterns = [
     #enviarExpediente
     path('expediente/enviarExpediente/<int:expedienteID>/<str:reenviado>', views.enviarExpediente, name='enviarExpediente'),
     path('expediente/rechazarExpediente/<int:expedienteID>/', views.rechazarExpediente, name='rechazarExpediente'),
-    
+    path('expediente/agregarRenglonExpediente/<int:expedienteID>/<int:seccionID>/<int:apartadoID>', views.agregarRenglonExpediente, name='agregarRenglonExpediente'),
+
     
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),

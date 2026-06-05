@@ -232,9 +232,12 @@ class RegistroSeccion(models.Model): #El renglon
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
     fecha = models.DateField(null=True, blank=True)
+    numero = models.IntegerField(max_length=10, null=True, blank=True)
     estatus = models.CharField(max_length=20, null=True, blank=True)
     comentario = models.TextField(null=True, blank=True)
     comentarioCredito = models.TextField(null=True, blank=True)
+    es_fecha = models.BooleanField(default=True)
+
 
     class Meta:
         # ESTO EVITA DUPLICADOS Y ERRORES DE LÓGICA
