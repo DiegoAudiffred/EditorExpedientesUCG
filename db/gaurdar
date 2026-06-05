@@ -1,0 +1,68 @@
+
+def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID)
+    apartado_origen = get_object_or_404(ApartadoCatalogo, pk=apartadoID)
+    
+    registro_origen = get_object_or_404(RegistroSeccion, seccion=seccion_actual, apartado=apartado_origen)
+    
+    clave_origen = apartado_origen.clave
+    
+    apartados_hijos = ApartadoCatalogo.objects.filter(
+        tipoDeSeccion=apartado_origen.tipoDeSeccion,
+        clave__startswith=clave_origen
+    ).exclude(clave=clave_origen)
+    
+    if not apartados_hijos.exists():
+        nueva_clave = f"{clave_origen}1"
+    else:
+        max_sufijo = 0
+        longitud_origen = len(clave_origen)
+        
+        for ap in apartados_hijos:
+            sufijo_texto = ap.clave[longitud_origen:]
+            if sufijo_texto.isdigit():
+                val = int(sufijo_texto)
+                if val > max_sufijo:
+                    max_sufijo = val
+                    
+        nueva_clave = f"{clave_origen}{max_sufijo + 1}"
+        
+    #nuevo_apartado = ApartadoCatalogo.objects.create(
+    #    tipoDeSeccion=apartado_origen.tipoDeSeccion,
+    #    clave=nueva_clave,
+    #    descripcion=apartado_origen.descripcion,
+    #    areaDondeAplica=apartado_origen.areaDondeAplica
+    #)
+    
+    nuevo_registro = RegistroSeccion.objects.create(
+        seccion=seccion_actual,
+        apartado=nuevo_apartado,
+        estatus=registro_origen.estatus,
+        comentario=registro_origen.comentario,
+        comentarioCredito=registro_origen.comentarioCredito,
+        es_fecha=registro_origen.es_fecha,
+        #numero=registro_origen.numero if not registro_origen.es_fecha else None
+    )
+    
+    return redirect('Index:editarExpediente', expedienteID)
+
+
+
+class RegistroSeccion(models.Model): #El renglon
+    seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
+    apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
+    fecha = models.DateField(null=True, blank=True)
+    numero = models.IntegerField(max_length=10, null=True, blank=True)
+    estatus = models.CharField(max_length=20, null=True, blank=True)
+    comentario = models.TextField(null=True, blank=True)
+    comentarioCredito = models.TextField(null=True, blank=True)
+    es_fecha = models.BooleanField(default=True)
+
+
+    class Meta:
+        # ESTO EVITA DUPLICADOS Y ERRORES DE LÓGICA
+        unique_together = ('seccion', 'apartado') 
+
+    def __str__(self):
+        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} {self.seccion.expediente.socio}"

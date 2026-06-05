@@ -228,20 +228,20 @@ class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del reng
 
     def __str__(self):
         return f"{self.tipoDeSeccion} - {self.clave}"
-class RegistroSeccion(models.Model): #El renglon
+class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
     fecha = models.DateField(null=True, blank=True)
-    numero = models.IntegerField(max_length=10, null=True, blank=True)
+    numero = models.IntegerField(null=True, blank=True)
     estatus = models.CharField(max_length=20, null=True, blank=True)
     comentario = models.TextField(null=True, blank=True)
     comentarioCredito = models.TextField(null=True, blank=True)
     es_fecha = models.BooleanField(default=True)
+    secuencial = models.IntegerField(null=True, blank=True,default=1)
 
 
     class Meta:
-        # ESTO EVITA DUPLICADOS Y ERRORES DE LÓGICA
-        unique_together = ('seccion', 'apartado') 
+        unique_together = ('seccion', 'apartado')
 
     def __str__(self):
         return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} {self.seccion.expediente.socio}"

@@ -2102,12 +2102,12 @@ def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
                     
         nueva_clave = f"{clave_origen}{max_sufijo + 1}"
         
-    nuevo_apartado = ApartadoCatalogo.objects.create(
-        tipoDeSeccion=apartado_origen.tipoDeSeccion,
-        clave=nueva_clave,
-        descripcion=apartado_origen.descripcion,
-        areaDondeAplica=apartado_origen.areaDondeAplica
-    )
+    #nuevo_apartado = ApartadoCatalogo.objects.create(
+    #    tipoDeSeccion=apartado_origen.tipoDeSeccion,
+    #    clave=nueva_clave,
+    #    descripcion=apartado_origen.descripcion,
+    #    areaDondeAplica=apartado_origen.areaDondeAplica
+    #)
     
     nuevo_registro = RegistroSeccion.objects.create(
         seccion=seccion_actual,
@@ -2116,7 +2116,7 @@ def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
         comentario=registro_origen.comentario,
         comentarioCredito=registro_origen.comentarioCredito,
         es_fecha=registro_origen.es_fecha,
-        numero=registro_origen.numero if not registro_origen.es_fecha else None
+        #numero=registro_origen.numero if not registro_origen.es_fecha else None
     )
     
     return redirect('Index:editarExpediente', expedienteID)
