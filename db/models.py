@@ -237,11 +237,10 @@ class RegistroSeccion(models.Model):
     comentario = models.TextField(null=True, blank=True)
     comentarioCredito = models.TextField(null=True, blank=True)
     es_fecha = models.BooleanField(default=True)
-    secuencial = models.IntegerField(null=True, blank=True,default=1)
-
+    secuencial = models.IntegerField(null=True, blank=True, default=1)
 
     class Meta:
-        unique_together = ('seccion', 'apartado')
+        unique_together = ('seccion', 'apartado', 'secuencial')
 
     def __str__(self):
-        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} {self.seccion.expediente.socio}"
+        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} ({self.secuencial}) {self.seccion.expediente.socio}"

@@ -528,7 +528,7 @@
         </ul>
 
         <div class="tab-content">
-            {% for item in secciones %}
+ {% for item in secciones %}
 
             <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="seccion-{{ item.seccion.pk }}"
                 role="tabpanel">
@@ -566,10 +566,10 @@
 {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
 
 <th class="align-middle">
-    {% if fila.apartado.clave|length <= 4 %}
+    {% if registro.secuencial == 1 %}
         <a href="{% url 'Index:agregarRenglonExpediente' expediente.id item.seccion.pk fila.apartado.pk %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center p-0" style="width: 30px; height: 30px;" onclick="return confirm('Está por crear un nuevo apartado para {{ apartado.clave }}.\n\nSi no ha guardado sus cambios actuales, presione CANCELAR y guarde primero.\n\n¿Desea continuar de todos modos?');">+</a>
     {% endif %}
-</th>            
+</th>
 {% endif %}                          <td class="align-middle">{{ apartado.clave }}</td>
                                         <td class="align-middle">
                                             {% if fila.archivo_url %}
@@ -586,11 +586,11 @@
     {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' %}
         {% if fila.registro.es_fecha %}
             <input type="date" class="form-control form-control-sm"
-                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha"
                    value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
         {% else %}
             <input type="number" class="form-control form-control-sm"
-                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-fecha"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha"
                    value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
         {% endif %}
     {% else %}
@@ -605,7 +605,7 @@
                                         <td>
 
                                             <select class="form-select form-select-sm"
-                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-estatus">
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-estatus">
                                                 <option value="" {% if not registro or registro.estatus == '' %}selected{% endif %}>--</option>
                                                 <option value="ok" {% if registro and registro.estatus == 'ok' %}selected{% endif %}>ok</option>
                                                 <option value="pendiente" {% if registro and registro.estatus == 'pendiente' %}selected{% endif %}>pendiente
@@ -621,7 +621,7 @@
                                             {% if request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Administrador' %}
                                                <td>
                                             <input class="form-control form-control-sm" type="text"
-                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentario"
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-comentario"
                                                 value="{{ registro.comentario|default_if_none:'' }}"></td>
                                             {% else %}
                                                 <td >{{ registro.comentario }}</td>
@@ -631,7 +631,7 @@
 
                                             {% if request.user.roles == 'Credito' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Administrador' %}
                                              <td><input class="form-control form-control-sm" type="text"
-                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-comentarioCredito"
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-comentarioCredito"
                                                 value="{{ registro.comentarioCredito|default_if_none:'' }}"></td> 
                                             {% else %}
                                                 <td >{{ registro.comentarioCredito|default_if_none:''  }} </td>

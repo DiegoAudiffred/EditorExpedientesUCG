@@ -209,14 +209,14 @@ def editarExpediente(request, id):
             if not key.startswith("registro-"):
                 continue
             
-            parts = key.split('-', 3)
-            if len(parts) != 4:
+            parts = key.split('-', 4)
+            if len(parts) != 5:
                 continue
             
-            _, seccion_id_s, apartado_id_s, field = parts
+            _, seccion_id_s, apartado_id_s, secuencial_s, field = parts
             
             try:
-                ids_tuple = (int(seccion_id_s), int(apartado_id_s))
+                ids_tuple = (int(seccion_id_s), int(apartado_id_s), int(secuencial_s))
             except ValueError:
                 continue
 
@@ -225,14 +225,15 @@ def editarExpediente(request, id):
 
             datos_agrupados[ids_tuple][field] = value.strip()
 
-        for (seccion_id, apartado_id), campos in datos_agrupados.items():
-            try:
-                registro = RegistroSeccion.objects.get(
-                    seccion__id=seccion_id, 
-                    seccion__expediente=expediente, 
-                    apartado__id=apartado_id
-                )
-            except RegistroSeccion.DoesNotExist:
+        for (seccion_id, apartado_id, secuencial), campos in datos_agrupados.items():
+            registro = RegistroSeccion.objects.filter(
+                seccion__id=seccion_id, 
+                seccion__expediente=expediente, 
+                apartado__id=apartado_id,
+                secuencial=secuencial
+            ).first()
+            
+            if not registro:
                 continue
             
             if 'estatus' in campos:
@@ -292,7 +293,7 @@ def editarExpediente(request, id):
     estatus_recepcion = expediente.estatus.nombre == "Completo"
 
     for seccion in secciones:
-        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave')
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave', 'secuencial')
         
         filas = []
         for registro in registros_existentes:
@@ -338,6 +339,8 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
+
+
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
     expedienteInstance = get_object_or_404(Expediente, pk=id)
@@ -2070,53 +2073,32 @@ def obtenerSeccionesVacios(id):
     print(cont)
          
 
-
-from django.shortcuts import get_object_or_404, redirect
-
 def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
     seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID)
     apartado_origen = get_object_or_404(ApartadoCatalogo, pk=apartadoID)
     
-    registro_origen = get_object_or_404(RegistroSeccion, seccion=seccion_actual, apartado=apartado_origen)
+    registros_existentes = RegistroSeccion.objects.filter(
+        seccion=seccion_actual, 
+        apartado=apartado_origen
+    )
     
-    clave_origen = apartado_origen.clave
+    registro_origen = registros_existentes.first()
     
-    apartados_hijos = ApartadoCatalogo.objects.filter(
-        tipoDeSeccion=apartado_origen.tipoDeSeccion,
-        clave__startswith=clave_origen
-    ).exclude(clave=clave_origen)
-    
-    if not apartados_hijos.exists():
-        nueva_clave = f"{clave_origen}1"
-    else:
-        max_sufijo = 0
-        longitud_origen = len(clave_origen)
+    if not registro_origen:
+        return redirect('Index:editarExpediente', expedienteID)
         
-        for ap in apartados_hijos:
-            sufijo_texto = ap.clave[longitud_origen:]
-            if sufijo_texto.isdigit():
-                val = int(sufijo_texto)
-                if val > max_sufijo:
-                    max_sufijo = val
-                    
-        nueva_clave = f"{clave_origen}{max_sufijo + 1}"
-        
-    #nuevo_apartado = ApartadoCatalogo.objects.create(
-    #    tipoDeSeccion=apartado_origen.tipoDeSeccion,
-    #    clave=nueva_clave,
-    #    descripcion=apartado_origen.descripcion,
-    #    areaDondeAplica=apartado_origen.areaDondeAplica
-    #)
+    max_secuencial = registros_existentes.aggregate(models.Max('secuencial'))['secuencial__max'] or 0
+    nuevo_secuencial = max_secuencial + 1
     
     nuevo_registro = RegistroSeccion.objects.create(
         seccion=seccion_actual,
-        apartado=nuevo_apartado,
+        apartado=apartado_origen,
         estatus=registro_origen.estatus,
         comentario=registro_origen.comentario,
         comentarioCredito=registro_origen.comentarioCredito,
         es_fecha=registro_origen.es_fecha,
-        #numero=registro_origen.numero if not registro_origen.es_fecha else None
+        secuencial=nuevo_secuencial
     )
     
     return redirect('Index:editarExpediente', expedienteID)
