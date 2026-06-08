@@ -1,6 +1,9 @@
 <table class="table">
     <thead class="bg-tercero text-quinto">
         <tr>
+                   {% if request.user.roles == 'Administrador' %}
+                <th style="width: 15px;">Exp</th>
+            {% endif %}
             <th>ID</th>
             <th>Socio</th>
             <th>Número</th>
@@ -9,12 +12,15 @@
             <th>Credito</th>
 
             <th>Editar</th>
-
+     
         </tr>
     </thead>
     <tbody>
         {% for expediente in expedientes %}
         <tr style="background-color: {{expediente.estatus.color}};" class="">
+                 {% if request.user.roles == 'Administrador' %}
+                <th>{{ expediente.id }}</th>
+            {% endif %}
             <td>{{ expediente.socio.id }}</td>
 
             <td>{{ expediente.socio.nombre }}</td>

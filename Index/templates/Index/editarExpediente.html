@@ -120,6 +120,17 @@
             {% endif %}
 
             {% endif %}
+
+                         {% if expediente.estatus.nombre == 'Recepción' %}
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href="" class="btn btn-primary fw-bold w-100">En revisíon</a>
+            {% endif %}
+
+      
+
+            {% endif %}   
+
+
         </div>
         <div class="col-4 my-2">
             {% if expediente.estatus.nombre == 'Completo' %}
@@ -129,12 +140,23 @@
                 recibido el expediente fisico c/observaciones</a>
             {% endif %}
             {% endif %}
+                 {% if expediente.estatus.nombre == 'Recepción' %}
+                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+
+            <a href="" class="btn btn-primary fw-bold w-100">En revisíon c/observaciones</a>
+            {% endif %}
+            {% endif %}
 
         </div>
         <div class="col-4 my-2">
 {% if expediente.estatus.nombre == 'Completo' %}
                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
             <a href="{% url 'Index:rechazarExpediente' expediente.id %}"
+                class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
+            {% endif %}            {% endif %}
+{% if expediente.estatus.nombre == 'Recepción' %}
+                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            <a href=""
                 class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
             {% endif %}            {% endif %}
 
@@ -570,7 +592,7 @@
         <a href="{% url 'Index:agregarRenglonExpediente' expediente.id item.seccion.pk fila.apartado.pk %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center p-0" style="width: 30px; height: 30px;" onclick="return confirm('Está por crear un nuevo apartado para {{ apartado.clave }}.\n\nSi no ha guardado sus cambios actuales, presione CANCELAR y guarde primero.\n\n¿Desea continuar de todos modos?');">+</a>
     {% endif %}
 </th>
-{% endif %}                          <td class="align-middle">{{ apartado.clave }}</td>
+{% endif %}                          <td class="align-middle">{{ apartado.clave }}{% if registro.secuencial != 1 %} -  {{ registro.secuencial }} {% endif %}</td>
                                         <td class="align-middle">
                                             {% if fila.archivo_url %}
                                             <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
@@ -582,22 +604,34 @@
                                             {{ apartado.descripcion}}
                                             {% endif %}
                                         </td>
-                               <td>
+                            <td class="align-middle">
     {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' %}
-        {% if fila.registro.es_fecha %}
-            <input type="date" class="form-control form-control-sm"
-                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha"
-                   value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
-        {% else %}
-            <input type="number" class="form-control form-control-sm"
-                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha"
-                   value="{{ fila.fecha_html }}" onblur="if(!this.value) this.value='';">
-        {% endif %}
+        <div class="d-flex align-items-center gap-1 container-alternar-fecha">
+            <input type="hidden" 
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-es_fecha" 
+                   class="input-es-fecha" 
+                   value="{% if registro.es_fecha %}true{% else %}false{% endif %}">
+
+            <input type="date" 
+                   class="form-control form-control-sm input-fecha-date {% if not registro.es_fecha %}d-none{% endif %}"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha_date"
+                   value="{% if registro.es_fecha %}{{ fila.fecha_html }}{% endif %}">
+
+            <input type="number" 
+                   class="form-control form-control-sm input-fecha-number {% if registro.es_fecha %}d-none{% endif %}"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha_num"
+                   value="{% if not registro.es_fecha %}{{ fila.fecha_html }}{% endif %}" 
+                   placeholder="Número">
+
+            <button type="button" class="btn btn-outline-secondary btn-sm btn-alternar-tipo" title="Alternar entre Fecha / Número">
+                <i class="bi bi-arrow-left-right"></i>
+            </button>
+        </div>
     {% else %}
-        {% if fila.registro.es_fecha %}
+        {% if registro.es_fecha %}
             {{ fila.fecha_html }}
         {% else %}
-            {{ fila.registro.numero|default:"" }}
+            {{ registro.numero|default:"" }}
         {% endif %}
     {% endif %}
 </td>
@@ -785,5 +819,30 @@
             allowClear: true
         });
     });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.btn-alternar-tipo').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const container = this.closest('.container-alternar-fecha');
+            const inputEsFecha = container.querySelector('.input-es-fecha');
+            const inputDate = container.querySelector('.input-fecha-date');
+            const inputNumber = container.querySelector('.input-fecha-number');
+
+            if (inputEsFecha.value === 'true') {
+                inputEsFecha.value = 'false';
+                inputDate.classList.add('d-none');
+                inputDate.value = '';
+                inputNumber.classList.remove('d-none');
+            } else {
+                inputEsFecha.value = 'true';
+                inputNumber.classList.add('d-none');
+                inputNumber.value = '';
+                inputDate.classList.remove('d-none');
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

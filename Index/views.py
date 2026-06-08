@@ -175,6 +175,7 @@ def agregarObligados(request, id):
 
     return JsonResponse({'status': 'error'}, status=400)
 @login_required(login_url='/login/')
+@login_required(login_url='/login/')
 def editarExpediente(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     lineasLista = Linea.objects.filter(expediente=expediente)
@@ -245,9 +246,13 @@ def editarExpediente(request, id):
             if 'comentarioCredito' in campos:
                 registro.comentarioCredito = campos['comentarioCredito']
             
+            if 'es_fecha' in campos:
+                registro.es_fecha = campos['es_fecha'].lower() == 'true'
+
             if registro.es_fecha:
-                if 'fecha' in campos:
-                    val_fecha = campos['fecha']
+                registro.numero = None
+                if 'fecha_date' in campos:
+                    val_fecha = campos['fecha_date']
                     if val_fecha:
                         try:
                             registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
@@ -256,8 +261,9 @@ def editarExpediente(request, id):
                     else:
                         registro.fecha = None
             else:
-                if 'fecha' in campos:
-                    val_numero = campos['fecha']
+                registro.fecha = None
+                if 'fecha_num' in campos:
+                    val_numero = campos['fecha_num']
                     if val_numero:
                         try:
                             registro.numero = int(val_numero)
@@ -339,7 +345,6 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
-
 
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
@@ -632,9 +637,9 @@ def _generar_con_debug_extremo(seccion_obj, area_socio):
 @login_required(login_url='/login/')    
 def expediente_eliminar(request,id):
     expediente = Expediente.objects.get(id=id)
-    expediente.delete()
-    #expediente.eliminado = True
-    #expediente.save()
+    #expediente.delete()
+    expediente.eliminado = True
+    expediente.save()
     return redirect('Index:expedientesLayout')
 
 
@@ -722,7 +727,7 @@ def correoParaRevision(expediente,reenviado):
         print("Correo enviado correctamente")
     except Exception as e:
         print("Error al enviar correo:", e)
-    return redirect('Index:editarExpediente', expediente.id)
+    #return redirect('Index:editarExpediente', expediente.id)
 
 @login_required(login_url='/login/')    
 def rechazarExpediente(request,expedienteID):
@@ -1548,6 +1553,7 @@ def enviarExpediente(request, expedienteID,reenviado):
         expediente.save()
 
     darAlta(expediente,getEstado.nombre,request.user)
+    print("Alta dada")
     return redirect('Index:editarExpediente', expediente.id)
 
 
