@@ -355,29 +355,51 @@ def lineaCrear(request, id):
         
         if lineasData:
             listaSegmentada = lineasData.split('||')
+            tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
+            area_socio = tipo_persona_map.get(expedienteInstance.socio.tipoPersona)
             
-            for bloque in listaSegmentada:
-                if not bloque.strip():
-                    continue
+            secciones_restantes = ['III', 'IV', 'V', 'VI','VII']
+            dict_titulos = dict(SeccionesExpediente.SECCIONES)
+            
+            try:
+                with transaction.atomic():
+                    for bloque in listaSegmentada:
+                        if not bloque.strip():
+                            continue
+                        
+                        partes = bloque.split('::')
+                        if len(partes) < 4:
+                            continue
+                            
+                        numero = partes[0].strip()
+                        monto = partes[1].strip()
+                        tipoLineaId = partes[2].strip()
+                        vigente = partes[3] == 'true'
+                        
+                        Linea.objects.create(
+                            expediente=expedienteInstance,
+                            numero=numero,
+                            monto=monto,
+                            tipoLinea=tipoLineaId,
+                            vigente=vigente
+                        )
+                        
+                        for tipo_sec in secciones_restantes:
+                            titulo_base = dict_titulos.get(tipo_sec, '')
+                            titulo_con_linea = f"{titulo_base} - Línea: {numero}"
+                            
+                            nueva_seccion = SeccionesExpediente.objects.create(
+                                expediente=expedienteInstance,
+                                tipoDeSeccion=tipo_sec,
+                                tituloSeccion=titulo_con_linea
+                            )
+                            
+                            _generar_con_debug_extremo(nueva_seccion, area_socio)
+                            
+                return JsonResponse({'status': 'success'}, status=200)
                 
-                try:
-                    partes = bloque.split('::')
-                    numero = partes[0]
-                    monto = partes[1]
-                    tipoLineaId = partes[2]
-                    vigente = partes[3] == 'true'
-                    
-                    Linea.objects.create(
-                        expediente=expedienteInstance,
-                        numero=numero,
-                        monto=monto,
-                        tipoLinea=tipoLineaId,
-                        vigente=vigente
-                    )
-                except (IndexError, ValueError):
-                    continue
-                    
-            return JsonResponse({'status': 'success'}, status=200)
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             
         return JsonResponse({'status': 'error', 'message': 'No data'}, status=400)
         
@@ -507,7 +529,6 @@ def expediente_llenar(request, id):
 
 
 @login_required(login_url='/login/')
-
 def crearExpediente(request):
     if request.method == "POST":
         exp_form = ExpedienteCrearForm(request.POST)
@@ -561,8 +582,13 @@ def crearExpediente(request):
                         obligado, created = ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")
                         obligado.expedientes.add(expediente)
 
+                    secciones_permitidas = ['A', 'B', 'C', 'I', 'II']
                     SECCIONES = SeccionesExpediente.SECCIONES
+                    
                     for tipo_sec, titulo_sec in SECCIONES:
+                        if tipo_sec not in secciones_permitidas:
+                            continue
+                            
                         if tipo_sec == 'B':
                             for nombre in nombres_reps:
                                 nueva = SeccionesExpediente.objects.create(
@@ -610,9 +636,6 @@ def crearExpediente(request):
         'rep_form': rep_form, 
         'obl_form': obl_form
     })
-
-
-
 
 
 
@@ -828,16 +851,16 @@ def rechazarExpediente(request,expedienteID):
 
 
 def darAlta(expediente, nuevo_estatus_nombre, usuario):
-    estadoActual = EstadosFechas.objects.filter(
-        expediente=expediente, 
-        estado__nombre=nuevo_estatus_nombre
-    ).first()
-    
-    if estadoActual:
-        estadoActual.fecha = datetime.now()
-        estadoActual.save()
-    else:    
-        EstadosFechas.objects.create(
+    #estadoActual = EstadosFechas.objects.filter(
+    #    expediente=expediente, 
+    #    estado__nombre=nuevo_estatus_nombre
+    #).first()
+    #
+    #if estadoActual:
+    #    estadoActual.fecha = datetime.now()
+    #    estadoActual.save()
+    #else:    
+    EstadosFechas.objects.create(
             expediente=expediente,
             estado=Estado.objects.get(nombre=nuevo_estatus_nombre),
             fecha=datetime.now(),
@@ -2060,24 +2083,8 @@ def enviarCorreoCitaAceptada(cita, expediente):
         
     except Exception as e:
         print("Error al enviar correo de aceptación:", e)
-
-def obtenerSeccionesVacios(id):
-    cont = 0
-    lista = []
-    expediente = get_object_or_404(Expediente, pk=id)
-    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
-    for seccion in secciones:
-        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
-        for apartado in apartados:
-            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
-            if registro:
-                if not registro.estatus:
-                    lista.append(registro)
-                    cont = cont+1
-  
-    print(lista)
-    print(cont)
          
+@login_required(login_url='/login/')
 
 def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
@@ -2107,4 +2114,143 @@ def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
         secuencial=nuevo_secuencial
     )
     
+    return redirect('Index:editarExpediente', expedienteID)
+@login_required(login_url='/login/')
+
+def eliminarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID)
+    apartado_origen = get_object_or_404(ApartadoCatalogo, pk=apartadoID)
+    
+    ultimo_registro = RegistroSeccion.objects.filter(
+        seccion=seccion_actual,
+        apartado=apartado_origen
+    ).order_by('-secuencial').first()
+    
+    if ultimo_registro and ultimo_registro.secuencial > 1:
+        ultimo_registro.delete()
+        messages.success(request, 'Renglón extra eliminado con éxito.')
+    else:
+        messages.error(request, 'No es posible eliminar el renglón principal del apartado.')
+        
+    return redirect('Index:editarExpediente', expedienteID)
+
+
+@login_required(login_url='/login/')
+def revisionExpediente(request, expedienteID,observaciones):
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+    
+  
+    if observaciones == "S":
+        getEstado = Estado.objects.get(nombre='En revisión')
+        expediente.estatus = getEstado
+        expediente.save()
+
+        darAlta(expediente,getEstado.nombre,request.user)
+
+    elif observaciones == "N":
+        print("aqui")
+        getEstado = Estado.objects.get(nombre='En revisión con observaciones')
+        expediente.estatus = getEstado
+        expediente.save()
+        darAlta(expediente,getEstado.nombre,request.user)
+
+    elif observaciones == "R":
+        from email.message import EmailMessage
+
+        getEstado = Estado.objects.get(nombre='Recepción con observaciones')
+        expediente.estatus = getEstado
+        expediente.save()
+
+        darAlta(expediente,getEstado.nombre,request.user)
+        seccionesConComentarios = []
+        secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+
+        for seccion in secciones:
+            apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+            for apartado in apartados:
+                registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+
+                if registro is not None:
+                    if registro.comentarioCredito:
+                        seccionesConComentarios.append({
+                            'nombreSeccion': str(seccion.tituloSeccion),
+                            'claveApartado': str(apartado.clave),
+                            'comentario': str(registro.comentarioCredito)
+                        })
+
+        destinatario = [expediente.usuario.email] #expediente.usuarioCredito.email
+        #destinatario = ["daudiffred@ucg.com.mx"]    
+        dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
+        url_final = f"{dominio}{expediente.id}/"
+        asunto = f"RECHAZO EN RECEPCIÓN: Expediente {expediente.id} - {expediente.socio.nombre}"
+
+        comentarios_texto = ""
+        for item in seccionesConComentarios:
+            comentarios_texto += f"\n- [{item['nombreSeccion']} - {item['claveApartado']}]: {item['comentario']}"
+
+
+        cuerpo_html = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                    <p>Estimado usuario,</p>
+                    <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido rechazado durante su recepción.</p>
+                    <p>Atte {expediente.usuarioCredito.username}.</p>
+                    <div style="margin: 30px 0; text-align: center;">
+                        <a href="{url_final}" 
+                           style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Revisar Expediente
+                        </a>
+                    </div>
+                    <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
+                        <ul style="margin-bottom: 0; padding-left: 20px;">
+        """
+
+        for item in seccionesConComentarios:
+            cuerpo_html += f"""
+                            <li style="margin-bottom: 10px;">
+                                <strong>{item['nombreSeccion']} (Clave: {item['claveApartado']}):</strong> {item['comentario']}
+                            </li>
+            """
+
+        cuerpo_html += f"""
+                        </ul>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid #eee;">
+                    <p style="font-size: 0.8em; color: #999; text-align: center;">
+                        Este es un mensaje automático, por favor no responda a este correo.
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+        SMTP_HOST = "ucg.com.mx"
+        SMTP_PORT = 587
+        USUARIO = "informacion@ucg.com.mx"
+        CONTRASENA = "UcG911_@!#"
+
+        mensaje = EmailMessage()
+        mensaje["From"] = USUARIO
+        mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
+        mensaje["Subject"] = asunto
+
+        mensaje.add_alternative(cuerpo_html, subtype="html")
+
+        try:
+            servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+            servidor.starttls()
+            servidor.login(USUARIO, CONTRASENA)
+            servidor.send_message(mensaje)
+            servidor.quit()
+            print("Correo enviado correctamente")
+        except Exception as e:
+            print("Error al enviar correo:", e)
+    else:
+            print("Error")
+        
+        
     return redirect('Index:editarExpediente', expedienteID)

@@ -123,7 +123,7 @@
 
                          {% if expediente.estatus.nombre == 'Recepción' %}
             {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href="" class="btn btn-primary fw-bold w-100">En revisíon</a>
+            <a href="{% url 'Index:revisionExpediente' expediente.id 'S'%}" class="btn btn-primary fw-bold w-100">Pasar a revisíon</a>
             {% endif %}
 
       
@@ -143,7 +143,7 @@
                  {% if expediente.estatus.nombre == 'Recepción' %}
                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
 
-            <a href="" class="btn btn-primary fw-bold w-100">En revisíon c/observaciones</a>
+            <a href="{% url 'Index:revisionExpediente' expediente.id 'N'%}" class="btn btn-primary fw-bold w-100">Pasar a revisíon c/observaciones</a>
             {% endif %}
             {% endif %}
 
@@ -156,7 +156,7 @@
             {% endif %}            {% endif %}
 {% if expediente.estatus.nombre == 'Recepción' %}
                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href=""
+            <a href="{% url 'Index:revisionExpediente' expediente.id 'R'%}"
                 class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
             {% endif %}            {% endif %}
 
@@ -202,10 +202,11 @@
 
         <div class="col-4 my-2">
             <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero " data-bs-toggle="modal"
-                    style="cursor: pointer;" data-bs-target="#asignadoModalCredito">{{expediente.usuarioCredito}}</b>
+                    style="cursor: pointer;" data-bs-target="#asignadoModalCredito">{% if expediente.usuarioCredito %} {{expediente.usuarioCredito}} {% else %} Sin asignar {% endif %}</b>
 
             </h5>
-            <div class="modal fade" id="asignadoModalCredito" tabindex="-1" aria-labelledby="asignadoModalCreditoLabel"
+            {% if request.user.roles == 'Administrador'%}
+<div class="modal fade" id="asignadoModalCredito" tabindex="-1" aria-labelledby="asignadoModalCreditoLabel"
                 aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -236,6 +237,8 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+            
         </div>
         <div class="col-4 my-2 my-2">
             <h5 class="mb-3">Ejecutivo de Negocios asignado: <b class="text-tercero" data-bs-toggle="modal"
@@ -565,9 +568,9 @@
                                     <tr>
                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
 
-                                        <th style="width: 10px;"></th>
+                                        <th style="width: 30px;"></th>
                                         {% endif %}
-                                        <th style="width: 50px;">Clave</th>
+                                        <th style="width: 60px;">Clave</th>
                                         <th style="width: 400px;">Descripción</th>
                                         <th style="width: 120px;">Fecha o Numero</th>
                                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
@@ -590,6 +593,9 @@
 <th class="align-middle">
     {% if registro.secuencial == 1 %}
         <a href="{% url 'Index:agregarRenglonExpediente' expediente.id item.seccion.pk fila.apartado.pk %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center p-0" style="width: 30px; height: 30px;" onclick="return confirm('Está por crear un nuevo apartado para {{ apartado.clave }}.\n\nSi no ha guardado sus cambios actuales, presione CANCELAR y guarde primero.\n\n¿Desea continuar de todos modos?');">+</a>
+    {% else %}
+            <a href="{% url 'Index:eliminarRenglonExpediente' expediente.id item.seccion.pk fila.apartado.pk %}" class="btn btn-secondary d-inline-flex align-items-center justify-content-center p-0 text-white" style="width: 30px; height: 30px;" onclick="return confirm('Está por borrar nuevo apartado para {{ apartado.clave }}.\n\nSi no ha guardado sus cambios actuales, presione CANCELAR y guarde primero.\n\n¿Desea continuar de todos modos?');">-</a>
+
     {% endif %}
 </th>
 {% endif %}                          <td class="align-middle">{{ apartado.clave }}{% if registro.secuencial != 1 %} -  {{ registro.secuencial }} {% endif %}</td>
@@ -600,8 +606,12 @@
                                                 style="text-decoration: none; color: #0d6efd;">
                                                 <i class="bi bi-file-earmark-pdf"></i> {{ apartado.descripcion }}
                                             </a>
+                                            {% else %}	
+                                            {% if apartado.tipoDeSeccion == 'VII' %}
+                                                <input type="text" class="form-control  border border-3 border-primary my-2" >
                                             {% else %}
-                                            {{ apartado.descripcion}}
+                                            {{ apartado.descripcion}} 
+                                            {% endif %}
                                             {% endif %}
                                         </td>
                             <td class="align-middle">
@@ -609,7 +619,7 @@
         <div class="d-flex align-items-center gap-1 container-alternar-fecha">
             <input type="hidden" 
                    name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-es_fecha" 
-                   class="input-es-fecha" 
+                   class="input-es-fecha d-inline-flex align-items-center justify-content-center" 
                    value="{% if registro.es_fecha %}true{% else %}false{% endif %}">
 
             <input type="date" 

@@ -31,12 +31,13 @@ urlpatterns = [
 
     path('expediente/asociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.asociarCitaExistente, name='asociarCitaExistente'),
     path('expediente/recibirExpediente/<int:expedienteID>/<str:observaciones>', views.recepcionExpediente, name='recepcionExpediente'),
+    path('expediente/revisionExpediente/<int:expedienteID>/<str:observaciones>', views.revisionExpediente, name='revisionExpediente'),
     #enviarExpediente
     path('expediente/enviarExpediente/<int:expedienteID>/<str:reenviado>', views.enviarExpediente, name='enviarExpediente'),
     path('expediente/rechazarExpediente/<int:expedienteID>/', views.rechazarExpediente, name='rechazarExpediente'),
     path('expediente/agregarRenglonExpediente/<int:expedienteID>/<int:seccionID>/<int:apartadoID>', views.agregarRenglonExpediente, name='agregarRenglonExpediente'),
-
-    
+    path('expediente/eliminarRenglonExpediente/<int:expedienteID>/<int:seccionID>/<int:apartadoID>', views.eliminarRenglonExpediente, name='eliminarRenglonExpediente'),
+   
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
 

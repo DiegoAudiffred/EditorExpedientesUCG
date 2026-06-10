@@ -124,7 +124,8 @@ class EstadosFechas(models.Model):
     fecha = models.DateField(null=True, blank=True)
     hora = models.TimeField(auto_now_add=True, blank=True,null=True)
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, blank=True,null=True)
-
+    def __str__(self):
+        return f"{self.expediente} - {self.estado} - {self.usuario}"
 
 class Cita(models.Model):
     listaEstatus = (('Aceptada','Aceptada'),('Rechazada','Rechazada'),('Pendiente','Pendiente'))
@@ -173,8 +174,6 @@ class Linea(models.Model):
         ("Linea de descuento","Linea de descuento")
     )    
     
-
-
     expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=False,blank=False)
     numero = models.CharField("Numero", max_length=10, blank=False,null=False)
     monto = models.IntegerField(default=0,blank=False,null=False)  
@@ -195,7 +194,8 @@ class SeccionesExpediente(models.Model):#ENCABEZADO DE LA SECCION Y SU NOMBRE
         ('III','Estudio de Crédito'),
         ('IV','Información de garantias'),
         ('V','Contratos'),
-        ('VI','Seguimiento')
+        ('VI','Seguimiento'),
+        ('VII','Correspondencia')
     ]
 
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
@@ -213,7 +213,7 @@ class SeccionesExpediente(models.Model):#ENCABEZADO DE LA SECCION Y SU NOMBRE
 class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del renglon
     SECCIONES = [
         ('A', 'A'), ('B', 'B'), ('C', 'C'), ('I', 'I'),
-        ('II','II'), ('III','III'), ('IV','IV'), ('V','V'), ('VI','VI')
+        ('II','II'), ('III','III'), ('IV','IV'), ('V','V'), ('VI','VI'), ('VII','VII')
     ]
     AREAS = [('Fisicas','Fisicas'),('Ambas','Ambas'),('Morales','Morales')] 
     

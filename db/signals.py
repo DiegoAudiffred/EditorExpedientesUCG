@@ -91,6 +91,9 @@ def cargar_apartados_default(sender, **kwargs):
             "6.06": {"descripcion": "CEDULA DE CALIFICACION DE CARTERA DE LOS ULTIMOS 4 TRIMESTRES", "area_aplicacion": "Ambas"},
             "6.07": {"descripcion": "INFORMACIÓN FONDEO", "area_aplicacion": "Ambas"},
         },
+        "VII": {
+            "7.01": {"descripcion": "", "area_aplicacion": "Ambas"}, 
+        }    
     }
 
     for tipo, items in defaults.items():

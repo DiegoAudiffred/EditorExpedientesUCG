@@ -1,23 +1,6 @@
 @charset "UTF-8";
-@import url(../fonts/Manrope-Bold.ttf);
-@import url(../fonts/Manrope-ExtraBold.ttf);
-@import url(../fonts/Manrope-ExtraLight.ttf);
-@import url(../fonts/Manrope-Light.ttf);
-@import url(../fonts/Manrope-Medium.ttf);
-@import url(../fonts/Manrope-Regular.ttf);
-@import url(../fonts/Manrope-SemiBold.ttf);
-@font-face {
-  font-family: "LTSuperior";
-  src: url("../fonts/LTSuperior-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-}
-@font-face {
-  font-family: "LTSuperior";
-  src: url("../fonts/LTSuperior-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-}
+
+
 .orangeShadow:hover {
   box-shadow: 0px 2px 4px rgba(246, 135, 31, 0.13), 0px 12px 24px rgba(246, 135, 31, 0.33);
 }
