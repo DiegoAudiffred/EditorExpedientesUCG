@@ -174,7 +174,7 @@ def agregarObligados(request, id):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
     return JsonResponse({'status': 'error'}, status=400)
-@login_required(login_url='/login/')
+
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -237,11 +237,13 @@ def editarExpediente(request, id):
             if not registro:
                 continue
             
+            if registro.seccion.tipoDeSeccion == 'VII' and 'descripcion_libre' in campos:
+                registro.comentario = campos['descripcion_libre']
+            elif 'comentario' in campos:
+                registro.comentario = campos['comentario']
+
             if 'estatus' in campos:
                 registro.estatus = campos['estatus']
-            
-            if 'comentario' in campos:
-                registro.comentario = campos['comentario']
 
             if 'comentarioCredito' in campos:
                 registro.comentarioCredito = campos['comentarioCredito']
@@ -266,7 +268,7 @@ def editarExpediente(request, id):
                     val_numero = campos['fecha_num']
                     if val_numero:
                         try:
-                            registro.numero = int(val_numero)
+                            registro.numero = val_numero
                         except ValueError:
                             registro.numero = None
                     else:
@@ -359,7 +361,6 @@ def lineaCrear(request, id):
             area_socio = tipo_persona_map.get(expedienteInstance.socio.tipoPersona)
             
             secciones_restantes = ['III', 'IV', 'V', 'VI','VII']
-            dict_titulos = dict(SeccionesExpediente.SECCIONES)
             
             try:
                 with transaction.atomic():
@@ -376,22 +377,19 @@ def lineaCrear(request, id):
                         tipoLineaId = partes[2].strip()
                         vigente = partes[3] == 'true'
                         
-                        Linea.objects.create(
+                        nueva_linea = Linea.objects.create(
                             expediente=expedienteInstance,
                             numero=numero,
                             monto=monto,
                             tipoLinea=tipoLineaId,
-                            vigente=vigente
+                            vigente=True
                         )
                         
                         for tipo_sec in secciones_restantes:
-                            titulo_base = dict_titulos.get(tipo_sec, '')
-                            titulo_con_linea = f"{titulo_base} - Línea: {numero}"
-                            
                             nueva_seccion = SeccionesExpediente.objects.create(
                                 expediente=expedienteInstance,
-                                tipoDeSeccion=tipo_sec,
-                                tituloSeccion=titulo_con_linea
+                                linea=nueva_linea,
+                                tipoDeSeccion=tipo_sec
                             )
                             
                             _generar_con_debug_extremo(nueva_seccion, area_socio)
@@ -404,7 +402,9 @@ def lineaCrear(request, id):
         return JsonResponse({'status': 'error', 'message': 'No data'}, status=400)
         
     return JsonResponse({'status': 'error'}, status=405)
-@login_required
+
+@login_required(login_url='/login/')
+
 def servirArchivo(request):
     ruta_archivo = request.GET.get('ruta')
     if not ruta_archivo or not os.path.exists(ruta_archivo):
@@ -416,7 +416,7 @@ def servirArchivo(request):
     response = FileResponse(open(ruta_archivo, 'rb'), content_type=mime_type)
     response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
     return response
-@login_required
+@login_required(login_url='/login/')
 def servir_archivo_expediente(request):
     ruta_archivo = request.GET.get('ruta')
     if not ruta_archivo or not os.path.exists(ruta_archivo):
@@ -607,9 +607,9 @@ def crearExpediente(request):
                                 _generar_con_debug_extremo(nueva, area_socio)
                         else:
                             nueva = SeccionesExpediente.objects.create(
-                                expediente=expediente, 
-                                tipoDeSeccion=tipo_sec
-                            )
+                                    expediente=expediente, 
+                                    tipoDeSeccion=tipo_sec
+                                )
                             _generar_con_debug_extremo(nueva, area_socio)
 
                 return JsonResponse({
@@ -638,8 +638,7 @@ def crearExpediente(request):
     })
 
 
-
-def _generar_con_debug_extremo(seccion_obj, area_socio):
+def _generar_con_debug_extremo(seccion_obj, area_socio, linea_instance=None):
     filtro_permitido = [area_socio, 'Ambas']
     
     todos_los_apartados = ApartadoCatalogo.objects.filter(
@@ -2254,3 +2253,22 @@ def revisionExpediente(request, expedienteID,observaciones):
         
         
     return redirect('Index:editarExpediente', expedienteID)
+@login_required(login_url='/login/')
+def lineaEliminar(request, expediente_id, linea_id):
+    if request.method == "POST":
+        linea = get_object_or_404(Linea, pk=linea_id, expediente_id=expediente_id)
+        
+        try:
+            with transaction.atomic():
+                secciones_linea = SeccionesExpediente.objects.filter(linea=linea, expediente_id=expediente_id)
+                RegistroSeccion.objects.filter(seccion__in=secciones_linea).delete()
+                secciones_linea.delete()
+                linea.delete()
+                
+            messages.success(request, 'Línea de crédito y todos sus apartados asociados fueron eliminados con éxito.')
+        except Exception as e:
+            messages.error(request, f'Error al eliminar la línea: {str(e)}')
+            
+        return redirect(reverse('Index:editarExpediente', args=[expediente_id]))
+        
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)

@@ -1,66 +1,73 @@
 {% load static %}
 
 <div class="tab-pane fade" id="seccion-agregarObligado" role="tabpanel">
-    <h2> Agregar Obligados solidarios
-    </h2>
+    <h2> Agregar Obligados solidarios</h2>
     <hr>
-        <div class="mb-4">
-            <div class="row border border-3 border-quinto rounded rounded-3">
-                <div class="col-12 p-3">
-                    <label>Seleccionar existente o escribir nuevo:</label>
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1" id="contenedor-select-obl">
-                            {{ obl_form.obligado_selector }}
-                        </div>
-                        <button type="button" class="btn btn-secondary ms-2 text-white border border-primary"
-                            onclick="agregarObl()">
-                            Agregar
-                        </button>
+    <div class="mb-4">
+        <div class="row border border-3 border-quinto rounded rounded-3">
+            <div class="col-12 p-3">
+                <label class="form-label fw-bold">Seleccionar existente o escribir nuevo:</label>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-grow-1" id="contenedor-select-obl">
+                        {{ obl_form.obligado_selector }}
                     </div>
-                    {{ obl_form.obligados }}
+                    <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarObl()">
+                        Agregar
+                    </button>
                 </div>
-                <div id="obl-list" class="col-12"></div>
 
-            </div>
-            <div class="col-12 text-end">
-    <button type="button" onclick="enviarObligados()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
-    Guardar Obligados
-</button>
+                <div id="campos-nuevo-obligado" class="p-3 bg-light border rounded mb-3 d-none">
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Nombre del Obligado:</label>
+                        {{ obl_form.nombre }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Tipo de Persona:</label>
+                        {{ obl_form.tipoPersona }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Representante:</label>
+                        {{ obl_form.representante }}
+                    </div>
+                </div>
 
+                {{ obl_form.obligados }}
             </div>
+            <div id="obl-list" class="col-12 px-3 pb-3"></div>
         </div>
-  
+        <div class="col-12 text-end">
+            <button type="button" onclick="enviarObligados()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
+                Guardar Obligados
+            </button>
+        </div>
+    </div>
 </div>
+
 <div class="tab-pane fade" id="seccion-agregarRepresentante" role="tabpanel">
-    <h2> Agregar Representantes legales
-    </h2>
+    <h2> Agregar Representantes legales</h2>
     <hr>
-
-        <div class="mb-4">
-            <div class="row border border-3 border-quinto rounded rounded-3">
-                <div class="col-12 p-3">
-                    <label>Seleccionar existente o escribir nuevo:</label>
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1" id="contenedor-select-rep">
-                            {{ rep_form.representante_selector }}
-                        </div>
-                        <button type="button" class="btn btn-secondary ms-2 text-white border border-primary"
-                            onclick="agregarRep()">
-                            Agregar
-                        </button>
+    <div class="mb-4">
+        <div class="row border border-3 border-quinto rounded rounded-3">
+            <div class="col-12 p-3">
+                <label class="form-label fw-bold">Seleccionar existente o escribir nuevo:</label>
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1" id="contenedor-select-rep">
+                        {{ rep_form.representante_selector }}
                     </div>
-                    {{ rep_form.representantes }}
+                    <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarRep()">
+                        Agregar
+                    </button>
                 </div>
-                <div id="rep-list" class="col-12"></div>
-
+                {{ rep_form.representantes }}
             </div>
-            <div class="col-12 text-end">
-    <button type="button" onclick="enviarRepresentantes()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
-    Guardar Representantes
-</button>
-
-            </div>
+            <div id="rep-list" class="col-12 px-3 pb-3"></div>
         </div>
+        <div class="col-12 text-end">
+            <button type="button" onclick="enviarRepresentantes()" class="btn btn-secondary my-2 text-white border border-primary border-3 fw-bold">
+                Guardar Representantes
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -69,7 +76,17 @@
 
     function syncHidden() {
         document.getElementsByName("representantes")[0].value = reps.join("||");
-        document.getElementsByName("obligados")[0].value = obls.join("||");
+        document.getElementsByName("obligados")[0].value = obls.map(o => JSON.stringify(o)).join("||");
+    }
+
+    function conmutarCamposObligado() {
+        const select = document.querySelector('[name="obligado_selector"]');
+        const contenedorCampos = document.getElementById("campos-nuevo-obligado");
+        if (select && select.value === "") {
+            contenedorCampos.classList.remove("d-none");
+        } else if (contenedorCampos) {
+            contenedorCampos.classList.add("d-none");
+        }
     }
 
     function render() {
@@ -78,16 +95,21 @@
             <div class="input-group my-2 w-100">
                 <span class="input-group-text bg-primary text-white">Rep.</span>
                 <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-                <button class="btn btn-primary" type="button" onclick="reps.splice(${i},1); render();">X</button>
+                <button class="btn btn-danger text-white" type="button" onclick="reps.splice(${i},1); render();">X</button>
             </div>
         `).join("");
 
         const oblList = document.getElementById("obl-list");
         oblList.innerHTML = obls.map((x, i) => `
-            <div class="input-group my-2 w-100">
-                <span class="input-group-text bg-primary text-white">Obl.</span>
-                <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
-                <button class="btn btn-primary" type="button" onclick="obls.splice(${i},1); render();">X</button>
+            <div class="card my-2 w-100 border border-secondary">
+                <div class="card-body d-flex justify-content-between align-items-center p-2">
+                    <div>
+                        <strong>Obl:</strong> ${x.nombre} 
+                        <span class="badge bg-secondary">${x.tipo_persona_texto || ''}</span>
+                        <small class="text-muted">${x.representante_texto ? ' - Rep: ' + x.representante_texto : ''}</small>
+                    </div>
+                    <button class="btn btn-danger btn-sm text-white" type="button" onclick="obls.splice(${i},1); render();">X</button>
+                </div>
             </div>
         `).join("");
 
@@ -96,77 +118,114 @@
 
     function agregarRep() {
         const select = document.querySelector('[name="representante_selector"]');
+        if (!select) return;
         const valor = select.options[select.selectedIndex].text;
-
-
         const nombreParaAgregar = select.value === "" ? "" : valor;
 
-        reps.push(nombreParaAgregar);
-        render();
-        select.value = "";
+        if (nombreParaAgregar !== "") {
+            reps.push(nombreParaAgregar);
+            render();
+            select.value = "";
+        }
     }
 
     function agregarObl() {
         const select = document.querySelector('[name="obligado_selector"]');
-        const valor = select.options[select.selectedIndex].text;
+        if (!select) return;
 
-        const nombreParaAgregar = select.value === "" ? "" : valor;
+        let nuevoObligado = {};
 
-        obls.push(nombreParaAgregar);
+        if (select.value === "") {
+            const inputNombre = document.getElementById("id_obl_nombre");
+            const selectTipo = document.getElementById("id_obl_tipoPersona");
+            const selectRep = document.getElementById("id_obl_representante");
+
+            if (!inputNombre.value.trim()) return;
+
+            nuevoObligado = {
+                id: "",
+                nombre: inputNombre.value,
+                tipo_persona: selectTipo.value,
+                tipo_persona_texto: selectTipo.value ? selectTipo.options[selectTipo.selectedIndex].text : "",
+                representante: selectRep.value,
+                representante_texto: selectRep.value ? selectRep.options[selectRep.selectedIndex].text : ""
+            };
+
+            inputNombre.value = "";
+            selectTipo.value = "";
+            selectRep.value = "";
+        } else {
+            nuevoObligado = {
+                id: select.value,
+                nombre: select.options[select.selectedIndex].text,
+                tipo_persona: "",
+                tipo_persona_texto: "Existente",
+                representante: "",
+                representante_texto: ""
+            };
+        }
+
+        obls.push(nuevoObligado);
         render();
         select.value = "";
+        conmutarCamposObligado();
     }
+
     async function enviarRepresentantes() {
-    const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    const formData = new FormData();
-    formData.append('representantes', reps.join("||"));
+        const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        const formData = new FormData();
+        formData.append('representantes', reps.join("||"));
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken
-            },
-            body: formData
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                body: formData
+            });
 
-        if (response.ok) {
-            alert("Representantes guardados correctamente");
-            location.reload(); 
-        } else {
-            alert("Error al guardar");
+            if (response.ok) {
+                alert("Representantes guardados correctamente");
+                location.reload();
+            } else {
+                alert("Error al guardar");
+            }
+        } catch (error) {
+            console.error("Error:", error);
         }
-    } catch (error) {
-        console.error("Error:", error);
     }
-}
 
-async function enviarObligados() {
-    const url = "{% url 'Index:agregarObligados' expediente.id %}";
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    const formData = new FormData();
-    formData.append('obligados', obls.join("||"));
+    async function enviarObligados() {
+        const url = "{% url 'Index:agregarObligados' expediente.id %}";
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        const formData = new FormData();
+        formData.append('obligados', obls.map(o => JSON.stringify(o)).join("||"));
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken
-            },
-            body: formData
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                body: formData
+            });
 
-        if (response.ok) {
-            alert("Obligados guardados correctamente");
-            location.reload();
-        } else {
-            alert("Error al guardar");
+            if (response.ok) {
+                alert("Obligados guardados correctamente");
+                location.reload();
+            } else {
+                alert("Error al guardar");
+            }
+        } catch (error) {
+            console.error("Error:", error);
         }
-    } catch (error) {
-        console.error("Error:", error);
     }
-}
+
+    document.addEventListener("DOMContentLoaded", function() {
+        conmutarCamposObligado();
+    });
 </script>

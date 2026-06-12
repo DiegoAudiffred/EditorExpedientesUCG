@@ -170,6 +170,8 @@ class ExpedienteCrearForm(forms.ModelForm):
 
         return cleaned_data
     
+
+
 class CrearObligado(forms.ModelForm):
     obligados = forms.CharField(widget=forms.HiddenInput(), required=False)
     obligado_selector = forms.ModelChoiceField(
@@ -177,11 +179,37 @@ class CrearObligado(forms.ModelForm):
         label="Obligado a Editar/Crear",
         empty_label="--- Nuevo Obligado ---",
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2'})
+        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2', 'onchange': 'conmutarCamposObligado()'})
     )
 
     class Meta:
         model = ObligadoSolidario
+        fields = ['nombre', 'tipoPersona', 'representante']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_obl_nombre'}),
+            'tipoPersona': forms.Select(attrs={'class': 'form-select', 'id': 'id_obl_tipoPersona'}),
+            'representante': forms.Select(attrs={'class': 'form-select', 'id': 'id_obl_representante'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nombre'].required = False
+        self.fields['tipoPersona'].required = False
+        self.fields['representante'].required = False
+
+
+class CrearRepresentante(forms.ModelForm):
+    representantes = forms.CharField(widget=forms.HiddenInput(), required=False)
+    representante_selector = forms.ModelChoiceField(
+        queryset=RepresentanteLegal.objects.all(),
+        label="Representante a Editar/Crear",
+        empty_label="--- Nuevo Representante ---",
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2'})
+    )
+
+    class Meta:
+        model = RepresentanteLegal
         fields = ['nombre']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'})
@@ -214,12 +242,13 @@ class CrearRepresentante(forms.ModelForm):
 class LineaCrearForm(forms.ModelForm):
     class Meta:
         model = Linea
-        fields = ['expediente', 'numero', 'monto', 'tipoLinea', 'vigente'] 
+        fields = ['expediente', 'numero', 'monto', 'tipoLinea', 'vigente','tipoGarantia'] 
         widgets = {
             'expediente': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
             'numero': forms.TextInput(attrs={'class': 'form-control'}),
             'monto': forms.NumberInput(attrs={'class': 'form-control'}),
             'tipoLinea': forms.Select(attrs={'class': 'form-control'}),
+              'tipoGarantia': forms.Select(attrs={'class': 'form-control'}),
         }
         
     def __init__(self, *args, **kwargs):

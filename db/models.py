@@ -144,10 +144,12 @@ class RepresentanteLegal(models.Model):
 class ObligadoSolidario(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
     expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados")
-
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
+    representante = models.ForeignKey(RepresentanteLegal, on_delete=models.CASCADE, null=True, blank=True)
+
     def __str__(self):
         return self.nombre
+    
 class Garantia(models.Model):
     garantias = (
         ("Hipotecaria","Hipotecaria"),
@@ -174,17 +176,23 @@ class Linea(models.Model):
         ("Linea de descuento","Linea de descuento")
     )    
     
-    expediente = models.ForeignKey(Expediente,on_delete=models.CASCADE,null=False,blank=False)
-    numero = models.CharField("Numero", max_length=10, blank=False,null=False)
-    monto = models.IntegerField(default=0,blank=False,null=False)  
+    expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE, null=False, blank=False)
+    numero = models.CharField("Numero", max_length=10, blank=False, null=False)
+    monto = models.IntegerField(default=0, blank=False, null=False)  
     vigente = models.BooleanField(default=True)
-    tipoLinea = models.CharField(choices=tipoLinea,blank=False,default="Cuenta Corriente", max_length=50)
+    tipoLinea = models.CharField(choices=tipoLinea, blank=False, default="Cuenta Corriente", max_length=50)
     tipoGarantia = models.ManyToManyField(Garantia, blank=True, related_name="lineas")
     
+    def delete(self, *args, **kwargs):
+        secciones_asociadas = self.secciones.all()
+        RegistroSeccion.objects.filter(seccion__in=secciones_asociadas).delete()
+        secciones_asociadas.delete()
+        super().delete(*args, **kwargs)
+        
     def __str__(self):
         return self.numero
     
-class SeccionesExpediente(models.Model):#ENCABEZADO DE LA SECCION Y SU NOMBRE
+class SeccionesExpediente(models.Model):
     SECCIONES = [
         ('A', 'Solicitante'),
         ('B', 'Representante legal'),
@@ -199,17 +207,24 @@ class SeccionesExpediente(models.Model):#ENCABEZADO DE LA SECCION Y SU NOMBRE
     ]
 
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
+    linea = models.ForeignKey(Linea, on_delete=models.CASCADE, null=True, blank=True, related_name="secciones")
     tipoDeSeccion = models.CharField(max_length=3, choices=SECCIONES)
     tituloSeccion = models.CharField(max_length=100, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.tituloSeccion:
-            self.tituloSeccion = dict(self.SECCIONES).get(self.tipoDeSeccion, '')
+            base_titulo = dict(self.SECCIONES).get(self.tipoDeSeccion, '')
+            if self.linea:
+                self.tituloSeccion = f"{base_titulo} - Línea: {self.linea.numero}"
+            else:
+                self.tituloSeccion = base_titulo
         super().save(*args, **kwargs)
 
-
     def __str__(self):
-        return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.tituloSeccion} - {self.expediente}"
+        return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.tituloSeccion}"
+    
+
+    
 class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del renglon
     SECCIONES = [
         ('A', 'A'), ('B', 'B'), ('C', 'C'), ('I', 'I'),
@@ -230,7 +245,7 @@ class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del reng
         return f"{self.tipoDeSeccion} - {self.clave}"
 class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
-    apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.PROTECT)
+    apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.CASCADE)
     fecha = models.DateField(null=True, blank=True)
     numero = models.CharField(max_length=20,null=True, blank=True)
     estatus = models.CharField(max_length=20, null=True, blank=True)

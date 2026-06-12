@@ -44,7 +44,7 @@ urlpatterns = [
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     
     path('avances/', views.avances, name='avances'),
-    
+    path('expediente/<int:expediente_id>/<int:linea_id>', views.lineaEliminar, name='lineaEliminar'),
     #Administrador
     path('admin-usuarios/', views.administrador, name='administrador'),
     path('admin-usuarios/alta/', views.alta_usuario, name='alta_usuario'),
