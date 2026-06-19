@@ -401,6 +401,15 @@
             </div>
         </div>
     </div>
+    <script>
+    document.getElementById('modalCita').addEventListener('shown.bs.modal', function () {
+        $('.selectorBuscador').select2({
+            dropdownParent: $('#modalCita'),
+            placeholder: "Escribe para buscar expedientes...",
+            allowClear: true
+        });
+    });
+</script>
     {% endif %}
     <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm mb-2" type="button" data-bs-toggle="collapse"
         data-bs-target="#collapseLineas" aria-expanded="false">
@@ -612,7 +621,7 @@
     <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
         target="_blank" title="Click para abrir archivo"
         style="text-decoration: none; color: #0d6efd;">
-        <i class="bi bi-file-earmark-pdf"></i> {{ registro.comentario|default:apartado.descripcion }}
+        {{ apartado.descripcion }}
     </a>
     {% else %}  
     {% if apartado.tipoDeSeccion == 'VII' %}
@@ -833,15 +842,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<script>
-    document.getElementById('modalCita').addEventListener('shown.bs.modal', function () {
-        $('.selectorBuscador').select2({
-            dropdownParent: $('#modalCita'),
-            placeholder: "Escribe para buscar expedientes...",
-            allowClear: true
-        });
-    });
-</script>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

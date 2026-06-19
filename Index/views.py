@@ -279,8 +279,9 @@ def editarExpediente(request, id):
         messages.success(request, 'Datos guardados con éxito.')
         return redirect(reverse('Index:editarExpediente', args=[expediente.pk]))
 
-    stringSocio = "0000 " + expediente.socio.nombre.upper() if expediente.socio.numeroKepler == "" else expediente.socio.numeroKepler + " " + expediente.socio.nombre.upper()
-    archivos_encontrados = checarRuta(stringSocio, secciones)
+
+    stringSocio = "0000 " + expediente.socio.nombre.upper() if expediente.socio.numeroKepler == "" else expediente.socio.numeroKepler 
+    archivos_encontrados = checarRuta(stringSocio, secciones)    
 
     context = {
         'estados': estados,
@@ -347,6 +348,99 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
+
+
+def checarRuta(identificador_socio, secciones):
+    rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+    
+    carpeta_socio = None
+    try:
+        for nombre_dir in os.listdir(rutaServidor):
+            if identificador_socio in nombre_dir:
+                carpeta_socio = os.path.join(rutaServidor, nombre_dir)
+                break
+    except Exception:
+        return {}
+
+    if not carpeta_socio:
+        return {}
+
+    rutaMaestra = os.path.join(carpeta_socio, "Maestra")
+    rutaOperativa = os.path.join(carpeta_socio, "Operativa")
+
+    mapeo_secciones = {
+        "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
+        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
+        "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
+        "4": os.path.join(rutaOperativa, "IV. Inform de las Gtías"),
+        "5": os.path.join(rutaOperativa, "V. Contratos"),
+        "6": os.path.join(rutaOperativa, "VI. Seguimiento")
+    }
+    
+    meses_es = {
+        1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
+        7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"
+    }
+    
+    resultados = {}
+
+    for seccion in secciones:
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
+        
+        for registro in registros_existentes:
+            clave = str(registro.apartado.clave).strip()
+            prefijo = clave.split('.')[0]
+            
+            ruta_busqueda = mapeo_secciones.get(prefijo)
+            if not ruta_busqueda or not os.path.exists(ruta_busqueda):
+                continue
+                
+            archivo_mas_reciente = None
+            mtime_maximo = 0
+
+            try:
+                for nombre_item in os.listdir(ruta_busqueda):
+                    ruta_item = os.path.join(ruta_busqueda, nombre_item)
+                    
+                    if os.path.isdir(ruta_item) and nombre_item.startswith(clave):
+                        for archivo in os.listdir(ruta_item):
+                            if not archivo.startswith(clave):
+                                continue
+                            
+                            archivo_lower = archivo.lower()
+                            coincide = False
+                            
+                            if registro.es_fecha:
+                                if registro.fecha:
+                                    mes_texto = meses_es.get(registro.fecha.month, "")
+                                    anio_dos_digitos = registro.fecha.strftime("%y")
+                                    if mes_texto in archivo_lower and anio_dos_digitos in archivo_lower:
+                                        coincide = True
+                            else:
+                                if registro.numero:
+                                    criterio_num = str(registro.numero).strip().lower()
+                                    if criterio_num in archivo_lower:
+                                        coincide = True
+                                        
+                            if coincide:
+                                ruta_archivo = os.path.join(ruta_item, archivo)
+                                if os.path.isfile(ruta_archivo):
+                                    mtime = os.path.getmtime(ruta_archivo)
+                                    if mtime > mtime_maximo:
+                                        mtime_maximo = mtime
+                                        archivo_mas_reciente = ruta_archivo
+            except Exception:
+                continue
+
+            if archivo_mas_reciente:
+                resultados[registro.id] = {
+                    'clave': clave,
+                    'ruta': archivo_mas_reciente,
+                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
+                }
+    return resultados
+
+
 
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
@@ -416,71 +510,7 @@ def servirArchivo(request):
     response = FileResponse(open(ruta_archivo, 'rb'), content_type=mime_type)
     response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
     return response
-@login_required(login_url='/login/')
-def servir_archivo_expediente(request):
-    ruta_archivo = request.GET.get('ruta')
-    if not ruta_archivo or not os.path.exists(ruta_archivo):
-        raise Http404("El archivo no existe")
 
-    nombre_archivo = os.path.basename(ruta_archivo)
-    mime_type, _ = mimetypes.guess_type(ruta_archivo)
-    
-    response = FileResponse(open(ruta_archivo, 'rb'), content_type=mime_type)
-    response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
-    return response
-def checarRuta(ruta, secciones):
-    rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
-    rutaMaestra = os.path.join(rutaServidor, ruta, "Maestra")
-    rutaOperativa = os.path.join(rutaServidor, ruta, "Operativa")
-
-    mapeo_secciones = {
-        "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
-        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
-        "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Inform de las Gtías"),
-        "5": os.path.join(rutaOperativa, "V. Contratos"),
-        "6": os.path.join(rutaOperativa, "VI. Seguimiento")
-    }
-    
-    resultados = {}
-
-    for seccion in secciones:
-        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
-        
-        for registro in registros_existentes:
-            clave = str(registro.apartado.clave).strip()
-            prefijo = clave.split('.')[0]
-            
-            ruta_busqueda = mapeo_secciones.get(prefijo)
-            if not ruta_busqueda or not os.path.exists(ruta_busqueda):
-                continue
-            archivo_mas_reciente = None
-            mtime_maximo = 0
-
-            for nombre_item in os.listdir(ruta_busqueda):
-                ruta_item = os.path.join(ruta_busqueda, nombre_item)
-                
-                if os.path.isdir(ruta_item) and nombre_item.startswith(clave):
-                    try:
-                        for archivo in os.listdir(ruta_item):
-                            if archivo.startswith(clave):
-                                ruta_archivo = os.path.join(ruta_item, archivo)
-                                if os.path.isfile(ruta_archivo):
-                                    mtime = os.path.getmtime(ruta_archivo)
-                                    if mtime > mtime_maximo:
-                                        mtime_maximo = mtime
-                                        archivo_mas_reciente = ruta_archivo
-                    except Exception:
-                        continue
-
-            if archivo_mas_reciente:
-                resultados[registro.id] = {
-                    'clave': clave,
-                    'ruta': archivo_mas_reciente,
-                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
-                }
-    return resultados
-            
 
         
         
@@ -566,8 +596,8 @@ def crearExpediente(request):
                     obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
                     nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
 
-                    if tipo_persona == 'M' and (not nombres_reps or not nombres_obls):
-                        raise ValueError("Las Personas Morales requieren representantes y obligados.")
+                    if tipo_persona == 'M' and not nombres_reps:
+                        raise ValueError("Las Personas Morales requieren representantes.")
 
                     expediente = exp_form.save(commit=False)
                     expediente.socio = socio_a_asignar

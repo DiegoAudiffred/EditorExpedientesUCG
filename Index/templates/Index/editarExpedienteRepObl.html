@@ -1,5 +1,7 @@
 {% load static %}
 
+{% csrf_token %}
+
 <div class="tab-pane fade" id="seccion-agregarObligado" role="tabpanel">
     <h2> Agregar Obligados solidarios</h2>
     <hr>
@@ -8,7 +10,7 @@
             <div class="col-12 p-3">
                 <label class="form-label fw-bold">Seleccionar existente o escribir nuevo:</label>
                 <div class="d-flex align-items-center mb-3">
-                    <div class="flex-grow-1" id="contenedor-select-obl">
+                    <div class="flex-grow-1" id="contenedor-select-obl" onchange="conmutarCamposObligado()">
                         {{ obl_form.obligado_selector }}
                     </div>
                     <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarObl()">
@@ -50,14 +52,22 @@
         <div class="row border border-3 border-quinto rounded rounded-3">
             <div class="col-12 p-3">
                 <label class="form-label fw-bold">Seleccionar existente o escribir nuevo:</label>
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1" id="contenedor-select-rep">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-grow-1" id="contenedor-select-rep" onchange="conmutarCamposRepresentante()">
                         {{ rep_form.representante_selector }}
                     </div>
                     <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarRep()">
                         Agregar
                     </button>
                 </div>
+
+                <div id="campos-nuevo-representante" class="p-3 bg-light border rounded mb-3 d-none">
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Nombre del Representante:</label>
+                        {{ rep_form.nombre }}
+                    </div>
+                </div>
+
                 {{ rep_form.representantes }}
             </div>
             <div id="rep-list" class="col-12 px-3 pb-3"></div>
@@ -75,15 +85,27 @@
     let obls = [];
 
     function syncHidden() {
-        document.getElementsByName("representantes")[0].value = reps.join("||");
-        document.getElementsByName("obligados")[0].value = obls.map(o => JSON.stringify(o)).join("||");
+        const inputRep = document.getElementsByName("representantes")[0];
+        const inputObl = document.getElementsByName("obligados")[0];
+        if (inputRep) inputRep.value = reps.join("||");
+        if (inputObl) inputObl.value = obls.map(o => JSON.stringify(o)).join("||");
     }
 
     function conmutarCamposObligado() {
         const select = document.querySelector('[name="obligado_selector"]');
         const contenedorCampos = document.getElementById("campos-nuevo-obligado");
         if (select && select.value === "") {
-            contenedorCampos.classList.remove("d-none");
+            if (contenedorCampos) contenedorCampos.classList.remove("d-none");
+        } else if (contenedorCampos) {
+            contenedorCampos.classList.add("d-none");
+        }
+    }
+
+    function conmutarCamposRepresentante() {
+        const select = document.querySelector('[name="representante_selector"]');
+        const contenedorCampos = document.getElementById("campos-nuevo-representante");
+        if (select && select.value === "") {
+            if (contenedorCampos) contenedorCampos.classList.remove("d-none");
         } else if (contenedorCampos) {
             contenedorCampos.classList.add("d-none");
         }
@@ -119,13 +141,23 @@
     function agregarRep() {
         const select = document.querySelector('[name="representante_selector"]');
         if (!select) return;
-        const valor = select.options[select.selectedIndex].text;
-        const nombreParaAgregar = select.value === "" ? "" : valor;
+
+        let nombreParaAgregar = "";
+
+        if (select.value === "") {
+            const inputNombre = document.querySelector('#campos-nuevo-representante [name="nombre"]');
+            if (!inputNombre || !inputNombre.value.trim()) return;
+            nombreParaAgregar = inputNombre.value.trim();
+            inputNombre.value = "";
+        } else {
+            nombreParaAgregar = select.options[select.selectedIndex].text;
+        }
 
         if (nombreParaAgregar !== "") {
             reps.push(nombreParaAgregar);
             render();
             select.value = "";
+            conmutarCamposRepresentante();
         }
     }
 
@@ -136,24 +168,24 @@
         let nuevoObligado = {};
 
         if (select.value === "") {
-            const inputNombre = document.getElementById("id_obl_nombre");
-            const selectTipo = document.getElementById("id_obl_tipoPersona");
-            const selectRep = document.getElementById("id_obl_representante");
+            const inputNombre = document.querySelector('#campos-nuevo-obligado [name="nombre"]');
+            const selectTipo = document.querySelector('[name="tipoPersona"]');
+            const selectRep = document.querySelector('[name="representante"]');
 
-            if (!inputNombre.value.trim()) return;
+            if (!inputNombre || !inputNombre.value.trim()) return;
 
             nuevoObligado = {
                 id: "",
                 nombre: inputNombre.value,
-                tipo_persona: selectTipo.value,
-                tipo_persona_texto: selectTipo.value ? selectTipo.options[selectTipo.selectedIndex].text : "",
-                representante: selectRep.value,
-                representante_texto: selectRep.value ? selectRep.options[selectRep.selectedIndex].text : ""
+                tipo_persona: selectTipo ? selectTipo.value : "",
+                tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
+                representante: selectRep ? selectRep.value : "",
+                representante_texto: (selectRep && selectRep.value) ? selectRep.options[selectRep.selectedIndex].text : ""
             };
 
-            inputNombre.value = "";
-            selectTipo.value = "";
-            selectRep.value = "";
+            if (inputNombre) inputNombre.value = "";
+            if (selectTipo) selectTipo.value = "";
+            if (selectRep) selectRep.value = "";
         } else {
             nuevoObligado = {
                 id: select.value,
@@ -173,7 +205,8 @@
 
     async function enviarRepresentantes() {
         const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrftoken = csrfInput ? csrfInput.value : "";
         
         const formData = new FormData();
         formData.append('representantes', reps.join("||"));
@@ -200,7 +233,8 @@
 
     async function enviarObligados() {
         const url = "{% url 'Index:agregarObligados' expediente.id %}";
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrftoken = csrfInput ? csrfInput.value : "";
         
         const formData = new FormData();
         formData.append('obligados', obls.map(o => JSON.stringify(o)).join("||"));
@@ -227,5 +261,6 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         conmutarCamposObligado();
+        conmutarCamposRepresentante();
     });
 </script>
