@@ -173,7 +173,9 @@ class Linea(models.Model):
         ("Refaccionario","Refaccionario"),
         ("Factoraje", "Factoraje"),
         ("Quirografario","Quirografario"),
-        ("Linea de descuento","Linea de descuento")
+        ("Linea de descuento","Linea de descuento"),
+        ("Arrendamiento Puro","Arrendamiento Puro"),
+        ("Arrendamietn Financiero","Arrendamietn Financiero"),
     )    
     
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE, null=False, blank=False)

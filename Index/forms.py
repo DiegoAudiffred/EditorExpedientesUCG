@@ -171,7 +171,6 @@ class ExpedienteCrearForm(forms.ModelForm):
         return cleaned_data
     
 
-
 class CrearObligado(forms.ModelForm):
     obligados = forms.CharField(widget=forms.HiddenInput(), required=False)
     obligado_selector = forms.ModelChoiceField(
@@ -181,43 +180,33 @@ class CrearObligado(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2', 'onchange': 'conmutarCamposObligado()'})
     )
+    representante_selector = forms.ModelChoiceField(
+        queryset=RepresentanteLegal.objects.all(),
+        label="Representante Legal",
+        empty_label="--- Nuevo Representante ---",
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_obl_representante_selector', 'onchange': 'conmutarCamposRepresentanteObligado()'})
+    )
+    representante_nombre_nuevo = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'id': 'id_obl_representante_nombre_nuevo', 'placeholder': 'Nombre del nuevo representante'})
+    )
 
     class Meta:
         model = ObligadoSolidario
-        fields = ['nombre', 'tipoPersona', 'representante']
+        fields = ['nombre', 'tipoPersona']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_obl_nombre'}),
-            'tipoPersona': forms.Select(attrs={'class': 'form-select', 'id': 'id_obl_tipoPersona'}),
-            'representante': forms.Select(attrs={'class': 'form-select', 'id': 'id_obl_representante'})
+            'tipoPersona': forms.Select(attrs={'class': 'form-select', 'id': 'id_obl_tipoPersona', 'onchange': 'conmutarCamposTipoPersona()'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['nombre'].required = False
         self.fields['tipoPersona'].required = False
-        self.fields['representante'].required = False
 
 
-class CrearRepresentante(forms.ModelForm):
-    representantes = forms.CharField(widget=forms.HiddenInput(), required=False)
-    representante_selector = forms.ModelChoiceField(
-        queryset=RepresentanteLegal.objects.all(),
-        label="Representante a Editar/Crear",
-        empty_label="--- Nuevo Representante ---",
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select border border-3 border-primary my-2'})
-    )
 
-    class Meta:
-        model = RepresentanteLegal
-        fields = ['nombre']
-        widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'})
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['nombre'].required = False
 
 class CrearRepresentante(forms.ModelForm):
     representantes = forms.CharField(widget=forms.HiddenInput(), required=False)

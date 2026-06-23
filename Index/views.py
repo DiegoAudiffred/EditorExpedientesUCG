@@ -142,22 +142,42 @@ def agregarRepresentantes(request, id):
             
     return JsonResponse({'status': 'error'}, status=400)
 
+
 def agregarObligados(request, id):
     if request.method == 'POST':
         try:
             expediente = Expediente.objects.get(id=id)
             obls_raw = request.POST.get('obligados', '').strip().strip("|")
-            nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+            elementos_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
             
             tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
             area_socio = tipo_persona_map.get(expediente.socio.tipoPersona)
 
-            for nombre in nombres_obls:
-                obligado, created_obl = ObligadoSolidario.objects.get_or_create(
-                    nombre=nombre,
-                    tipoPersona="F"
-                )
-                obligado.expedientes.add(expediente)
+            for item in elementos_obls:
+                try:
+                    data = json.loads(item)
+                    id_existente = data.get('id')
+                    nombre = data.get('nombre')
+                    tipo_persona = data.get('tipo_persona')
+                    id_rep = data.get('representante')
+                    nombre_rep_input = data.get('representante_texto')
+                except json.JSONDecodeError:
+                    id_existente = ""
+                    nombre = item
+                    tipo_persona = "F"
+                    id_rep = ""
+                    nombre_rep_input = ""
+
+                if id_existente:
+                    obligado = ObligadoSolidario.objects.get(id=id_existente)
+                    obligado.expedientes.add(expediente)
+                    tipo_persona = obligado.tipoPersona if hasattr(obligado, 'tipoPersona') else tipo_persona
+                else:
+                    obligado, created_obl = ObligadoSolidario.objects.get_or_create(
+                        nombre=nombre,
+                        defaults={'tipoPersona': tipo_persona}
+                    )
+                    obligado.expedientes.add(expediente)
 
                 nueva, created_sec = SeccionesExpediente.objects.get_or_create(
                     expediente=expediente,
@@ -167,6 +187,27 @@ def agregarObligados(request, id):
                 
                 if created_sec:
                     _generar_con_debug_extremo(nueva, area_socio)
+
+                if tipo_persona == 'M' and nombre_rep_input:
+                    if id_rep:
+                        representante = RepresentanteLegal.objects.get(id=id_rep)
+                    else:
+                        representante, created_rep = RepresentanteLegal.objects.get_or_create(
+                            nombre=nombre_rep_input
+                        )
+                    
+                    representante.expedientes.add(expediente)
+                    obligado.representante = representante
+                    obligado.save()
+
+                    nueva_sec_rep, created_sec_rep = SeccionesExpediente.objects.get_or_create(
+                        expediente=expediente,
+                        tipoDeSeccion='B',
+                        tituloSeccion=f"Representante legal - {nombre_rep_input}"
+                    )
+                    
+                    if created_sec_rep:
+                        _generar_con_debug_extremo(nueva_sec_rep, area_socio)
                 
             return JsonResponse({'status': 'ok'})
         except Exception as e:
@@ -175,6 +216,7 @@ def agregarObligados(request, id):
 
     return JsonResponse({'status': 'error'}, status=400)
 
+    
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -402,33 +444,36 @@ def checarRuta(identificador_socio, secciones):
                 for nombre_item in os.listdir(ruta_busqueda):
                     ruta_item = os.path.join(ruta_busqueda, nombre_item)
                     
-                    if os.path.isdir(ruta_item) and nombre_item.startswith(clave):
-                        for archivo in os.listdir(ruta_item):
-                            if not archivo.startswith(clave):
-                                continue
-                            
-                            archivo_lower = archivo.lower()
-                            coincide = False
-                            
-                            if registro.es_fecha:
-                                if registro.fecha:
-                                    mes_texto = meses_es.get(registro.fecha.month, "")
-                                    anio_dos_digitos = registro.fecha.strftime("%y")
-                                    if mes_texto in archivo_lower and anio_dos_digitos in archivo_lower:
-                                        coincide = True
-                            else:
-                                if registro.numero:
-                                    criterio_num = str(registro.numero).strip().lower()
-                                    if criterio_num in archivo_lower:
-                                        coincide = True
-                                        
-                            if coincide:
-                                ruta_archivo = os.path.join(ruta_item, archivo)
-                                if os.path.isfile(ruta_archivo):
-                                    mtime = os.path.getmtime(ruta_archivo)
-                                    if mtime > mtime_maximo:
-                                        mtime_maximo = mtime
-                                        archivo_mas_reciente = ruta_archivo
+                    if os.path.isdir(ruta_item):
+                        nombre_item_clean = nombre_item.strip()
+                        
+                        if nombre_item_clean.startswith(clave) or clave.startswith(nombre_item_clean):
+                            for archivo in os.listdir(ruta_item):
+                                if not archivo.startswith(clave):
+                                    continue
+                                
+                                archivo_lower = archivo.lower()
+                                coincide = False
+                                
+                                if registro.es_fecha:
+                                    if registro.fecha:
+                                        mes_texto = meses_es.get(registro.fecha.month, "")
+                                        anio_dos_digitos = registro.fecha.strftime("%y")
+                                        if mes_texto in archivo_lower and anio_dos_digitos in archivo_lower:
+                                            coincide = True
+                                else:
+                                    if registro.numero:
+                                        criterio_num = str(registro.numero).strip().lower()
+                                        if criterio_num in archivo_lower:
+                                            coincide = True
+                                            
+                                if coincide:
+                                    ruta_archivo = os.path.join(ruta_item, archivo)
+                                    if os.path.isfile(ruta_archivo):
+                                        mtime = os.path.getmtime(ruta_archivo)
+                                        if mtime > mtime_maximo:
+                                            mtime_maximo = mtime
+                                            archivo_mas_reciente = ruta_archivo
             except Exception:
                 continue
 
@@ -439,7 +484,6 @@ def checarRuta(identificador_socio, secciones):
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
     return resultados
-
 
 
 @login_required(login_url='/login/')
@@ -602,8 +646,14 @@ def crearExpediente(request):
                     expediente = exp_form.save(commit=False)
                     expediente.socio = socio_a_asignar
                     expediente.estatus_id = 1
+                    expediente.usuario = request.user #Se agrego
                     expediente.save()
-
+                    EstadosFechas.objects.create( #se agrego
+                        expediente=expediente,
+                        estado=Estado.objects.get(nombre="Nuevo"),
+                        fecha=datetime.now(),
+                        usuario=request.user
+                    )
                     for rep_nombre in nombres_reps:
                         representante, created = RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)
                         representante.expedientes.add(expediente)
@@ -1201,6 +1251,7 @@ def avances(request):
     
     mes_seleccionado = int(request.GET.get('mes', mes_actual))
     ano_seleccionado = int(request.GET.get('ano', ano_actual))
+    tipo_reporte = request.GET.get('tipo_reporte', 'actual')
 
     if request.user.roles == 'Gerente Centro de Negocios':
         usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios','Gerente Centro de Negocios']).distinct()
@@ -1217,14 +1268,28 @@ def avances(request):
     
     data_por_usuario = {}
 
-    for us in usuarios:
-        rol_limpio = us.roles.strip() if us.roles else ""
+    lista_usuarios = list(usuarios)
+    lista_usuarios.append(None)
+
+    for us in lista_usuarios:
+        rol_limpio = request.user.roles
         es_credito = rol_limpio in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']
 
-        if es_credito:
-            expedientes_totales = Expediente.objects.filter(usuarioCredito=us, eliminado=False)
+        if us is None:
+            username_key = "Sin Asignar"
+            grafica_barras = es_credito
+            if es_credito:
+                expedientes_totales = Expediente.objects.filter(usuarioCredito__isnull=True, eliminado=False)
+            else:
+                expedientes_totales = Expediente.objects.filter(usuario__isnull=True, eliminado=False)
         else:
-            expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
+            username_key = us.username
+            rol_usuario = us.roles.strip() if us.roles else ""
+            grafica_barras = rol_usuario in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']
+            if grafica_barras:
+                expedientes_totales = Expediente.objects.filter(usuarioCredito=us, eliminado=False)
+            else:
+                expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
 
         numExpedientes = expedientes_totales.count()
         
@@ -1241,10 +1306,30 @@ def avances(request):
             historico_cambios[estado.nombre] = 0
             estado_cierre_mes[estado.nombre] = 0
 
-        for exp in expedientes_totales:
-            if exp.estatus and exp.estatus.nombre in conteo_por_estado:
-                conteo_por_estado[exp.estatus.nombre]['count'] += 1
-        
+        if tipo_reporte == 'actual':
+            for exp in expedientes_totales:
+                if exp.estatus and exp.estatus.nombre in conteo_por_estado:
+                    conteo_por_estado[exp.estatus.nombre]['count'] += 1
+        else:
+            expedientes_ids = expedientes_totales.values_list('id', flat=True)
+            for exp_id in expedientes_ids:
+                ultimo_cambio = EstadosFechas.objects.filter(
+                    expediente_id=exp_id,
+                    fecha__month=mes_seleccionado,
+                    fecha__year=ano_seleccionado
+                ).order_by('-fecha', '-hora').first()
+                
+                if ultimo_cambio:
+                    if ultimo_cambio.estado.nombre in conteo_por_estado:
+                        conteo_por_estado[ultimo_cambio.estado.nombre]['count'] += 1
+                else:
+                    ultimo_cambio_historico = EstadosFechas.objects.filter(
+                        expediente_id=exp_id,
+                        fecha__lt=datetime(ano_seleccionado, mes_seleccionado, 1).date()
+                    ).order_by('-fecha', '-hora').first()
+                    if ultimo_cambio_historico and ultimo_cambio_historico.estado.nombre in conteo_por_estado:
+                        conteo_por_estado[ultimo_cambio_historico.estado.nombre]['count'] += 1
+
         historial_periodo = EstadosFechas.objects.filter(
             expediente__in=expedientes_totales,
             fecha__month=mes_seleccionado,
@@ -1265,34 +1350,42 @@ def avances(request):
             
             if ultimo_cambio and ultimo_cambio.estado.nombre in estado_cierre_mes:
                 estado_cierre_mes[ultimo_cambio.estado.nombre] += 1
-            
-        expedientes_completados = expedientes_totales.filter(estatus__id=2).count()
         
+        if tipo_reporte == 'actual':
+            expedientes_completados = expedientes_totales.filter(estatus__id=2).count()
+        else:
+            expedientes_completados = 0
+            for exp_id in expedientes_ids:
+                uc = EstadosFechas.objects.filter(expediente_id=exp_id, fecha__month=mes_seleccionado, fecha__year=ano_seleccionado).order_by('-fecha', '-hora').first()
+                if uc and uc.estado.id == 2:
+                    expedientes_completados += 1
+
         if numExpedientes > 0:
             porcentaje_completado = (expedientes_completados / numExpedientes) * 100
         else:
             porcentaje_completado = 0
             
-        data_por_usuario[us.username] = {
-            'total': numExpedientes,
-            'porcentaje': round(porcentaje_completado, 2),
-            'estados': conteo_por_estado,
-            'grafica_barras': es_credito,
-            'historico_cambios': historico_cambios,
-            'estado_cierre_mes': estado_cierre_mes
-        }
+        if numExpedientes > 0 or us is not None:
+            data_por_usuario[username_key] = {
+                'total': numExpedientes,
+                'porcentaje': round(porcentaje_completado, 2),
+                'estados': conteo_por_estado,
+                'grafica_barras': grafica_barras,
+                'historico_cambios': historico_cambios,
+                'estado_cierre_mes': estado_cierre_mes
+            }
             
     context = {
         'data_por_usuario': data_por_usuario,
         'estados_list': estados,
         'mes_seleccionado': mes_seleccionado,
         'ano_seleccionado': ano_seleccionado,
+        'tipo_reporte': tipo_reporte,
         'meses_rango': range(1, 13),
         'anos_rango': range(datetime.now().year - 3, datetime.now().year + 1)
     }
     
     return render(request, 'Index/avancesLayout.html', context)
-
 @login_required(login_url='/login/')
 #@user_passes_test(is_admin)
 def administrador(request):
@@ -2302,3 +2395,52 @@ def lineaEliminar(request, expediente_id, linea_id):
         return redirect(reverse('Index:editarExpediente', args=[expediente_id]))
         
     return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
+
+
+
+def eliminarRepresentante(request,rep,exp):
+    try:
+        expediente = Expediente.objects.get(id=exp)
+        obligado = RepresentanteLegal.objects.get(id=rep)
+        
+        try:
+            seccion_obl = SeccionesExpediente.objects.get(
+                expediente=expediente,
+                tipoDeSeccion='B',
+                tituloSeccion=f"Representante legal - {obligado.nombre}"
+            )
+            seccion_obl.delete()
+        except SeccionesExpediente.DoesNotExist:
+            pass
+
+        obligado.expedientes.remove(expediente)
+
+    except (Expediente.DoesNotExist, RepresentanteLegal.DoesNotExist):
+        raise Http404
+
+    return redirect(reverse('Index:editarExpediente', args=[expediente.id]))
+
+
+
+
+def eliminarObligado(request, obl, exp):
+    try:
+        expediente = Expediente.objects.get(id=exp)
+        obligado = ObligadoSolidario.objects.get(id=obl)
+        
+        try:
+            seccion_obl = SeccionesExpediente.objects.get(
+                expediente=expediente,
+                tipoDeSeccion='C',
+                tituloSeccion=f"Obligado solidario y garantes - {obligado.nombre}"
+            )
+            seccion_obl.delete()
+        except SeccionesExpediente.DoesNotExist:
+            pass
+
+        obligado.expedientes.remove(expediente)
+
+    except (Expediente.DoesNotExist, ObligadoSolidario.DoesNotExist):
+        raise Http404
+
+    return redirect(reverse('Index:editarExpediente', args=[expediente.id]))

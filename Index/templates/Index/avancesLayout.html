@@ -11,6 +11,13 @@
         <div class="card-body">
             <form method="GET" action="" class="row g-3 align-items-center">
                 <div class="col-auto">
+                    <label for="tipo_reporte" class="form-label font-weight-bold">Tipo de Vista:</label>
+                    <select name="tipo_reporte" id="tipo_reporte" class="form-select">
+                        <option value="actual" {% if tipo_reporte == 'actual' %}selected{% endif %}>Estado Actual (Al día de hoy)</option>
+                        <option value="historico" {% if tipo_reporte == 'historico' %}selected{% endif %}>Cierre de Mes (Histórico)</option>
+                    </select>
+                </div>
+                <div class="col-auto">
                     <label for="mes" class="form-label font-weight-bold">Filtrar por Mes:</label>
                     <select name="mes" id="mes" class="form-select">
                         <option value="1" {% if mes_seleccionado == 1 %}selected{% endif %}>Enero</option>
@@ -47,9 +54,9 @@
         {% for username, data in data_por_usuario.items %}
             {% if not data.grafica_barras %}
             <div class="col-md-12 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-light">
-                        <h4>{{ username }} - Avance Total: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
+                <div class="card shadow-sm h-100 {% if username == 'Sin Asignar' %}border-danger{% endif %}">
+                    <div class="card-header {% if username == 'Sin Asignar' %}bg-danger text-white{% else %}bg-light{% endif %}">
+                        <h4>{{ username }} - Avance: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -89,9 +96,9 @@
         {% for username, data in data_por_usuario.items %}
             {% if data.grafica_barras %}
             <div class="col-md-12 mb-4">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-light">
-                        <h4>{{ username }} - Avance Total: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
+                <div class="card shadow-sm h-100 {% if username == 'Sin Asignar' %}border-danger{% endif %}">
+                    <div class="card-header {% if username == 'Sin Asignar' %}bg-danger text-white{% else %}bg-light{% endif %}">
+                        <h4>{{ username }} - Avance: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
                     </div>
                     <div class="card-body">
                         <div class="row">

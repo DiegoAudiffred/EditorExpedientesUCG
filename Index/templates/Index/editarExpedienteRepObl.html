@@ -27,9 +27,15 @@
                         <label class="form-label fw-bold">Tipo de Persona:</label>
                         {{ obl_form.tipoPersona }}
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-bold">Representante:</label>
-                        {{ obl_form.representante }}
+                    <div class="mb-2 d-none" id="contenedor-representante-obligado">
+                        <label class="form-label fw-bold">Representante Legal (Obligatorio para Morales):</label>
+                        <div class="mb-2">
+                            {{ obl_form.representante_selector }}
+                        </div>
+                        <div id="campo-representante-nuevo-obl" class="d-none">
+                            <label class="form-label text-muted">Escribe el nombre del nuevo representante:</label>
+                            {{ obl_form.representante_nombre_nuevo }}
+                        </div>
                     </div>
                 </div>
 
@@ -96,8 +102,30 @@
         const contenedorCampos = document.getElementById("campos-nuevo-obligado");
         if (select && select.value === "") {
             if (contenedorCampos) contenedorCampos.classList.remove("d-none");
+            conmutarCamposTipoPersona();
         } else if (contenedorCampos) {
             contenedorCampos.classList.add("d-none");
+        }
+    }
+
+    function conmutarCamposTipoPersona() {
+        const selectTipo = document.querySelector('[name="tipoPersona"]');
+        const contenedorRep = document.getElementById("contenedor-representante-obligado");
+        if (selectTipo && selectTipo.value === "M") {
+            if (contenedorRep) contenedorRep.classList.remove("d-none");
+            conmutarCamposRepresentanteObligado();
+        } else if (contenedorRep) {
+            contenedorRep.classList.add("d-none");
+        }
+    }
+
+    function conmutarCamposRepresentanteObligado() {
+        const selectRep = document.getElementById("id_obl_representante_selector");
+        const contenedorNuevoRep = document.getElementById("campo-representante-nuevo-obl");
+        if (selectRep && selectRep.value === "") {
+            if (contenedorNuevoRep) contenedorNuevoRep.classList.remove("d-none");
+        } else if (contenedorNuevoRep) {
+            contenedorNuevoRep.classList.add("d-none");
         }
     }
 
@@ -170,22 +198,38 @@
         if (select.value === "") {
             const inputNombre = document.querySelector('#campos-nuevo-obligado [name="nombre"]');
             const selectTipo = document.querySelector('[name="tipoPersona"]');
-            const selectRep = document.querySelector('[name="representante"]');
+            const selectRep = document.getElementById("id_obl_representante_selector");
+            const inputRepNuevo = document.getElementById("id_obl_representante_nombre_nuevo");
 
             if (!inputNombre || !inputNombre.value.trim()) return;
+
+            let repId = "";
+            let repTexto = "";
+
+            if (selectTipo && selectTipo.value === "M") {
+                if (selectRep && selectRep.value === "") {
+                    if (inputRepNuevo && inputRepNuevo.value.trim()) {
+                        repTexto = inputRepNuevo.value.trim();
+                    }
+                } else if (selectRep && selectRep.value !== "") {
+                    repId = selectRep.value;
+                    repTexto = selectRep.options[selectRep.selectedIndex].text;
+                }
+            }
 
             nuevoObligado = {
                 id: "",
                 nombre: inputNombre.value,
                 tipo_persona: selectTipo ? selectTipo.value : "",
                 tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
-                representante: selectRep ? selectRep.value : "",
-                representante_texto: (selectRep && selectRep.value) ? selectRep.options[selectRep.selectedIndex].text : ""
+                representante: repId,
+                representante_texto: repTexto
             };
 
             if (inputNombre) inputNombre.value = "";
             if (selectTipo) selectTipo.value = "";
             if (selectRep) selectRep.value = "";
+            if (inputRepNuevo) inputRepNuevo.value = "";
         } else {
             nuevoObligado = {
                 id: select.value,

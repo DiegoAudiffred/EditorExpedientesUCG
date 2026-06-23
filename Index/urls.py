@@ -37,7 +37,9 @@ urlpatterns = [
     path('expediente/rechazarExpediente/<int:expedienteID>/', views.rechazarExpediente, name='rechazarExpediente'),
     path('expediente/agregarRenglonExpediente/<int:expedienteID>/<int:seccionID>/<int:apartadoID>', views.agregarRenglonExpediente, name='agregarRenglonExpediente'),
     path('expediente/eliminarRenglonExpediente/<int:expedienteID>/<int:seccionID>/<int:apartadoID>', views.eliminarRenglonExpediente, name='eliminarRenglonExpediente'),
-   
+    path('expediente/eliminarRepresentante/<int:rep>/<int:exp>',views.eliminarRepresentante, name = 'eliminarRepresentante'),
+    path('expediente/eliminarObligado/<int:obl>/<int:exp>',views.eliminarObligado, name = 'eliminarObligado'),
+
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
 
@@ -54,7 +56,8 @@ urlpatterns = [
 
     path('obtener-apartado-data/<int:apartado_id>/', views.obtener_apartado_data, name='obtener_apartado_data'),
 
-    path('servirArchivo/', views.servirArchivo, name='servirArchivo'),    path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
+    path('servirArchivo/', views.servirArchivo, name='servirArchivo'), 
+          path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
     
     #Lineas
     path("lineas/",views.lineasLayout,name='lineasLayout'),

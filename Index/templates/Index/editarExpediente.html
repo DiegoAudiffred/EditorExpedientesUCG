@@ -488,7 +488,11 @@
                     <div>
                         <span class="text-secondary small d-block">Nombre</span>
                         <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
-                    </div>
+            
+                        {% if request.user.roles == 'Administrador' %}
+                <a href="{% url 'Index:eliminarObligado' linea.id expediente.id %}" class="btn btn-primary">Eliminar Obligado</a>           
+                        {% endif %}
+            </div>
 
 
 
@@ -514,6 +518,10 @@
                     <div>
                         <span class="text-secondary small d-block">Nombre</span>
                         <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
+
+                        {% if request.user.roles == 'Administrador' %}
+                        <a href="{% url 'Index:eliminarRepresentante' linea.id expediente.id %}" class="btn btn-primary mx-2">Eliminar Representante del Expediente</a>
+                        {% endif %}
                     </div>
 
 
@@ -724,7 +732,8 @@
         <h4> Total de registros llenados: {{totalRegistrosLlenos}} de {{totalRegistros}}</h4>
 
         <div class="d-flex justify-content-end">
-            <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
+            {% if request.user.roles == 'Administrador' %}             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
+ {% endif %}
             <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a
                 PDF</a>
             <a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}"
