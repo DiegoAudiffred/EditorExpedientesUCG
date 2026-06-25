@@ -236,14 +236,14 @@ def editarExpediente(request, id):
     hora_actual = ahora_local.time()
 
     citasDisponibles = Cita.objects.filter(
-        Q(dia__gt=hoy) | 
+        Q(dia__gt=hoy) |
         Q(dia=hoy, hora__gte=hora_actual)
     ).order_by('dia', 'hora')    
 
     citaAsignada = Cita.objects.filter(
         Q(expedientes=expediente),
     ).order_by('dia', 'hora').last()    
-    
+   
     if request.method == "POST":
         post = request.POST
         datos_agrupados = {}
@@ -251,13 +251,13 @@ def editarExpediente(request, id):
         for key, value in post.items():
             if not key.startswith("registro-"):
                 continue
-            
+           
             parts = key.split('-', 4)
             if len(parts) != 5:
                 continue
-            
+           
             _, seccion_id_s, apartado_id_s, secuencial_s, field = parts
-            
+           
             try:
                 ids_tuple = (int(seccion_id_s), int(apartado_id_s), int(secuencial_s))
             except ValueError:
@@ -270,15 +270,15 @@ def editarExpediente(request, id):
 
         for (seccion_id, apartado_id, secuencial), campos in datos_agrupados.items():
             registro = RegistroSeccion.objects.filter(
-                seccion__id=seccion_id, 
-                seccion__expediente=expediente, 
+                seccion__id=seccion_id,
+                seccion__expediente=expediente,
                 apartado__id=apartado_id,
                 secuencial=secuencial
             ).first()
-            
+           
             if not registro:
                 continue
-            
+           
             if registro.seccion.tipoDeSeccion == 'VII' and 'descripcion_libre' in campos:
                 registro.comentario = campos['descripcion_libre']
             elif 'comentario' in campos:
@@ -289,7 +289,7 @@ def editarExpediente(request, id):
 
             if 'comentarioCredito' in campos:
                 registro.comentarioCredito = campos['comentarioCredito']
-            
+           
             if 'es_fecha' in campos:
                 registro.es_fecha = campos['es_fecha'].lower() == 'true'
 
@@ -315,16 +315,15 @@ def editarExpediente(request, id):
                             registro.numero = None
                     else:
                         registro.numero = None
-            
+           
             registro.save()
 
         messages.success(request, 'Datos guardados con éxito.')
         return redirect(reverse('Index:editarExpediente', args=[expediente.pk]))
 
-
-    stringSocio = "0000 " + expediente.socio.nombre.upper() if expediente.socio.numeroKepler == "" else expediente.socio.numeroKepler 
+    stringSocio = expediente.socio.nombre.upper() if expediente.socio.numeroKepler == None else expediente.socio.numeroKepler
     archivos_encontrados = checarRuta(stringSocio, secciones)    
-
+    print(stringSocio)
     context = {
         'estados': estados,
         'usuarios': usuarios,
@@ -336,7 +335,7 @@ def editarExpediente(request, id):
         'usuariosCreditos': usuariosCreditos,
         'usuariosNegocios': usuariosNegocios,
     }
-    
+   
     totalRegistros = 0
     totalRegistrosLlenos = 0
 
@@ -345,7 +344,7 @@ def editarExpediente(request, id):
 
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave', 'secuencial')
-        
+       
         filas = []
         for registro in registros_existentes:
             if es_credito and estatus_recepcion:
@@ -354,7 +353,7 @@ def editarExpediente(request, id):
 
             totalRegistros += 1
 
-            if registro.estatus and registro.estatus != "": 
+            if registro.estatus and registro.estatus != "":
                 totalRegistrosLlenos += 1
 
             fecha_html = ""
@@ -364,21 +363,21 @@ def editarExpediente(request, id):
             else:
                 if registro.numero is not None:
                     fecha_html = str(registro.numero)
-            
+           
             info_archivo = archivos_encontrados.get(registro.id)
-            
+           
             filas.append({
                 'apartado': registro.apartado,
                 'registro': registro,
                 'fecha_html': fecha_html,
                 'archivo_url': info_archivo['ruta'] if info_archivo else None
             })
-            
+           
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
         })
-        
+       
     context['totalRegistros'] = totalRegistros
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
     context['rep_form'] = rep_form
@@ -394,14 +393,14 @@ def editarExpediente(request, id):
 
 def checarRuta(identificador_socio, secciones):
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
-    
+
     carpeta_socio = None
     try:
         for nombre_dir in os.listdir(rutaServidor):
             if identificador_socio in nombre_dir:
                 carpeta_socio = os.path.join(rutaServidor, nombre_dir)
                 break
-    except Exception:
+    except Exception as e:
         return {}
 
     if not carpeta_socio:
@@ -418,43 +417,58 @@ def checarRuta(identificador_socio, secciones):
         "5": os.path.join(rutaOperativa, "V. Contratos"),
         "6": os.path.join(rutaOperativa, "VI. Seguimiento")
     }
-    
+   
     meses_es = {
         1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
         7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"
     }
-    
+   
     resultados = {}
 
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
-        
+       
         for registro in registros_existentes:
             clave = str(registro.apartado.clave).strip()
             prefijo = clave.split('.')[0]
-            
+           
             ruta_busqueda = mapeo_secciones.get(prefijo)
+           
             if not ruta_busqueda or not os.path.exists(ruta_busqueda):
                 continue
-                
+               
             archivo_mas_reciente = None
             mtime_maximo = 0
 
+            partes_clave = clave.split('.')
+            clave_base = clave
+            if len(partes_clave) == 2 and len(partes_clave[1]) > 2:
+                clave_base = f"{partes_clave[0]}.{partes_clave[1][:2]}"
+
             try:
-                for nombre_item in os.listdir(ruta_busqueda):
+                items_directorio = os.listdir(ruta_busqueda)
+                for nombre_item in items_directorio:
                     ruta_item = os.path.join(ruta_busqueda, nombre_item)
-                    
+                   
                     if os.path.isdir(ruta_item):
                         nombre_item_clean = nombre_item.strip()
+                       
+                        condicion_carpeta = (
+                            nombre_item_clean.startswith(clave_base + " ") or 
+                            nombre_item_clean.startswith(clave_base + ".") or
+                            nombre_item_clean == clave_base
+                        )
                         
-                        if nombre_item_clean.startswith(clave) or clave.startswith(nombre_item_clean):
-                            for archivo in os.listdir(ruta_item):
+                        if condicion_carpeta:
+                            archivos_internos = os.listdir(ruta_item)
+                       
+                            for archivo in archivos_internos:
                                 if not archivo.startswith(clave):
                                     continue
-                                
+                               
                                 archivo_lower = archivo.lower()
                                 coincide = False
-                                
+                               
                                 if registro.es_fecha:
                                     if registro.fecha:
                                         mes_texto = meses_es.get(registro.fecha.month, "")
@@ -466,7 +480,7 @@ def checarRuta(identificador_socio, secciones):
                                         criterio_num = str(registro.numero).strip().lower()
                                         if criterio_num in archivo_lower:
                                             coincide = True
-                                            
+                               
                                 if coincide:
                                     ruta_archivo = os.path.join(ruta_item, archivo)
                                     if os.path.isfile(ruta_archivo):
@@ -474,7 +488,7 @@ def checarRuta(identificador_socio, secciones):
                                         if mtime > mtime_maximo:
                                             mtime_maximo = mtime
                                             archivo_mas_reciente = ruta_archivo
-            except Exception:
+            except Exception as e:
                 continue
 
             if archivo_mas_reciente:
@@ -483,10 +497,11 @@ def checarRuta(identificador_socio, secciones):
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
+       
     return resultados
-
-
 @login_required(login_url='/login/')
+
+
 def lineaCrear(request, id):
     expedienteInstance = get_object_or_404(Expediente, pk=id)
     
@@ -603,6 +618,7 @@ def expediente_llenar(request, id):
 
 
 @login_required(login_url='/login/')
+@login_required(login_url='/login/')
 def crearExpediente(request):
     if request.method == "POST":
         exp_form = ExpedienteCrearForm(request.POST)
@@ -638,7 +654,24 @@ def crearExpediente(request):
                     nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
                     
                     obls_raw = obl_form.cleaned_data.get('obligados', '').strip().strip("|")
-                    nombres_obls = [x.strip() for x in obls_raw.split("||") if x.strip()]
+                    raw_items = [x.strip() for x in obls_raw.split("||") if x.strip()]
+
+                    import json
+                    listado_obligados_procesados = []
+
+                    for item in raw_items:
+                        try:
+                            data_obl = json.loads(item)
+                            listado_obligados_procesados.append(data_obl)
+                        except json.JSONDecodeError:
+                            listado_obligados_procesados.append({
+                                "id": "",
+                                "nombre": item,
+                                "tipo_persona": "F",
+                                "tipo_persona_texto": "Persona Física",
+                                "representante": "",
+                                "representante_texto": ""
+                            })
 
                     if tipo_persona == 'M' and not nombres_reps:
                         raise ValueError("Las Personas Morales requieren representantes.")
@@ -646,21 +679,42 @@ def crearExpediente(request):
                     expediente = exp_form.save(commit=False)
                     expediente.socio = socio_a_asignar
                     expediente.estatus_id = 1
-                    expediente.usuario = request.user #Se agrego
+                    expediente.usuario = request.user
                     expediente.save()
-                    EstadosFechas.objects.create( #se agrego
+                    
+                    EstadosFechas.objects.create(
                         expediente=expediente,
                         estado=Estado.objects.get(nombre="Nuevo"),
                         fecha=datetime.now(),
                         usuario=request.user
                     )
+                    
                     for rep_nombre in nombres_reps:
                         representante, created = RepresentanteLegal.objects.get_or_create(nombre=rep_nombre)
                         representante.expedientes.add(expediente)
 
-                    for obl_nombre in nombres_obls:
-                        obligado, created = ObligadoSolidario.objects.get_or_create(nombre=obl_nombre, tipoPersona="F")
-                        obligado.expedientes.add(expediente)
+                    for o_data in listado_obligados_procesados:
+                        if o_data.get("id"):
+                            obligado = ObligadoSolidario.objects.filter(id=o_data["id"]).first()
+                        else:
+                            obligado = ObligadoSolidario.objects.filter(nombre=o_data["nombre"]).first()
+                            if not obligado:
+                                t_persona = o_data.get("tipo_persona") if o_data.get("tipo_persona") else "F"
+                                obligado = ObligadoSolidario.objects.create(
+                                    nombre=o_data["nombre"], 
+                                    tipoPersona=t_persona
+                                )
+                        
+                        if obligado:
+                            obligado.expedientes.add(expediente)
+                            
+                            if obligado.tipoPersona == 'M' and o_data.get("representante_texto"):
+                                rep_nom = o_data["representante_texto"]
+                                r_legal, _ = RepresentanteLegal.objects.get_or_create(nombre=rep_nom)
+                                obligado.representante = r_legal
+                                integrado = r_legal
+                                integrado.expedientes.add(expediente)
+                                obligado.save()
 
                     secciones_permitidas = ['A', 'B', 'C', 'I', 'II']
                     SECCIONES = SeccionesExpediente.SECCIONES
@@ -678,13 +732,27 @@ def crearExpediente(request):
                                 )
                                 _generar_con_debug_extremo(nueva, area_socio)
                         elif tipo_sec == 'C':
-                            for nombre in nombres_obls:
+                            for o_data in listado_obligados_procesados:
+                                nombre_obl = o_data["nombre"]
                                 nueva = SeccionesExpediente.objects.create(
                                     expediente=expediente, 
                                     tipoDeSeccion=tipo_sec, 
-                                    tituloSeccion=f"{titulo_sec} - {nombre}"
+                                    tituloSeccion=f"{titulo_sec} - {nombre_obl}"
                                 )
                                 _generar_con_debug_extremo(nueva, area_socio)
+                                
+                                if o_data.get("id"):
+                                    obl_obj = ObligadoSolidario.objects.filter(id=o_data["id"]).first()
+                                else:
+                                    obl_obj = ObligadoSolidario.objects.filter(nombre=nombre_obl).first()
+                                    
+                                if obl_obj and obl_obj.tipoPersona == 'M' and obl_obj.representante:
+                                    nueva_rep = SeccionesExpediente.objects.create(
+                                        expediente=expediente,
+                                        tipoDeSeccion='B',
+                                        tituloSeccion=f"Rep. Legal Obligado - {obl_obj.representante.nombre}"
+                                    )
+                                    _generar_con_debug_extremo(nueva_rep, area_socio)
                         else:
                             nueva = SeccionesExpediente.objects.create(
                                     expediente=expediente, 
@@ -716,7 +784,6 @@ def crearExpediente(request):
         'rep_form': rep_form, 
         'obl_form': obl_form
     })
-
 
 def _generar_con_debug_extremo(seccion_obj, area_socio, linea_instance=None):
     filtro_permitido = [area_socio, 'Ambas']
@@ -1037,6 +1104,22 @@ def obtener_apartado_data(request, apartado_id):
     }
     return JsonResponse(data)
 
+
+def obtener_obligado_data(request, obligado_id):
+    obligado = get_object_or_404(ObligadoSolidario, id=obligado_id)
+    
+    rep_id = ""
+    rep_nombre = ""
+    
+    if preparado := obligado.representante:
+        rep_id = preparado.id
+        rep_nombre = preparado.nombre
+            
+    return JsonResponse({
+        'tipoPersona': obligado.tipoPersona,
+        'representante_id': rep_id,
+        'representante_nombre': rep_nombre
+    })
 def obtener_socio_data(request, socio_id):
     try:
         socio = Socio.objects.get(pk=socio_id)

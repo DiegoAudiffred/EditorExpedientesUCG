@@ -28,7 +28,7 @@ urlpatterns = [
     path('expediente/agregarObligados/<int:id>/',views.agregarObligados,name ='agregarObligados'),
     path('expediente/agregarRepresentantes/<int:id>/',views.agregarRepresentantes,name ='agregarRepresentantes'),
     path('expediente/crearCita/<int:id>/',views.crearCita,name ='crearCita'),
-
+    path('obtener-obligado-data/<int:obligado_id>/', views.obtener_obligado_data, name='obtener_obligado_data'),
     path('expediente/asociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.asociarCitaExistente, name='asociarCitaExistente'),
     path('expediente/recibirExpediente/<int:expedienteID>/<str:observaciones>', views.recepcionExpediente, name='recepcionExpediente'),
     path('expediente/revisionExpediente/<int:expedienteID>/<str:observaciones>', views.revisionExpediente, name='revisionExpediente'),

@@ -1,42 +1,70 @@
 {% load static %}
 
 <div class="mb-4">
-    <div class="fnSuperiorRegularTitle text-quinto">Representantes legales</div>
-    <div class="row border border-3 border-quinto rounded rounded-3">
-        <div class="col-12 p-3">
-            <label>Seleccionar existente o escribir nuevo:</label>
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1" id="contenedor-select-rep">
-                    {{ rep_form.representante_selector }}
-                </div>
-                <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarRep()">
-                    Agregar
-                </button>
-            </div>
-            {{ rep_form.representantes }}
-        </div>
-                <div id="rep-list" class="col-12"></div>
-
-    </div>
-</div>
-
-<div class="mb-4">
     <div class="fnSuperiorRegularTitle text-quinto">Obligados solidarios y garantes</div>
     <div class="row border border-3 border-quinto rounded rounded-3">
         <div class="col-12 p-3">
-            <label>Seleccionar existente o escribir nuevo:</label>
-            <div class="d-flex align-items-center">
-                <div class="flex-grow-1" id="contenedor-select-obl">
+            <label class="form-label fw-bold">Seleccionar existente o escribir nuevo:</label>
+            <div class="d-flex align-items-center mb-3">
+                <div class="flex-grow-1" id="contenedor-select-obl" onchange="conmutarCamposObligado()">
                     {{ obl_form.obligado_selector }}
                 </div>
                 <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarObl()">
                     Agregar
                 </button>
             </div>
+
+            <div id="campos-nuevo-obligado" class="p-3 bg-light border rounded mb-3 d-none">
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Nombre del Obligado:</label>
+                    {{ obl_form.nombre }}
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Tipo de Persona:</label>
+                    {{ obl_form.tipoPersona }}
+                </div>
+                <div class="mb-2 d-none" id="contenedor-representante-obligado">
+                    <label class="form-label fw-bold">Representante Legal (Obligatorio para Morales):</label>
+                    <div class="mb-2">
+                        {{ obl_form.representante_selector }}
+                    </div>
+                    <div id="campo-representante-nuevo-obl" class="d-none">
+                        <label class="form-label text-muted">Escribe el nombre del nuevo representante:</label>
+                        {{ obl_form.representante_nombre_nuevo }}
+                    </div>
+                </div>
+            </div>
+
             {{ obl_form.obligados }}
         </div>
-                <div id="obl-list" class="col-12"></div>
+        <div id="obl-list" class="col-12 px-3 pb-3"></div>
+    </div>
+</div>
 
+<div class="mb-4">
+    <div class="fnSuperiorRegularTitle text-quinto">Representantes legales del Socio</div>
+    <div class="row border border-3 border-quinto rounded rounded-3">
+        <div class="col-12 p-3">
+            <label class="form-label fw-bold">Seleccionar existente o escribir nuevo:</label>
+            <div class="d-flex align-items-center mb-3">
+                <div class="flex-grow-1" id="contenedor-select-rep" onchange="conmutarCamposRepresentante()">
+                    {{ rep_form.representante_selector }}
+                </div>
+                <button type="button" class="btn btn-secondary ms-2 text-white border border-primary" onclick="agregarRep()">
+                    Agregar
+                </button>
+            </div>
+
+            <div id="campos-nuevo-representante" class="p-3 bg-light border rounded mb-3 d-none">
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Nombre del Representante:</label>
+                    {{ rep_form.nombre }}
+                </div>
+            </div>
+
+            {{ rep_form.representantes }}
+        </div>
+        <div id="rep-list" class="col-12 px-3 pb-3"></div>
     </div>
 </div>
 
@@ -45,8 +73,52 @@
     let obls = [];
 
     function syncHidden() {
-        document.getElementsByName("representantes")[0].value = reps.join("||");
-        document.getElementsByName("obligados")[0].value = obls.join("||");
+        const inputRep = document.getElementsByName("representantes")[0];
+        const inputObl = document.getElementsByName("obligados")[0];
+        if (inputRep) inputRep.value = reps.join("||");
+        if (inputObl) inputObl.value = obls.map(o => JSON.stringify(o)).join("||");
+    }
+
+    function conmutarCamposObligado() {
+        const select = document.querySelector('[name="obligado_selector"]');
+        const contenedorCampos = document.getElementById("campos-nuevo-obligado");
+        if (select && select.value === "") {
+            if (contenedorCampos) contenedorCampos.classList.remove("d-none");
+            conmutarCamposTipoPersona();
+        } else if (contenedorCampos) {
+            contenedorCampos.classList.add("d-none");
+        }
+    }
+
+    function conmutarCamposTipoPersona() {
+        const selectTipo = document.querySelector('[name="tipoPersona"]');
+        const contenedorRep = document.getElementById("contenedor-representante-obligado");
+        if (selectTipo && selectTipo.value === "M") {
+            if (contenedorRep) contenedorRep.classList.remove("d-none");
+            conmutarCamposRepresentanteObligado();
+        } else if (contenedorRep) {
+            contenedorRep.classList.add("d-none");
+        }
+    }
+
+    function conmutarCamposRepresentanteObligado() {
+        const selectRep = document.getElementById("id_obl_representante_selector");
+        const contenedorNuevoRep = document.getElementById("campo-representante-nuevo-obl");
+        if (selectRep && selectRep.value === "") {
+            if (contenedorNuevoRep) contenedorNuevoRep.classList.remove("d-none");
+        } else if (contenedorNuevoRep) {
+            contenedorNuevoRep.classList.add("d-none");
+        }
+    }
+
+    function conmutarCamposRepresentante() {
+        const select = document.querySelector('[name="representante_selector"]');
+        const contenedorCampos = document.getElementById("campos-nuevo-representante");
+        if (select && select.value === "") {
+            if (contenedorCampos) contenedorCampos.classList.remove("d-none");
+        } else if (contenedorCampos) {
+            contenedorCampos.classList.add("d-none");
+        }
     }
 
     function render() {
@@ -55,16 +127,21 @@
             <div class="input-group my-2 w-100">
                 <span class="input-group-text bg-primary text-white">Rep.</span>
                 <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-                <button class="btn btn-primary" type="button" onclick="reps.splice(${i},1); render();">X</button>
+                <button class="btn btn-danger text-white" type="button" onclick="reps.splice(${i},1); render();">X</button>
             </div>
         `).join("");
 
         const oblList = document.getElementById("obl-list");
         oblList.innerHTML = obls.map((x, i) => `
-            <div class="input-group my-2 w-100">
-                <span class="input-group-text bg-primary text-white">Obl.</span>
-                <input type="text" class="form-control" value="${x}" oninput="obls[${i}]=this.value; syncHidden();">
-                <button class="btn btn-primary" type="button" onclick="obls.splice(${i},1); render();">X</button>
+            <div class="card my-2 w-100 border border-secondary">
+                <div class="card-body d-flex justify-content-between align-items-center p-2">
+                    <div>
+                        <strong>Obl:</strong> ${x.nombre} 
+                        <span class="badge bg-secondary">${x.tipo_persona_texto || ''}</span>
+                        <small class="text-muted">${x.representante_texto ? ' - Rep: ' + x.representante_texto : ''}</small>
+                    </div>
+                    <button class="btn btn-danger btn-sm text-white" type="button" onclick="obls.splice(${i},1); render();">X</button>
+                </div>
             </div>
         `).join("");
 
@@ -73,24 +150,123 @@
 
     function agregarRep() {
         const select = document.querySelector('[name="representante_selector"]');
-        const valor = select.options[select.selectedIndex].text;
-        
+        if (!select) return;
 
-        const nombreParaAgregar = select.value === "" ? "" : valor;
-        
-        reps.push(nombreParaAgregar);
-        render();
-        select.value = ""; 
+        let nombreParaAgregar = "";
+
+        if (select.value === "") {
+            const inputNombre = document.querySelector('#campos-nuevo-representante [name="nombre"]');
+            if (!inputNombre || !inputNombre.value.trim()) return;
+            nombreParaAgregar = inputNombre.value.trim();
+            inputNombre.value = "";
+        } else {
+            nombreParaAgregar = select.options[select.selectedIndex].text;
+        }
+
+        if (nombreParaAgregar !== "") {
+            reps.push(nombreParaAgregar);
+            render();
+            select.value = "";
+            conmutarCamposRepresentante();
+        }
     }
 
     function agregarObl() {
         const select = document.querySelector('[name="obligado_selector"]');
-        const valor = select.options[select.selectedIndex].text;
-        
-        const nombreParaAgregar = select.value === "" ? "" : valor;
-        
-        obls.push(nombreParaAgregar);
-        render();
-        select.value = ""; 
+        if (!select) return;
+
+        if (select.value === "") {
+            const inputNombre = document.querySelector('#campos-nuevo-obligado [name="nombre"]');
+            const selectTipo = document.querySelector('[name="tipoPersona"]');
+            const selectRep = document.getElementById("id_obl_representante_selector");
+            const inputRepNuevo = document.getElementById("id_obl_representante_nombre_nuevo");
+
+            if (!inputNombre || !inputNombre.value.trim()) return;
+
+            let repId = "";
+            let repTexto = "";
+
+            if (selectTipo && selectTipo.value === "M") {
+                if (selectRep && selectRep.value === "") {
+                    if (inputRepNuevo && inputRepNuevo.value.trim()) {
+                        repTexto = inputRepNuevo.value.trim();
+                    }
+                } else if (selectRep && selectRep.value !== "") {
+                    repId = selectRep.value;
+                    repTexto = selectRep.options[selectRep.selectedIndex].text;
+                }
+            }
+
+            let nuevoObligado = {
+                id: "",
+                nombre: inputNombre.value,
+                tipo_persona: selectTipo ? selectTipo.value : "",
+                tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
+                representante: repId,
+                representante_texto: repTexto
+            };
+
+            obls.push(nuevoObligado);
+            render();
+
+            if (inputNombre) inputNombre.value = "";
+            if (selectTipo) selectTipo.value = "";
+            if (selectRep) selectRep.value = "";
+            if (inputRepNuevo) inputRepNuevo.value = "";
+            select.value = "";
+            conmutarCamposObligado();
+        } else {
+            const obligadoId = select.value;
+            const obligadoNombre = select.options[select.selectedIndex].text;
+
+            fetch(`/obtener-obligado-data/${obligadoId}/`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al obtener obligado');
+                    return response.json();
+                })
+                .then(data => {
+                    let nuevoObligado = {
+                        id: obligadoId,
+                        nombre: obligadoNombre,
+                        tipo_persona: data.tipoPersona || "",
+                        tipo_persona_texto: data.tipoPersona === "M" ? "Moral" : "Física",
+                        representante: data.representante_id || "",
+                        representante_texto: data.representante_nombre || ""
+                    };
+                    obls.push(nuevoObligado);
+                    render();
+                    select.value = "";
+                    conmutarCamposObligado();
+                })
+                .catch(error => {
+                    console.error(error);
+                    let nuevoObligado = {
+                        id: obligadoId,
+                        nombre: obligadoNombre,
+                        tipo_persona: "",
+                        tipo_persona_texto: "Existente",
+                        representante: "",
+                        representante_texto: ""
+                    };
+                    obls.push(nuevoObligado);
+                    render();
+                    select.value = "";
+                    conmutarCamposObligado();
+                });
+        }
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectTipoPersona = document.querySelector('[name="tipoPersona"]');
+        if (selectTipoPersona) {
+            selectTipoPersona.setAttribute("onchange", "conmutarCamposTipoPersona()");
+        }
+        const selectRepObl = document.getElementById("id_obl_representante_selector");
+        if (selectRepObl) {
+            selectRepObl.setAttribute("onchange", "conmutarCamposRepresentanteObligado()");
+        }
+
+        conmutarCamposObligado();
+        conmutarCamposRepresentante();
+    });
 </script>

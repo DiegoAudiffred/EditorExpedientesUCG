@@ -24,8 +24,11 @@
             <td>{{ expediente.socio.id }}</td>
 
             <td>{{ expediente.socio.nombre }}</td>
+            {% if expediente.socio.numeroKepler %}
             <td>{{ expediente.socio.numeroKepler }}</td>
-
+            {% else %}
+            <td>0000</td>
+            {% endif %}
             <td>{{ expediente.estatus.nombre }}</td>
             {% if expediente.usuario %}
             <td>{{ expediente.usuario.nombreCompleto }}</td>
