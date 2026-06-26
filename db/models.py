@@ -255,7 +255,7 @@ class RegistroSeccion(models.Model):
     comentarioCredito = models.TextField(null=True, blank=True)
     es_fecha = models.BooleanField(default=True)
     secuencial = models.IntegerField(null=True, blank=True, default=1)
-
+    enviar = models.BooleanField(default=False)
     class Meta:
         unique_together = ('seccion', 'apartado', 'secuencial')
 

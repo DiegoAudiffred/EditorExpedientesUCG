@@ -225,7 +225,6 @@ def editarExpediente(request, id):
     estados = Estado.objects.all()
     usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Gerente Centro de Negocios'])
     usuariosCreditos = User.objects.filter(roles__in=['Credito','Gerente de Credito'])
-
     usuariosNegocios = User.objects.filter(roles__in=['Ejecutivo de Negocios'])
     rep_form = CrearRepresentante()
     obl_form = CrearObligado()
@@ -392,6 +391,7 @@ def editarExpediente(request, id):
 
 
 def checarRuta(identificador_socio, secciones):
+    print(identificador_socio)
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
     carpeta_socio = None
@@ -413,9 +413,10 @@ def checarRuta(identificador_socio, secciones):
         "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
         "2": os.path.join(rutaMaestra, "II. Información Financiera"),
         "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Inform de las Gtías"),
+        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
         "5": os.path.join(rutaOperativa, "V. Contratos"),
-        "6": os.path.join(rutaOperativa, "VI. Seguimiento")
+        "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
+        "7": os.path.join(rutaOperativa, "VII. Correspondencia")
     }
    
     meses_es = {
@@ -433,7 +434,7 @@ def checarRuta(identificador_socio, secciones):
             prefijo = clave.split('.')[0]
            
             ruta_busqueda = mapeo_secciones.get(prefijo)
-           
+            rutalineas = ruta_busqueda #Agregar para la linea que  1957 CS 8,000,000 feb 26 MN
             if not ruta_busqueda or not os.path.exists(ruta_busqueda):
                 continue
                
@@ -679,7 +680,7 @@ def crearExpediente(request):
                     expediente = exp_form.save(commit=False)
                     expediente.socio = socio_a_asignar
                     expediente.estatus_id = 1
-                    expediente.usuario = request.user
+                    #expediente.usuario = request.user
                     expediente.save()
                     
                     EstadosFechas.objects.create(
@@ -2527,3 +2528,104 @@ def eliminarObligado(request, obl, exp):
         raise Http404
 
     return redirect(reverse('Index:editarExpediente', args=[expediente.id]))
+
+def checkBoxChange(request, seccion, apartado, secuencial):
+    registro = get_object_or_404(
+        RegistroSeccion, 
+        seccion_id=seccion, 
+        apartado_id=apartado, 
+        secuencial=secuencial
+    )
+    registro.enviar = not registro.enviar
+    registro.save()
+    return JsonResponse({'success': True, 'enviar': registro.enviar})
+
+def notificarFaltantes(request,expedienteID):
+    from email.message import EmailMessage
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+
+    seccionesConCheckBox = []
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+    
+    for seccion in secciones:
+        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        for apartado in apartados:
+            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            
+            if registro is not None:
+                if registro.enviar:
+                    seccionesConCheckBox.append({
+                        'nombreSeccion': str(seccion.tituloSeccion),
+                        'claveApartado': str(apartado.clave),
+                    })
+                    
+    destinatario = [expediente.usuario.email,expediente.usuarioNegocios.email]     
+    dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
+    url_final = f"{dominio}{expediente.id}/"
+    asunto = f"Documentos faltantes: Expediente {expediente.id} - {expediente.socio.nombre}"
+    
+    comentarios_texto = ""
+    for item in seccionesConCheckBox:
+        comentarios_texto += f"\n- [{item['nombreSeccion']} - {item['claveApartado']}]: "
+
+
+    cuerpo_html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                <p>Estimado usuario,</p>
+                <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} requiere ciertos documentos.</p>
+                <p>Atte {expediente.usuario.username}.</p>
+                <div style="margin: 30px 0; text-align: center;">
+                    <a href="{url_final}" 
+                       style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Revisar Expediente
+                    </a>
+                </div>
+                <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                    <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
+                    <ul style="margin-bottom: 0; padding-left: 20px;">
+    """
+
+    for item in seccionesConCheckBox:
+        cuerpo_html += f"""
+                        <li style="margin-bottom: 10px;">
+                            <strong>{item['nombreSeccion']} (Clave: {item['claveApartado']}):</strong> 
+                        </li>
+        """
+
+    cuerpo_html += f"""
+                    </ul>
+                </div>
+          
+                <hr style="border: 0; border-top: 1px solid #eee;">
+                <p style="font-size: 0.8em; color: #999; text-align: center;">
+                    Este es un mensaje automático, por favor no responda a este correo.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    SMTP_HOST = "ucg.com.mx"
+    SMTP_PORT = 587
+    USUARIO = "informacion@ucg.com.mx"
+    CONTRASENA = "UcG911_@!#"
+    
+    mensaje = EmailMessage()
+    mensaje["From"] = USUARIO
+    mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
+    mensaje["Subject"] = asunto
+    
+    mensaje.add_alternative(cuerpo_html, subtype="html")
+
+    try:
+        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        servidor.starttls()
+        servidor.login(USUARIO, CONTRASENA)
+        servidor.send_message(mensaje)
+        servidor.quit()
+        print("Correo enviado correctamente")
+    except Exception as e:
+        print("Error al enviar correo:", e)
+    return redirect('Index:editarExpediente', expediente.id)

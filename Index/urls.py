@@ -47,7 +47,10 @@ urlpatterns = [
     
     path('avances/', views.avances, name='avances'),
     path('expediente/<int:expediente_id>/<int:linea_id>', views.lineaEliminar, name='lineaEliminar'),
-    #Administrador
+path('expediente/<int:seccion>/<int:apartado>/<int:secuencial>/', views.checkBoxChange, name='checkBoxChange'),    #Administrador
+    path('expediente/<int:expedienteID>/', views.notificarFaltantes, name='notificarFaltantes'),    #Administrador
+
+    
     path('admin-usuarios/', views.administrador, name='administrador'),
     path('admin-usuarios/alta/', views.alta_usuario, name='alta_usuario'),
     path('admin-usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
