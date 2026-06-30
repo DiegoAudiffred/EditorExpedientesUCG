@@ -184,7 +184,8 @@ class Linea(models.Model):
     vigente = models.BooleanField(default=True)
     tipoLinea = models.CharField(choices=tipoLinea, blank=False, default="Cuenta Corriente", max_length=50)
     tipoGarantia = models.ManyToManyField(Garantia, blank=True, related_name="lineas")
-    
+    abreviacion = models.CharField(max_length=10,blank=True,null=True)
+    fecha = models.DateField(blank=True,null=True)
     def delete(self, *args, **kwargs):
         secciones_asociadas = self.secciones.all()
         RegistroSeccion.objects.filter(seccion__in=secciones_asociadas).delete()

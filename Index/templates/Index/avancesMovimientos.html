@@ -18,18 +18,29 @@
                         {{exp.socio.nombre}} 
                     </td>
                     <td>
-                        <div class="d-flex align-items-center flex-wrap">
-                            {% for eventos in todosEstados %}
-                                {% if eventos.expediente == exp %}
-                                    <div class="rounded rounded-5 p-2 mx-2 text-center my-2" style="background-color: {{eventos.estado.color}}; min-width: 120px;">
-                                        <b>{{eventos.estado.nombre}}</b>
-                                    </div>
-                                    {% if not eventos.estado.valor == exp.estatus.valor   %}
-                                        <span class="fw-bold mx-2">&rarr;</span>
-                                    {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                        </div>
+              <div class="d-flex align-items-center flex-wrap">
+    {% for eventos in todosEstados %}
+        {% if eventos.expediente == exp %}
+            <div class="d-flex flex-column align-items-center mx-2 my-2">
+                <div class="rounded rounded-5 p-2 text-center" style="background-color: {{eventos.estado.color}}; min-width: 120px;">
+                    <b>{{eventos.estado.nombre}}</b>
+                </div>
+                <small class="mt-1" style="font-size: 0.60rem;">
+                    {{ eventos.fecha|date:"d / m / y" }}
+                </small>
+            </div>
+            
+            {% if eventos.dias_siguiente != None %}
+                <div class="d-flex flex-column align-items-center mx-2 my-2">
+                    <span class="badge bg-secondary mb-1" style="font-size: 0.75rem;">
+                        {{ eventos.dias_siguiente }} días
+                    </span>
+                    <span class="fw-bold">&rarr;</span>
+                </div>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+</div>
                     </td>
                 </tr>
                 {% endfor %}

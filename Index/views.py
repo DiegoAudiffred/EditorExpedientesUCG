@@ -399,25 +399,21 @@ def editarExpediente(request, id):
 
 
 def checarRuta(identificador_socio, secciones):
-    #print(f"--- INICIO CHECAR RUTA ---")
-    #print(f"Buscando socio: {identificador_socio}")
+
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
     carpeta_socio = None
     try:
-        #print(f"Listando directorio de servidor: {rutaServidor}")
         dirs_servidor = os.listdir(rutaServidor)
         for nombre_dir in dirs_servidor:
             if identificador_socio in nombre_dir:
                 carpeta_socio = os.path.join(rutaServidor, nombre_dir)
-                #print(f"Carpeta de socio encontrada: {carpeta_socio}")
+              
                 break
     except Exception as e:
-        #print(f"ERROR al listar o acceder al servidor: {e}")
         return {}
 
     if not carpeta_socio:
-        #print(f"AVISO: No se encontró ninguna carpeta que contenga el identificador {identificador_socio} en el servidor.")
         return {}
 
     rutaMaestra = os.path.join(carpeta_socio, "Maestra")
@@ -442,22 +438,17 @@ def checarRuta(identificador_socio, secciones):
 
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
-        #print(f"Procesando sección: {seccion}. Encontrados {len(registros_existentes)} registros.")
         
         for registro in registros_existentes:
             clave = str(registro.apartado.clave).strip()
             prefijo = clave.split('.')[0]
             
             ruta_busqueda = mapeo_secciones.get(prefijo)
-            #print(f"  Registro ID: {registro.id} | Clave: {clave} | Prefijo: {prefijo}")
-            #print(f"  Ruta de búsqueda asignada: {ruta_busqueda}")
-            
+
             if not ruta_busqueda:
-                #print(f"  AVISO: No hay un mapeo para el prefijo {prefijo}")
                 continue
                 
             if not os.path.exists(ruta_busqueda):
-                #print(f"  AVISO: La ruta NO EXISTE en el sistema: {ruta_busqueda}")
                 continue
                 
             archivo_mas_reciente = None
@@ -484,7 +475,6 @@ def checarRuta(identificador_socio, secciones):
                         )
                         
                         if condicion_carpeta:
-                            #print(f"    Evaluando carpeta que coincide: {nombre_item}")
                             archivos_internos = os.listdir(ruta_item)
                        
                             for archivo in archivos_internos:
@@ -513,17 +503,14 @@ def checarRuta(identificador_socio, secciones):
                                     ruta_archivo = os.path.join(ruta_item, archivo)
                                     if os.path.isfile(ruta_archivo):
                                         mtime = os.path.getmtime(ruta_archivo)
-                                #        print(f"      Archivo COINCIDE: {archivo} | Criterio: {criterio_debug} | Modificado: {mtime}")
                                         if mtime > mtime_maximo:
                                             mtime_maximo = mtime
                                             archivo_mas_reciente = ruta_archivo
 
             except Exception as e:
-                #print(f"  ERROR al leer subcarpetas o archivos: {e}")
                 continue
 
             if archivo_mas_reciente:
-                #print(f"  -> GANADOR para registro {registro.id}: {archivo_mas_reciente}")
                 resultados[registro.id] = {
                     'clave': clave,
                     'ruta': archivo_mas_reciente,
@@ -531,6 +518,8 @@ def checarRuta(identificador_socio, secciones):
                 }
 
     return resultados
+
+
 
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
@@ -2805,17 +2794,28 @@ def procesarArchivos(request, id):
         'resultados': resultados_proceso
     })
 
+@login_required(login_url='/login/')
 def avancesMovimientos(request):
     expediente = Expediente.objects.all().order_by('socio__nombre')    
-    todosEstados = EstadosFechas.objects.all()
-   
-    contest = {'expediente':expediente,
-               'todosEstados':todosEstados,
-               }
+    todosEstados = EstadosFechas.objects.all().order_by('fecha')
+    
+    for exp in expediente:
+        estados_exp = [e for e in todosEstados if e.expediente_id == exp.id]
+        for i in range(len(estados_exp)):
+            if i < len(estados_exp) - 1:
+                fecha_actual = estados_exp[i].fecha
+                fecha_siguiente = estados_exp[i+1].fecha
+                diferencia = (fecha_siguiente - fecha_actual).days
+                estados_exp[i].dias_siguiente = diferencia
+            else:
+                estados_exp[i].dias_siguiente = None
 
-    return render(request, 'Index/avancesMovimientos.html',contest)
+    contest = {
+        'expediente': expediente,
+        'todosEstados': todosEstados,
+    }
 
-
+    return render(request, 'Index/avancesMovimientos.html', contest)
 
 
 
