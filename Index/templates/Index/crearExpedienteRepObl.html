@@ -56,7 +56,7 @@
             </div>
 
             <div id="campos-nuevo-representante" class="p-3 bg-light border rounded mb-3 d-none">
-                <div class="mb-2">
+                <div class="mb-2" id="wrapper-nombre-rep">
                     <label class="form-label fw-bold">Nombre del Representante:</label>
                     {{ rep_form.nombre }}
                 </div>
@@ -70,203 +70,213 @@
 
 <script>
     let reps = [];
-    let obls = [];
+let obls = [];
 
-    function syncHidden() {
-        const inputRep = document.getElementsByName("representantes")[0];
-        const inputObl = document.getElementsByName("obligados")[0];
-        if (inputRep) inputRep.value = reps.join("||");
-        if (inputObl) inputObl.value = obls.map(o => JSON.stringify(o)).join("||");
+function syncHidden() {
+    const inputRep = document.getElementsByName("representantes")[0];
+    const inputObl = document.getElementsByName("obligados")[0];
+    if (inputRep) inputRep.value = reps.join("||");
+    if (inputObl) inputObl.value = obls.map(o => JSON.stringify(o)).join("||");
+}
+
+function conmutarCamposObligado() {
+    const select = document.querySelector('[name="obligado_selector"]');
+    const contenedorCampos = document.getElementById("campos-nuevo-obligado");
+    if (select && select.value === "") {
+        if (contenedorCampos) contenedorCampos.classList.remove("d-none");
+        conmutarCamposTipoPersona();
+    } else if (contenedorCampos) {
+        contenedorCampos.classList.add("d-none");
     }
+}
 
-    function conmutarCamposObligado() {
-        const select = document.querySelector('[name="obligado_selector"]');
-        const contenedorCampos = document.getElementById("campos-nuevo-obligado");
-        if (select && select.value === "") {
-            if (contenedorCampos) contenedorCampos.classList.remove("d-none");
-            conmutarCamposTipoPersona();
-        } else if (contenedorCampos) {
-            contenedorCampos.classList.add("d-none");
-        }
+function conmutarCamposTipoPersona() {
+    const selectTipo = document.querySelector('[name="tipoPersona"]');
+    const contenedorRep = document.getElementById("contenedor-representante-obligado");
+    if (selectTipo && selectTipo.value === "M") {
+        if (contenedorRep) contenedorRep.classList.remove("d-none");
+        conmutarCamposRepresentanteObligado();
+    } else if (contenedorRep) {
+        contenedorRep.classList.add("d-none");
     }
+}
 
-    function conmutarCamposTipoPersona() {
-        const selectTipo = document.querySelector('[name="tipoPersona"]');
-        const contenedorRep = document.getElementById("contenedor-representante-obligado");
-        if (selectTipo && selectTipo.value === "M") {
-            if (contenedorRep) contenedorRep.classList.remove("d-none");
-            conmutarCamposRepresentanteObligado();
-        } else if (contenedorRep) {
-            contenedorRep.classList.add("d-none");
-        }
+function conmutarCamposRepresentanteObligado() {
+    const selectRep = document.getElementById("id_obl_representante_selector");
+    const contenedorNuevoRep = document.getElementById("campo-representante-nuevo-obl");
+    if (selectRep && selectRep.value === "") {
+        if (contenedorNuevoRep) contenedorNuevoRep.classList.remove("d-none");
+    } else if (contenedorNuevoRep) {
+        contenedorNuevoRep.classList.add("d-none");
     }
+}
 
-    function conmutarCamposRepresentanteObligado() {
-        const selectRep = document.getElementById("id_obl_representante_selector");
-        const contenedorNuevoRep = document.getElementById("campo-representante-nuevo-obl");
-        if (selectRep && selectRep.value === "") {
-            if (contenedorNuevoRep) contenedorNuevoRep.classList.remove("d-none");
-        } else if (contenedorNuevoRep) {
-            contenedorNuevoRep.classList.add("d-none");
-        }
+function conmutarCamposRepresentante() {
+    const contenedor = document.getElementById('contenedor-select-rep');
+    if (!contenedor) return;
+    
+    const select = contenedor.querySelector('select');
+    const contenedorCampos = document.getElementById("campos-nuevo-representante");
+    
+    if (select && select.value === "") {
+        if (contenedorCampos) contenedorCampos.classList.remove("d-none");
+    } else if (contenedorCampos) {
+        contenedorCampos.classList.add("d-none");
     }
-
-    function conmutarCamposRepresentante() {
-        const select = document.querySelector('[name="representante_selector"]');
-        const contenedorCampos = document.getElementById("campos-nuevo-representante");
-        if (select && select.value === "") {
-            if (contenedorCampos) contenedorCampos.classList.remove("d-none");
-        } else if (contenedorCampos) {
-            contenedorCampos.classList.add("d-none");
-        }
-    }
-
-    function render() {
-        const repList = document.getElementById("rep-list");
-        repList.innerHTML = reps.map((x, i) => `
-            <div class="input-group my-2 w-100">
-                <span class="input-group-text bg-primary text-white">Rep.</span>
-                <input type="text" class="form-control" value="${x}" oninput="reps[${i}]=this.value; syncHidden();">
-                <button class="btn btn-danger text-white" type="button" onclick="reps.splice(${i},1); render();">X</button>
-            </div>
-        `).join("");
-
-        const oblList = document.getElementById("obl-list");
-        oblList.innerHTML = obls.map((x, i) => `
-            <div class="card my-2 w-100 border border-secondary">
-                <div class="card-body d-flex justify-content-between align-items-center p-2">
-                    <div>
-                        <strong>Obl:</strong> ${x.nombre} 
-                        <span class="badge bg-secondary">${x.tipo_persona_texto || ''}</span>
-                        <small class="text-muted">${x.representante_texto ? ' - Rep: ' + x.representante_texto : ''}</small>
-                    </div>
-                    <button class="btn btn-danger btn-sm text-white" type="button" onclick="obls.splice(${i},1); render();">X</button>
+}
+function render() {
+    const repList = document.getElementById("rep-list");
+    repList.innerHTML = reps.map((x, i) => `
+        <div class="card my-2 w-100 border border-primary">
+            <div class="card-body d-flex justify-content-between align-items-center p-2">
+                <div>
+                    <strong>Rep:</strong> ${x}
                 </div>
+                <button class="btn btn-danger btn-sm text-white" type="button" onclick="reps.splice(${i},1); render();">X</button>
             </div>
-        `).join("");
+        </div>
+    `).join("");
 
-        syncHidden();
+    const oblList = document.getElementById("obl-list");
+    oblList.innerHTML = obls.map((x, i) => `
+        <div class="card my-2 w-100 border border-secondary">
+            <div class="card-body d-flex justify-content-between align-items-center p-2">
+                <div>
+                    <strong>Obl:</strong> ${x.nombre} 
+                    <span class="badge bg-secondary">${x.tipo_persona_texto || ''}</span>
+                    <small class="text-muted">${x.representante_texto ? ' - Rep: ' + x.representante_texto : ''}</small>
+                </div>
+                <button class="btn btn-danger btn-sm text-white" type="button" onclick="obls.splice(${i},1); render();">X</button>
+            </div>
+        </div>
+    `).join("");
+
+    syncHidden();
+}
+
+function agregarRep() {
+    // Buscamos el select de forma segura dentro de su contenedor exclusivo
+    const contenedor = document.getElementById('contenedor-select-rep');
+    if (!contenedor) return;
+    
+    const select = contenedor.querySelector('select');
+    if (!select) return;
+
+    let nombreParaAgregar = "";
+
+    if (select.value === "") {
+        const inputNombre = document.querySelector('#wrapper-nombre-rep input[type="text"]');
+        if (!inputNombre || !inputNombre.value.trim()) return;
+        nombreParaAgregar = inputNombre.value.trim();
+        inputNombre.value = "";
+    } else {
+        nombreParaAgregar = select.options[select.selectedIndex].text;
     }
 
-    function agregarRep() {
-        const select = document.querySelector('[name="representante_selector"]');
-        if (!select) return;
-
-        let nombreParaAgregar = "";
-
-        if (select.value === "") {
-            const inputNombre = document.querySelector('#campos-nuevo-representante [name="nombre"]');
-            if (!inputNombre || !inputNombre.value.trim()) return;
-            nombreParaAgregar = inputNombre.value.trim();
-            inputNombre.value = "";
-        } else {
-            nombreParaAgregar = select.options[select.selectedIndex].text;
-        }
-
-        if (nombreParaAgregar !== "") {
-            reps.push(nombreParaAgregar);
-            render();
-            select.value = "";
-            conmutarCamposRepresentante();
-        }
-    }
-
-    function agregarObl() {
-        const select = document.querySelector('[name="obligado_selector"]');
-        if (!select) return;
-
-        if (select.value === "") {
-            const inputNombre = document.querySelector('#campos-nuevo-obligado [name="nombre"]');
-            const selectTipo = document.querySelector('[name="tipoPersona"]');
-            const selectRep = document.getElementById("id_obl_representante_selector");
-            const inputRepNuevo = document.getElementById("id_obl_representante_nombre_nuevo");
-
-            if (!inputNombre || !inputNombre.value.trim()) return;
-
-            let repId = "";
-            let repTexto = "";
-
-            if (selectTipo && selectTipo.value === "M") {
-                if (selectRep && selectRep.value === "") {
-                    if (inputRepNuevo && inputRepNuevo.value.trim()) {
-                        repTexto = inputRepNuevo.value.trim();
-                    }
-                } else if (selectRep && selectRep.value !== "") {
-                    repId = selectRep.value;
-                    repTexto = selectRep.options[selectRep.selectedIndex].text;
-                }
-            }
-
-            let nuevoObligado = {
-                id: "",
-                nombre: inputNombre.value,
-                tipo_persona: selectTipo ? selectTipo.value : "",
-                tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
-                representante: repId,
-                representante_texto: repTexto
-            };
-
-            obls.push(nuevoObligado);
-            render();
-
-            if (inputNombre) inputNombre.value = "";
-            if (selectTipo) selectTipo.value = "";
-            if (selectRep) selectRep.value = "";
-            if (inputRepNuevo) inputRepNuevo.value = "";
-            select.value = "";
-            conmutarCamposObligado();
-        } else {
-            const obligadoId = select.value;
-            const obligadoNombre = select.options[select.selectedIndex].text;
-
-            fetch(`/obtener-obligado-data/${obligadoId}/`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Error al obtener obligado');
-                    return response.json();
-                })
-                .then(data => {
-                    let nuevoObligado = {
-                        id: obligadoId,
-                        nombre: obligadoNombre,
-                        tipo_persona: data.tipoPersona || "",
-                        tipo_persona_texto: data.tipoPersona === "M" ? "Moral" : "Física",
-                        representante: data.representante_id || "",
-                        representante_texto: data.representante_nombre || ""
-                    };
-                    obls.push(nuevoObligado);
-                    render();
-                    select.value = "";
-                    conmutarCamposObligado();
-                })
-                .catch(error => {
-                    console.error(error);
-                    let nuevoObligado = {
-                        id: obligadoId,
-                        nombre: obligadoNombre,
-                        tipo_persona: "",
-                        tipo_persona_texto: "Existente",
-                        representante: "",
-                        representante_texto: ""
-                    };
-                    obls.push(nuevoObligado);
-                    render();
-                    select.value = "";
-                    conmutarCamposObligado();
-                });
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const selectTipoPersona = document.querySelector('[name="tipoPersona"]');
-        if (selectTipoPersona) {
-            selectTipoPersona.setAttribute("onchange", "conmutarCamposTipoPersona()");
-        }
-        const selectRepObl = document.getElementById("id_obl_representante_selector");
-        if (selectRepObl) {
-            selectRepObl.setAttribute("onchange", "conmutarCamposRepresentanteObligado()");
-        }
-
-        conmutarCamposObligado();
+    if (nombreParaAgregar !== "") {
+        reps.push(nombreParaAgregar);
+        render();
+        select.value = "";
         conmutarCamposRepresentante();
-    });
+    }
+}
+
+function agregarObl() {
+    const select = document.querySelector('[name="obligado_selector"]');
+    if (!select) return;
+
+    if (select.value === "") {
+        const inputNombre = document.querySelector('#campos-nuevo-obligado [name="nombre"]');
+        const selectTipo = document.querySelector('[name="tipoPersona"]');
+        const selectRep = document.getElementById("id_obl_representante_selector");
+        const inputRepNuevo = document.getElementById("id_obl_representante_nombre_nuevo");
+
+        if (!inputNombre || !inputNombre.value.trim()) return;
+
+        let repId = "";
+        let repTexto = "";
+
+        if (selectTipo && selectTipo.value === "M") {
+            if (selectRep && selectRep.value === "") {
+                if (inputRepNuevo && inputRepNuevo.value.trim()) {
+                    repTexto = inputRepNuevo.value.trim();
+                }
+            } else if (selectRep && selectRep.value !== "") {
+                repId = selectRep.value;
+                repTexto = selectRep.options[selectRep.selectedIndex].text;
+            }
+        }
+
+        let nuevoObligado = {
+            id: "",
+            nombre: inputNombre.value,
+            tipo_persona: selectTipo ? selectTipo.value : "",
+            tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
+            representante: repId,
+            representante_texto: repTexto
+        };
+
+        obls.push(nuevoObligado);
+        render();
+
+        if (inputNombre) inputNombre.value = "";
+        if (selectTipo) selectTipo.value = "";
+        if (selectRep) selectRep.value = "";
+        if (inputRepNuevo) inputRepNuevo.value = "";
+        select.value = "";
+        conmutarCamposObligado();
+    } else {
+        const obligadoId = select.value;
+        const obligadoNombre = select.options[select.selectedIndex].text;
+
+        fetch(`/obtener-obligado-data/${obligadoId}/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Error al obtener obligado');
+                return response.json();
+            })
+            .then(data => {
+                let nuevoObligado = {
+                    id: obligadoId,
+                    nombre: obligadoNombre,
+                    tipo_persona: data.tipoPersona || "",
+                    tipo_persona_texto: data.tipoPersona === "M" ? "Moral" : "Física",
+                    representante: data.representante_id || "",
+                    representante_texto: data.representante_nombre || ""
+                };
+                obls.push(nuevoObligado);
+                render();
+                select.value = "";
+                conmutarCamposObligado();
+            })
+            .catch(error => {
+                console.error(error);
+                let nuevoObligado = {
+                    id: obligadoId,
+                    nombre: obligadoNombre,
+                    tipo_persona: "",
+                    tipo_persona_texto: "Existente",
+                    representante: "",
+                    representante_texto: ""
+                };
+                obls.push(nuevoObligado);
+                render();
+                select.value = "";
+                conmutarCamposObligado();
+            });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const selectTipoPersona = document.querySelector('[name="tipoPersona"]');
+    if (selectTipoPersona) {
+        selectTipoPersona.setAttribute("onchange", "conmutarCamposTipoPersona()");
+    }
+    const selectRepObl = document.getElementById("id_obl_representante_selector");
+    if (selectRepObl) {
+        selectRepObl.setAttribute("onchange", "conmutarCamposRepresentanteObligado()");
+    }
+
+    conmutarCamposObligado();
+    conmutarCamposRepresentante();
+});
 </script>

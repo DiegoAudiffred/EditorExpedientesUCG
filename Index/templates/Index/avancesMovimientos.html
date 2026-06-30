@@ -1,0 +1,40 @@
+{% extends 'layout/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container my-4">
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Expediente / Socio</th>
+                    <th style="width: 75%;">Línea de Tiempo de Estados</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exp in expediente %}
+                <tr>
+                    <td style="background-color: {{exp.estatus.color}};">
+                        {{exp.socio.nombre}} 
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center flex-wrap">
+                            {% for eventos in todosEstados %}
+                                {% if eventos.expediente == exp %}
+                                    <div class="rounded rounded-5 p-2 mx-2 text-center my-2" style="background-color: {{eventos.estado.color}}; min-width: 120px;">
+                                        <b>{{eventos.estado.nombre}}</b>
+                                    </div>
+                                    {% if not eventos.estado.valor == exp.estatus.valor   %}
+                                        <span class="fw-bold mx-2">&rarr;</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

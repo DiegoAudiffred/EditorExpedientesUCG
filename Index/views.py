@@ -29,6 +29,7 @@ from django.core.mail import EmailMessage, SafeMIMEText, get_connection
 from icalendar import Calendar, Event
 from datetime import date, datetime, time, timedelta
 from django.db.models import FloatField
+import re
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
     return user.roles == 'Administrador'
@@ -303,6 +304,8 @@ def editarExpediente(request, id):
                             registro.fecha = None
                     else:
                         registro.fecha = None
+                else:
+                    registro.fecha = None
             else:
                 registro.fecha = None
                 if 'fecha_num' in campos:
@@ -320,7 +323,12 @@ def editarExpediente(request, id):
         messages.success(request, 'Datos guardados con éxito.')
         return redirect(reverse('Index:editarExpediente', args=[expediente.pk]))
 
-    stringSocio = expediente.socio.nombre.upper() if expediente.socio.numeroKepler == None else expediente.socio.numeroKepler
+    num_kepler = expediente.socio.numeroKepler
+    if num_kepler is None or str(num_kepler).strip() == "" or str(num_kepler).strip() == "0000" or str(num_kepler).strip() == "0":
+        stringSocio = f"0000 {expediente.socio.nombre}"
+    else:
+        stringSocio = str(num_kepler).strip()
+
     archivos_encontrados = checarRuta(stringSocio, secciones)    
     print(stringSocio)
     context = {
@@ -391,19 +399,25 @@ def editarExpediente(request, id):
 
 
 def checarRuta(identificador_socio, secciones):
-    print(identificador_socio)
+    #print(f"--- INICIO CHECAR RUTA ---")
+    #print(f"Buscando socio: {identificador_socio}")
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
     carpeta_socio = None
     try:
-        for nombre_dir in os.listdir(rutaServidor):
+        #print(f"Listando directorio de servidor: {rutaServidor}")
+        dirs_servidor = os.listdir(rutaServidor)
+        for nombre_dir in dirs_servidor:
             if identificador_socio in nombre_dir:
                 carpeta_socio = os.path.join(rutaServidor, nombre_dir)
+                #print(f"Carpeta de socio encontrada: {carpeta_socio}")
                 break
     except Exception as e:
+        #print(f"ERROR al listar o acceder al servidor: {e}")
         return {}
 
     if not carpeta_socio:
+        #print(f"AVISO: No se encontró ninguna carpeta que contenga el identificador {identificador_socio} en el servidor.")
         return {}
 
     rutaMaestra = os.path.join(carpeta_socio, "Maestra")
@@ -418,26 +432,34 @@ def checarRuta(identificador_socio, secciones):
         "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
         "7": os.path.join(rutaOperativa, "VII. Correspondencia")
     }
-   
+    
     meses_es = {
         1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
         7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"
     }
-   
+    
     resultados = {}
 
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
-       
+        #print(f"Procesando sección: {seccion}. Encontrados {len(registros_existentes)} registros.")
+        
         for registro in registros_existentes:
             clave = str(registro.apartado.clave).strip()
             prefijo = clave.split('.')[0]
-           
+            
             ruta_busqueda = mapeo_secciones.get(prefijo)
-            rutalineas = ruta_busqueda #Agregar para la linea que  1957 CS 8,000,000 feb 26 MN
-            if not ruta_busqueda or not os.path.exists(ruta_busqueda):
+            #print(f"  Registro ID: {registro.id} | Clave: {clave} | Prefijo: {prefijo}")
+            #print(f"  Ruta de búsqueda asignada: {ruta_busqueda}")
+            
+            if not ruta_busqueda:
+                #print(f"  AVISO: No hay un mapeo para el prefijo {prefijo}")
                 continue
-               
+                
+            if not os.path.exists(ruta_busqueda):
+                #print(f"  AVISO: La ruta NO EXISTE en el sistema: {ruta_busqueda}")
+                continue
+                
             archivo_mas_reciente = None
             mtime_maximo = 0
 
@@ -445,15 +467,16 @@ def checarRuta(identificador_socio, secciones):
             clave_base = clave
             if len(partes_clave) == 2 and len(partes_clave[1]) > 2:
                 clave_base = f"{partes_clave[0]}.{partes_clave[1][:2]}"
+            #print(f"  Clave base calculada para carpetas: {clave_base}")
 
             try:
                 items_directorio = os.listdir(ruta_busqueda)
                 for nombre_item in items_directorio:
                     ruta_item = os.path.join(ruta_busqueda, nombre_item)
-                   
+                    
                     if os.path.isdir(ruta_item):
                         nombre_item_clean = nombre_item.strip()
-                       
+                        
                         condicion_carpeta = (
                             nombre_item_clean.startswith(clave_base + " ") or 
                             nombre_item_clean.startswith(clave_base + ".") or
@@ -461,48 +484,55 @@ def checarRuta(identificador_socio, secciones):
                         )
                         
                         if condicion_carpeta:
+                            #print(f"    Evaluando carpeta que coincide: {nombre_item}")
                             archivos_internos = os.listdir(ruta_item)
                        
                             for archivo in archivos_internos:
                                 if not archivo.startswith(clave):
                                     continue
-                               
+                                
                                 archivo_lower = archivo.lower()
                                 coincide = False
-                               
+                                criterio_debug = ""
+                                
                                 if registro.es_fecha:
                                     if registro.fecha:
                                         mes_texto = meses_es.get(registro.fecha.month, "")
                                         anio_dos_digitos = registro.fecha.strftime("%y")
+                                        criterio_debug = f"Fecha (mes: {mes_texto}, año: {anio_dos_digitos})"
                                         if mes_texto in archivo_lower and anio_dos_digitos in archivo_lower:
                                             coincide = True
                                 else:
                                     if registro.numero:
                                         criterio_num = str(registro.numero).strip().lower()
+                                        criterio_debug = f"Número ({criterio_num})"
                                         if criterio_num in archivo_lower:
                                             coincide = True
-                               
+                                
                                 if coincide:
                                     ruta_archivo = os.path.join(ruta_item, archivo)
                                     if os.path.isfile(ruta_archivo):
                                         mtime = os.path.getmtime(ruta_archivo)
+                                #        print(f"      Archivo COINCIDE: {archivo} | Criterio: {criterio_debug} | Modificado: {mtime}")
                                         if mtime > mtime_maximo:
                                             mtime_maximo = mtime
                                             archivo_mas_reciente = ruta_archivo
+
             except Exception as e:
+                #print(f"  ERROR al leer subcarpetas o archivos: {e}")
                 continue
 
             if archivo_mas_reciente:
+                #print(f"  -> GANADOR para registro {registro.id}: {archivo_mas_reciente}")
                 resultados[registro.id] = {
                     'clave': clave,
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
-       
+
     return resultados
+
 @login_required(login_url='/login/')
-
-
 def lineaCrear(request, id):
     expedienteInstance = get_object_or_404(Expediente, pk=id)
     
@@ -618,7 +648,6 @@ def expediente_llenar(request, id):
     return redirect('Index:editarExpediente', id=expediente.id)
 
 
-@login_required(login_url='/login/')
 @login_required(login_url='/login/')
 def crearExpediente(request):
     if request.method == "POST":
@@ -2629,3 +2658,174 @@ def notificarFaltantes(request,expedienteID):
     except Exception as e:
         print("Error al enviar correo:", e)
     return redirect('Index:editarExpediente', expediente.id)
+
+
+
+
+@login_required(login_url='/login/')
+def procesarArchivos(request, id):
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    expediente = get_object_or_404(Expediente, pk=id)
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente)
+    
+    kepler = str(expediente.socio.numeroKepler).strip() if expediente.socio.numeroKepler else "0000"
+    nombre_socio = str(expediente.socio.nombre).strip().upper()
+    rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+
+    carpeta_socio = None
+    try:
+        if os.path.exists(rutaServidor):
+            for nombre_dir in os.listdir(rutaServidor):
+                if kepler != "0000" and kepler in nombre_dir:
+                    carpeta_socio = os.path.join(rutaServidor, nombre_dir)
+                    break
+                elif kepler == "0000" and nombre_socio in nombre_dir.upper():
+                    carpeta_socio = os.path.join(rutaServidor, nombre_dir)
+                    break
+        
+        if not carpeta_socio:
+            nombre_nueva_carpeta = f"{kepler} {nombre_socio}".strip()
+            carpeta_socio = os.path.join(rutaServidor, nombre_nueva_carpeta)
+            os.makedirs(carpeta_socio, exist_ok=True)
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error de acceso o creación de carpeta raíz: {str(e)}'}, status=500)
+
+    rutaMaestra = os.path.join(carpeta_socio, "Maestra")
+    rutaOperativa = os.path.join(carpeta_socio, "Operativa")
+
+    mapeo_secciones = {
+        "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
+        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
+        "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
+        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
+        "5": os.path.join(rutaOperativa, "V. Contratos"),
+        "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
+        "7": os.path.join(rutaOperativa, "VII. Correspondencia")
+    }
+    
+    meses_map = {
+        "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
+        "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12
+    }
+
+    archivos = request.FILES.getlist('archivos_pdf')
+    resultados_proceso = []
+
+    registros_validos = RegistroSeccion.objects.filter(seccion__in=secciones).select_related('apartado')
+    mapeo_claves_registro = {}
+    for r in registros_validos:
+        clave_limpia = str(r.apartado.clave).strip()
+        mapeo_claves_registro[clave_limpia] = r
+
+    for f in archivos:
+        nombre_archivo = f.name
+        nombre_sin_ext, _ = os.path.splitext(nombre_archivo)
+        
+        partes_nombre = nombre_sin_ext.strip().split(' ')
+        if not partes_nombre or partes_nombre[0] == "":
+            resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': 'Nombre inválido'})
+            continue
+            
+        clave_detectada = partes_nombre[0].strip().rstrip('.')
+        prefijo = clave_detectada.split('.')[0] if '.' in clave_detectada else clave_detectada
+        
+        ruta_destino_base = mapeo_secciones.get(prefijo)
+        if not ruta_destino_base:
+            resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'Clave "{clave_detectada}" no mapea a Maestra/Operativa'})
+            continue
+
+        registro_asociado = mapeo_claves_registro.get(clave_detectada)
+        if not registro_asociado:
+            partes_clave = clave_detectada.split('.')
+            if len(partes_clave) == 2 and len(partes_clave[1]) > 2:
+                clave_truncada = f"{partes_clave[0]}.{partes_clave[1][:2]}"
+                registro_asociado = mapeo_claves_registro.get(clave_truncada)
+
+        if not registro_asociado:
+            resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'No hay renglón en base de datos para la clave {clave_detectada}'})
+            continue
+
+        match_fecha = re.search(r'([a-z]{3})\s+(\d{2})$', nombre_sin_ext.strip().lower())
+        fecha_procesada = None
+        
+        if match_fecha:
+            mes_texto = match_fecha.group(1)
+            anio_texto = match_fecha.group(2)
+            if mes_texto in meses_map:
+                try:
+                    fecha_procesada = datetime(int(f"20{anio_texto}"), meses_map[mes_texto], 1).date()
+                except ValueError:
+                    pass
+
+        if not fecha_procesada:
+            resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': 'Estructura de fecha incorrecta al final del nombre'})
+            continue
+
+        try:
+            # Asegurar la creación de la carpeta de la sección (ej. Maestra/I. Identificación del Socio)
+            os.makedirs(ruta_destino_base, exist_ok=True)
+            
+            carpeta_destino_final = None
+            # Evaluar elementos existentes únicamente si la carpeta ya contenía datos
+            for item in os.listdir(ruta_destino_base):
+                ruta_item = os.path.join(ruta_destino_base, item)
+                if os.path.isdir(ruta_item):
+                    item_clean = item.strip()
+                    if item_clean.startswith(clave_detectada + " ") or item_clean.startswith(clave_detectada + ".") or item_clean == clave_detectada:
+                        carpeta_destino_final = ruta_item
+                        break
+            
+            # Si es una estructura totalmente nueva o no hay coincidencia, se crea usando la clave
+            if not carpeta_destino_final:
+                carpeta_destino_final = os.path.join(ruta_destino_base, clave_detectada)
+                os.makedirs(carpeta_destino_final, exist_ok=True)
+                
+            ruta_completa_archivo = os.path.join(carpeta_destino_final, nombre_archivo)
+            
+            with open(ruta_completa_archivo, 'wb+') as destination:
+                for chunk in f.chunks():
+                    destination.write(chunk)
+            
+            registro_asociado.es_fecha = True
+            registro_asociado.fecha = fecha_procesada
+            registro_asociado.numero = None
+            if not registro_asociado.estatus or registro_asociado.estatus == "":
+                registro_asociado.estatus = "Completo"
+            registro_asociado.save()
+                    
+            resultados_proceso.append({'archivo': nombre_archivo, 'success': True, 'mensaje': f'Copiado y enlazado con fecha {fecha_procesada.strftime("%b %y")}'})
+        except Exception as e:
+            resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'Error en escritura: {str(e)}'})
+
+    return JsonResponse({
+        'global_success': any(r['success'] for r in resultados_proceso),
+        'resultados': resultados_proceso
+    })
+
+def avancesMovimientos(request):
+    expediente = Expediente.objects.all().order_by('socio__nombre')    
+    todosEstados = EstadosFechas.objects.all()
+   
+    contest = {'expediente':expediente,
+               'todosEstados':todosEstados,
+               }
+
+    return render(request, 'Index/avancesMovimientos.html',contest)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

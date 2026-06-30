@@ -100,7 +100,7 @@ class Estado(models.Model):
         default='#FFFFFF', 
         verbose_name="Color de Identificación" 
     )
-
+    valor = models.IntegerField(default=0)
     def __str__(self):
         return self.nombre
 

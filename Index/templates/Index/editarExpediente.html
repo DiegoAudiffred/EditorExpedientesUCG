@@ -636,7 +636,7 @@
            {% if registro.enviar %}checked{% endif %}>
 </td>
 
-<td class="align-middle">
+<td class="align-middle" >
     {% if fila.archivo_url %}
     <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
         target="_blank" title="Click para abrir archivo"
@@ -752,7 +752,11 @@
                 target="_blank">Exportar a Excel</a>
             <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
                 valores vacios</a>
-            <a href="" class="btn btn-yellow mx-2 text-white" >Cargar un checklist</a>
+                {% if request.user.username == 'Audi' %}
+                            {% include 'Index/modalCargarArchivos.html' %}
+                
+
+                {% endif %}
             <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"

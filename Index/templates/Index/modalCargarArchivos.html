@@ -1,0 +1,130 @@
+<button type="button" class="btn btn-yellow mx-2 text-white" data-bs-toggle="modal" data-bs-target="#modalCargarArchivos">
+    Cargar archivos
+</button>
+
+<div class="modal fade" id="modalCargarArchivos" tabindex="-1" aria-labelledby="modalCargarArchivosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalCargarArchivosLabel">Cargar Expedientes Digitales (PDF)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Seleccione uno o varios archivos PDF:</label>
+                    <input type="file" id="input-pdf-files" class="form-control" accept=".pdf" multiple onchange="manejarSeleccionArchivos()">
+                </div>
+                
+                <h6 class="fw-bold mt-4">Archivos listos para procesar:</h6>
+                <div id="lista-archivos-previa" class="list-group mb-3">
+                    <p class="text-muted small text-center my-3" id="msg-sin-archivos">No hay archivos seleccionados.</p>
+                </div>
+
+                <div id="contenedor-resultado-proceso" class="d-none">
+                    <h6 class="fw-bold text-success">Resultado del procesamiento:</h6>
+                    <ul id="lista-resultados-final" class="list-group small"></ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary text-white" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" id="btn-procesar-pdfs" class="btn btn-primary" onclick="subirYProcesarArchivos()" disabled>Procesar y Copiar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let colaArchivosPdf = [];
+
+function manejarSeleccionArchivos() {
+    const input = document.getElementById('input-pdf-files');
+    if (!input || !input.files.length) return;
+
+    for (let i = 0; i < input.files.length; i++) {
+        const archivo = input.files[i];
+        if (!colaArchivosPdf.some(a => a.name === archivo.name)) {
+            colaArchivosPdf.push(archivo);
+        }
+    }
+    input.value = ""; 
+    renderizarListaPrevia();
+}
+
+function removerArchivoDeCola(indice) {
+    colaArchivosPdf.splice(indice, 1);
+    renderizarListaPrevia();
+}
+
+function renderizarListaPrevia() {
+    const lista = document.getElementById('lista-archivos-previa');
+    const btnProcesar = document.getElementById('btn-procesar-pdfs');
+    
+    if (colaArchivosPdf.length === 0) {
+        lista.innerHTML = '<p class="text-muted small text-center my-3" id="msg-sin-archivos">No hay archivos seleccionados.</p>';
+        btnProcesar.disabled = true;
+        return;
+    }
+
+    btnProcesar.disabled = false;
+    lista.innerHTML = colaArchivosPdf.map((archivo, i) => `
+        <div class="list-group-item d-flex justify-content-between align-items-center p-2">
+            <span class="text-truncate me-2 small"><i class="bi bi-file-earmark-pdf text-danger"></i> ${archivo.name}</span>
+            <button class="btn btn-danger btn-sm py-0 px-2 text-white" type="button" onclick="removerArchivoDeCola(${i})">X</button>
+        </div>
+    `).join("");
+}
+
+function subirYProcesarArchivos() {
+    if (colaArchivosPdf.length === 0) return;
+
+    const btnProcesar = document.getElementById('btn-procesar-pdfs');
+    btnProcesar.disabled = true;
+    btnProcesar.innerText = "Procesando...";
+
+    const formData = new FormData();
+    colaArchivosPdf.forEach(archivo => {
+        formData.append('archivos_pdf', archivo);
+    });
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch("{% url 'Index:procesarArchivos' expediente.id %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        btnProcesar.innerText = "Procesar y Copiar";
+        btnProcesar.disabled = false;
+
+        const contenedorRes = document.getElementById('contenedor-resultado-proceso');
+        const listaResultados = document.getElementById('lista-resultados-final');
+        contenedorRes.classList.remove('d-none');
+        listaResultados.innerHTML = "";
+
+        data.resultados.forEach(res => {
+            const claseColor = res.success ? 'list-group-item-success' : 'list-group-item-danger';
+            listaResultados.innerHTML += `
+                <li class="list-group-item ${claseColor} d-flex justify-content-between align-items-center py-1">
+                    <span>${res.archivo}</span>
+                    <small class="fw-bold">${res.mensaje}</small>
+                </li>
+            `;
+        });
+
+        if (data.global_success) {
+            colaArchivosPdf = [];
+            renderizarListaPrevia();
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        btnProcesar.innerText = "Procesar y Copiar";
+        btnProcesar.disabled = false;
+        alert("Ocurrió un error de comunicación con el servidor.");
+    });
+}
+</script>

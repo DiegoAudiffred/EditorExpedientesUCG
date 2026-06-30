@@ -39,13 +39,15 @@ urlpatterns = [
     path('expediente/eliminarRenglonExpediente/<int:expedienteID>/<int:seccionID>/<int:apartadoID>', views.eliminarRenglonExpediente, name='eliminarRenglonExpediente'),
     path('expediente/eliminarRepresentante/<int:rep>/<int:exp>',views.eliminarRepresentante, name = 'eliminarRepresentante'),
     path('expediente/eliminarObligado/<int:obl>/<int:exp>',views.eliminarObligado, name = 'eliminarObligado'),
-
+    path('expediente/procesarArchivos/<int:id>/', views.procesarArchivos, name='procesarArchivos'),
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
 
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     
     path('avances/', views.avances, name='avances'),
+    path('avancesMovimientos/', views.avancesMovimientos, name='avancesMovimientos'),
+
     path('expediente/<int:expediente_id>/<int:linea_id>', views.lineaEliminar, name='lineaEliminar'),
 path('expediente/<int:seccion>/<int:apartado>/<int:secuencial>/', views.checkBoxChange, name='checkBoxChange'),    #Administrador
     path('expediente/<int:expedienteID>/', views.notificarFaltantes, name='notificarFaltantes'),    #Administrador

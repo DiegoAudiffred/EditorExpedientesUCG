@@ -54,8 +54,10 @@
                     </ul>
                 </div>
                 <div class="card-footer d-flex gap-2">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editarJuntaModal{{ item.cita.id }}">Editar expedientes de la junta</button>
+                    {% if request.user.roles == 'Administrador' %}
+                           <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editarJuntaModal{{ item.cita.id }}">Editar expedientes de la junta</button>
                     <button class="btn btn-secondary text-white" data-bs-toggle="modal" data-bs-target="#eliminarJuntaModal{{ item.cita.id }}">Borrar junta</button>
+                    {% endif %}
                 </div>
             </div>
 

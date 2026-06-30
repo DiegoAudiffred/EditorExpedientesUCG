@@ -14,7 +14,7 @@ class UserAdminForm(UserChangeForm):
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'roles': forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary my-1'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary m-2'}),
 
         }
         def __init__(self, *args, **kwargs):
