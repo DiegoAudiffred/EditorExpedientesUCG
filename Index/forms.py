@@ -341,7 +341,7 @@ class EditarSocio(forms.ModelForm):
     ]
     
     socio_selector = forms.ModelChoiceField(
-        queryset=Socio.objects.all(),
+        queryset=Socio.objects.all().order_by('nombre'),
         label="Socio a Editar/Crear",
         empty_label="--- Nuevo Socio  ---",
         required=False,

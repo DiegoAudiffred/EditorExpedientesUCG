@@ -106,7 +106,7 @@ class Estado(models.Model):
 
 
 class Expediente(models.Model):
-    socio = models.ForeignKey(Socio, on_delete=models.CASCADE, null=False, blank=False)
+    socio = models.ForeignKey(Socio, on_delete=models.CASCADE, null=False, blank=False,unique=True)
     estatus = models.ForeignKey(Estado, on_delete=models.CASCADE)
     usuario = models.ForeignKey(User, related_name='centroNegocios', blank=True, null=True, on_delete=models.CASCADE)
     usuarioCredito = models.ForeignKey(User, related_name='credito', blank=True, null=True, on_delete=models.CASCADE)

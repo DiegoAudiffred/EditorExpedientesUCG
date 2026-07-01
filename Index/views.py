@@ -399,8 +399,9 @@ def editarExpediente(request, id):
 
 
 def checarRuta(identificador_socio, secciones):
-
+    #print("\n================= DEBUG CHECAR RUTA =================")
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+    #print(f"[*] Buscando identificador_socio: '{identificador_socio}'")
 
     carpeta_socio = None
     try:
@@ -408,9 +409,9 @@ def checarRuta(identificador_socio, secciones):
         for nombre_dir in dirs_servidor:
             if identificador_socio in nombre_dir:
                 carpeta_socio = os.path.join(rutaServidor, nombre_dir)
-              
                 break
     except Exception as e:
+        #print(f"[-] ERROR al listar la raíz del servidor: {e}")
         return {}
 
     if not carpeta_socio:
@@ -437,28 +438,68 @@ def checarRuta(identificador_socio, secciones):
     resultados = {}
 
     for seccion in secciones:
-        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado')
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado', 'seccion__expediente')
         
         for registro in registros_existentes:
             clave = str(registro.apartado.clave).strip()
             prefijo = clave.split('.')[0]
             
             ruta_busqueda = mapeo_secciones.get(prefijo)
+            #print(f"\n--- Procesando Registro ID: {registro.id} ---")
+            #print(f"    Clave DB: {clave} | Prefijo: {prefijo}")
 
             if not ruta_busqueda:
                 continue
                 
+            if prefijo in ["3", "4", "5", "6", "7"] and not os.path.exists(ruta_busqueda):
+                try:
+                    expediente_actual = registro.seccion.expediente
+                    lineas_asociadas = Linea.objects.filter(expediente=expediente_actual)
+                    
+                    if os.path.exists(rutaOperativa):
+                        subdirs_operativa = os.listdir(rutaOperativa)
+                        enrutado_exitoso = False
+                        
+                        for linea in lineas_asociadas:
+                            prefijo_linea = f"{linea.numero} "
+                            #print(f"    [*] Buscando carpeta de línea que inicie con: '{prefijo_linea}'")
+                            
+                            for subdir in subdirs_operativa:
+                                if subdir.strip().startswith(prefijo_linea):
+                                    ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
+                                    if os.path.isdir(ruta_subdir_completa):
+                                        nombre_carpeta_seccion = os.path.basename(mapeo_secciones.get(prefijo))
+                                        posible_ruta = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
+                                        if os.path.exists(posible_ruta):
+                                            ruta_busqueda = posible_ruta
+                                            #print(f"    [+] Enrutamiento correcto hacia: {ruta_busqueda}")
+                                            enrutado_exitoso = True
+                                            break
+                            if enrutado_exitoso:
+                                break
+                except Exception as ex_op:
+                    print(f"    [-] Error escaneando Operativa: {ex_op}")
+
             if not os.path.exists(ruta_busqueda):
+                #print(f"    [-] Cancelado: La ruta final NO existe: {ruta_busqueda}")
                 continue
                 
             archivo_mas_reciente = None
             mtime_maximo = 0
 
+            opciones_clave = [clave]
             partes_clave = clave.split('.')
-            clave_base = clave
-            if len(partes_clave) == 2 and len(partes_clave[1]) > 2:
-                clave_base = f"{partes_clave[0]}.{partes_clave[1][:2]}"
-            #print(f"  Clave base calculada para carpetas: {clave_base}")
+            if len(partes_clave) == 2:
+                try:
+                    num_principal = partes_clave[0]
+                    num_decimal = int(partes_clave[1])
+                    opciones_clave.append(f"{num_principal}.{num_decimal:02d}")
+                    opciones_clave.append(f"{num_principal}.{num_decimal}")
+                except ValueError:
+                    pass
+            
+            opciones_clave = list(set(opciones_clave))
+            #print(f"    [*] Variantes de clave a buscar en disco: {opciones_clave}")
 
             try:
                 items_directorio = os.listdir(ruta_busqueda)
@@ -468,34 +509,33 @@ def checarRuta(identificador_socio, secciones):
                     if os.path.isdir(ruta_item):
                         nombre_item_clean = nombre_item.strip()
                         
-                        condicion_carpeta = (
-                            nombre_item_clean.startswith(clave_base + " ") or 
-                            nombre_item_clean.startswith(clave_base + ".") or
-                            nombre_item_clean == clave_base
+                        condicion_carpeta = any(
+                            nombre_item_clean.startswith(opt + " ") or 
+                            nombre_item_clean.startswith(opt + ".") or
+                            nombre_item_clean == opt
+                            for opt in opciones_clave
                         )
                         
                         if condicion_carpeta:
                             archivos_internos = os.listdir(ruta_item)
                        
                             for archivo in archivos_internos:
-                                if not archivo.startswith(clave):
+                                cumple_inicio_archivo = any(archivo.startswith(opt) for opt in opciones_clave)
+                                if not cumple_inicio_archivo:
                                     continue
                                 
                                 archivo_lower = archivo.lower()
                                 coincide = False
-                                criterio_debug = ""
                                 
                                 if registro.es_fecha:
                                     if registro.fecha:
                                         mes_texto = meses_es.get(registro.fecha.month, "")
                                         anio_dos_digitos = registro.fecha.strftime("%y")
-                                        criterio_debug = f"Fecha (mes: {mes_texto}, año: {anio_dos_digitos})"
                                         if mes_texto in archivo_lower and anio_dos_digitos in archivo_lower:
                                             coincide = True
                                 else:
                                     if registro.numero:
                                         criterio_num = str(registro.numero).strip().lower()
-                                        criterio_debug = f"Número ({criterio_num})"
                                         if criterio_num in archivo_lower:
                                             coincide = True
                                 
@@ -506,20 +546,19 @@ def checarRuta(identificador_socio, secciones):
                                         if mtime > mtime_maximo:
                                             mtime_maximo = mtime
                                             archivo_mas_reciente = ruta_archivo
-
-            except Exception as e:
+            except Exception:
                 continue
 
             if archivo_mas_reciente:
+                #print(f"    [=>] Asignado archivo ganador: {archivo_mas_reciente}")
                 resultados[registro.id] = {
                     'clave': clave,
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
 
+    #print("\n================= FIN DEBUG CHECAR RUTA =================\n")
     return resultados
-
-
 
 @login_required(login_url='/login/')
 def lineaCrear(request, id):

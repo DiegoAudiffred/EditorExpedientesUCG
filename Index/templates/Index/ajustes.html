@@ -23,10 +23,6 @@
         margin-top: 0.25em;
     }
 </style>
-
-<div class="container my-5">
-    <h1 class="fnSuperiorRegularTitle2 text-secondary"> Modificar estados</h1>
-    
     {% if messages %}
         {% for message in messages %}
             <div class="alert {% if message.tags == 'success' %}alert-green{% else %}alert-red {% endif %} alert-dismissible fade show fnSuperiorRegularTitle" role="alert">
@@ -35,6 +31,11 @@
             </div>
         {% endfor %}
     {% endif %}
+{% if request.user.roles == 'Administrador' %}
+<div class="container my-5">
+    <h1 class="fnSuperiorRegularTitle2 text-secondary"> Modificar estados</h1>
+    
+
     <form method="post">
         <input type="hidden" name="form_name" value="estado_form"> {{ formset.management_form }}
         {% csrf_token %}
@@ -81,6 +82,8 @@
     </form>
 </div>
 
+{% endif %}
+
 <div class="container my-5">
     <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar Socio</h1>
 
@@ -119,6 +122,7 @@
         <button type="submit" class="btn btn-primary col-12 my-2">Guardar Socio</button>
     </form>
 </div>
+{% if request.user.roles == 'Administrador' %}
 
 <div class="container my-5">
     <h1 class="fnSuperiorRegularTitle2 text-secondary "> Modificar Apartado de Catálogo</h1>
@@ -161,7 +165,7 @@
         <button type="submit" class="btn btn-primary col-12 my-2">Guardar Apartado</button>
     </form>
 </div>
-
+{% endif %}
 <script>
   function cargarSocio(socioId) {
     const nombreInput = document.getElementById('{{ formSocios.nombre.id_for_label }}');
