@@ -98,19 +98,25 @@
     
         <div class="col-4 my-2">
             {% if expediente.estatus.nombre == 'Completo' %}
-            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
             <a href="{% url 'Index:recepcionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">He
                 recibido el expediente fisico</a>
             {% endif %}
 
             {% endif %}
-            {% if expediente.estatus.nombre == 'Nuevo' %}
+            {% if expediente.estatus.nombre == 'Nuevo'  %}
                 {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
 
             <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold">Enviar expediente
                 a crédito</a>
             {% endif %}
 
+            {% endif %}
+            {% if expediente.estatus.nombre == 'Rechazado' %}
+                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
+                <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold">Reenviar expediente
+                a crédito</a>
+                {% endif %}
             {% endif %}
             {% if expediente.estatus.nombre == 'Recepción con observaciones' %}
                             {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
@@ -122,14 +128,18 @@
             {% endif %}
 
                          {% if expediente.estatus.nombre == 'Recepción' %}
-            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
             <a href="{% url 'Index:revisionExpediente' expediente.id 'S'%}" class="btn btn-primary fw-bold w-100">Pasar a revisíon</a>
             {% endif %}
 
       
 
             {% endif %}   
-
+            {% if expediente.estatus.nombre == 'En revisión' %}
+                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+                <a href="" class="btn btn-primary fw-bold"> Archivar Expediente </a>
+                {% endif %}
+            {% endif %}
 
         </div>
         <div class="col-4 my-2">
@@ -146,7 +156,11 @@
             <a href="{% url 'Index:revisionExpediente' expediente.id 'N'%}" class="btn btn-primary fw-bold w-100">Pasar a revisíon c/observaciones</a>
             {% endif %}
             {% endif %}
-
+            {% if expediente.estatus.nombre == 'En revisión' %}
+                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+                <a href="" class="btn btn-primary fw-bold"> Rechzar Expediente</a>
+                {% endif %}
+            {% endif %}
         </div>
         <div class="col-4 my-2">
 {% if expediente.estatus.nombre == 'Completo' %}

@@ -37,4 +37,179 @@
 
     </div>
 </div>
+<div class="container my-4">
+
+    <div class="row justify-content-center my-4">
+        <div class="col-12 text-center fnSuperiorRegularTitle2">
+            Guía rapida de la página de expedientes
+        </div>
+        <div class="col-6 col-md-4 col-lg-3 text-center text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30%" height="auto" viewBox="0 0 16 8" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-3">
+                <polyline points="1 1 8 7 15 1"></polyline>
+            </svg>
+        </div>
+    </div>
+    <div class="col-12 text-start">
+        <b class="fnSuperiorRegularTitle3 text-primary">Estados</b>
+        <p>Los estados son la fase en la que se encuentre un expediente </p>
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover align-middle mb-0 table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col" class="py-3 ps-4">Nombre</th>
+                        <th scope="col" class="py-3">Color</th>
+                        <th scope="col" class="py-3 pe-4">Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for estado in estados %}
+                    <tr>
+                        <td class="fw-bold ps-4">{{ estado.nombre }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="d-inline-block rounded-circle"
+                                    style="width: 16px; height: 16px; background-color: {{ estado.color }}; border: 1px solid rgba(0,0,0,0.15);"></span>
+                                <small class="text-muted text-uppercase fw-monospace">{{ estado.color }}</small>
+                            </div>
+                        </td>
+                        <td class="text-primary pe-4">
+                            {% if estado.descripcion %}
+                            {{ estado.descripcion }}
+                            {% else %}
+                            <span class="text-muted italic small">Sin descripción</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-12">
+        <b class="fnSuperiorRegularTitle3 text-primary">Diagrama</b>
+        <p>Ilustración del proceso y sus variantes </p>
+
+        <img src="{% static 'img/diagrama2.png' %}" alt="diagrama" class="img-fluid w-100">
+    </div>
+
+    <div class="col-12">
+        <b class="fnSuperiorRegularTitle3 text-primary">Estrucutra del Expediente</b>
+        <p>Esquema de cada expediente</p>
+        <div class="table table-responsive shadow-sm rounded table-bordered">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col" class="py-3 ps-4">Campo</th>
+                        <th scope="col" class="py-3">¿Qué hace?</th>
+                        <th scope="col" class="py-3 pe-4">Relación / Tipo de Dato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Socio</td>
+                        <td>Vincula el expediente a un socio específico. Al ser único, garantiza que cada socio tenga
+                            solamente un expediente.</td>
+                        <td>
+                            <span class="badge bg-tercero text-dark fw-normal">Uno-a-Uno (Socio)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Estatus</td>
+                        <td>Registra el estado actual en el que se encuentra el expediente dentro del flujo (ej. Nuevo,
+                            Completo, Rechazado).</td>
+                        <td>
+                            <span class="badge bg-primary fw-normal">Muchos-a-Uno (Estado)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Usuario Servicios</td>
+                        <td>Almacena ejecutivo de servicios encargado de la gestión inicial o creación del
+                            registro.</td>
+                        <td>
+                            <span class="badge bg-primary fw-normal">Muchos-a-Uno (User)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Usuario Credito</td>
+                        <td>Identifica al usuario del área de crédito asignado para revisar, validar o rechazar el
+                            checklist del expediente.</td>
+                        <td>
+                            <span class="badge bg-primary fw-normal">Muchos-a-Uno (User)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Usuario Archivo</td>
+                        <td>Registra al usuario responsable de recibir y resguardar físicamente el expediente en el
+                            archivo.</td>
+                        <td>
+                            <span class="badge bg-primary fw-normal">Muchos-a-Uno (User)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Fecha Creacion</td>
+                        <td>Guarda la fecha exacta en la que se dio de alta el expediente en el sistema de manera
+                            automática.</td>
+                        <td>
+                            <span class="badge bg-secondary fw-normal">Fecha</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Usuario Negocios</td>
+                        <td>Guarda la referencia del ejecutivo de negocios.</td>
+                        <td>
+                            <span class="badge bg-primary fw-normal">Muchos-a-Uno (User)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold ps-4 text-monospace">Fecha Archivado</td>
+                        <td>Almacena la fecha en la que el expediente físico fue guardado de manera definitiva en el
+                            archivo general.</td>
+                        <td>
+                            <span class="badge bg-secondary fw-normal">Fecha</span>
+                        </td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-12">
+        <h3 class="h4 text-primary fw-bold mb-3 fnSuperiorRegularTitle3">
+            Gestión de Citas
+        </h3>
+
+        <p class="leading-relaxed mb-4">
+            Dentro del sistema se pueden generar citas para organizar la entrega física de la documentación. Al
+            programar una cita, es posible asignar uno o varios expedientes simultáneamente.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 bg-white rounded-3 border-start border-secondary border-4 h-100">
+                    <h5 class="text-primary fw-bold small text-uppercase tracking-wider mb-2">Requisito
+                    </h5>
+                    <p class="mb-0 small text-muted">
+                        Únicamente se pueden generar citas si el expediente se encuentra en el estado <b class="fw-bold"
+                            style="color: #0EF64D;">Completo</b>.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 bg-white rounded-3 border-start border-secondary border-4 h-100">
+                    <h5 class="text-primary fw-bold small text-uppercase tracking-wider mb-2">Flujo de Confirmación
+                    </h5>
+                    <p class="mb-0 small text-muted">
+                        Al crear la junta (indicando día, hora y expedientes), se enviará un correo automático de
+                        confirmación para que el ejecutivo de servicios pueda <strong>aceptar</strong> o
+                        <strong>reagendar</strong>.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
 {% endblock %}

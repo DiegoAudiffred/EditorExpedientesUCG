@@ -39,13 +39,12 @@ def is_active_user(user):
 
 @login_required(login_url='/login/')    
 def index(request):
-
+    estados = Estado.objects.all()
     context = {
-     #   'doctors': doctors,
-     #   'services':services,
-        
+   
+        'estados':estados,
     }
-    return render(request, 'Index/index.html')
+    return render(request, 'Index/index.html',context)
 
 @login_required(login_url='/login/')    
 def expedientesLayout(request):
@@ -2689,7 +2688,6 @@ def notificarFaltantes(request,expedienteID):
 
 
 
-
 @login_required(login_url='/login/')
 def procesarArchivos(request, id):
     if request.method != "POST":
@@ -2738,6 +2736,11 @@ def procesarArchivos(request, id):
         "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
         "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12
     }
+    
+    meses_inv_map = {
+        1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
+        7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"
+    }
 
     archivos = request.FILES.getlist('archivos_pdf')
     resultados_proceso = []
@@ -2750,20 +2753,80 @@ def procesarArchivos(request, id):
 
     for f in archivos:
         nombre_archivo = f.name
-        nombre_sin_ext, _ = os.path.splitext(nombre_archivo)
+        nombre_sin_ext, ext = os.path.splitext(nombre_archivo)
         
         partes_nombre = nombre_sin_ext.strip().split(' ')
         if not partes_nombre or partes_nombre[0] == "":
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': 'Nombre inválido'})
             continue
             
-        clave_detectada = partes_nombre[0].strip().rstrip('.')
-        prefijo = clave_detectada.split('.')[0] if '.' in clave_detectada else clave_detectada
+        linea_detectada_num = None
+        clave_detectada = None
+
+        if '.' not in partes_nombre[0]:
+            linea_detectada_num = partes_nombre[0].strip()
+            if len(partes_nombre) > 1 and '.' in partes_nombre[1]:
+                clave_detectada = partes_nombre[1].strip().rstrip('.')
+            else:
+                resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': 'Estructura de clave x.xx no encontrada tras número de línea'})
+                continue
+        else:
+            clave_detectada = partes_nombre[0].strip().rstrip('.')
+
+        prefijo = clave_detectada.split('.')[0]
         
         ruta_destino_base = mapeo_secciones.get(prefijo)
         if not ruta_destino_base:
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'Clave "{clave_detectada}" no mapea a Maestra/Operativa'})
             continue
+
+        if prefijo in ["3", "4", "5", "6", "7"]:
+            if linea_detectada_num:
+                lineas_asociadas = Linea.objects.filter(expediente=expediente, numero=linea_detectada_num)
+            else:
+                lineas_asociadas = Linea.objects.filter(expediente=expediente)
+
+            if lineas_asociadas.exists():
+                os.makedirs(rutaOperativa, exist_ok=True)
+                try:
+                    subdirs_operativa = os.listdir(rutaOperativa)
+                    encontrado = False
+                    
+                    for linea in lineas_asociadas:
+                        prefijo_linea = f"{linea.numero} "
+                        for subdir in subdirs_operativa:
+                            if subdir.strip().startswith(prefijo_linea):
+                                ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
+                                if os.path.isdir(ruta_subdir_completa):
+                                    nombre_carpeta_seccion = os.path.basename(ruta_destino_base)
+                                    ruta_destino_base = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
+                                    encontrado = True
+                                    break
+                        if encontrado:
+                            break
+                    
+                    if not encontrado:
+                        linea_primera = lineas_asociadas.first()
+                        num_l = str(linea_primera.numero).strip()
+                        kepler_l = kepler
+                        abrev_l = str(linea_primera.abreviacion).strip() if linea_primera.abreviacion else ""
+                        monto_l = f"{linea_primera.monto:,}"
+                        
+                        fecha_str = ""
+                        if linea_primera.fecha:
+                            m_str = meses_inv_map.get(linea_primera.fecha.month, "")
+                            y_str = linea_primera.fecha.strftime("%Y")
+                            fecha_str = f"{m_str} {y_str}".strip()
+                        
+                        nombre_nueva_linea_dir = f"{num_l} {kepler_l} {abrev_l} ${monto_l} {fecha_str}".strip()
+                        ruta_nueva_linea_completa = os.path.join(rutaOperativa, nombre_nueva_linea_dir)
+                        os.makedirs(ruta_nueva_linea_completa, exist_ok=True)
+                        
+                        nombre_carpeta_seccion = os.path.basename(ruta_destino_base)
+                        ruta_destino_base = os.path.join(ruta_nueva_linea_completa, nombre_carpeta_seccion)
+                        
+                except Exception:
+                    pass
 
         registro_asociado = mapeo_claves_registro.get(clave_detectada)
         if not registro_asociado:
@@ -2793,11 +2856,9 @@ def procesarArchivos(request, id):
             continue
 
         try:
-            # Asegurar la creación de la carpeta de la sección (ej. Maestra/I. Identificación del Socio)
             os.makedirs(ruta_destino_base, exist_ok=True)
             
             carpeta_destino_final = None
-            # Evaluar elementos existentes únicamente si la carpeta ya contenía datos
             for item in os.listdir(ruta_destino_base):
                 ruta_item = os.path.join(ruta_destino_base, item)
                 if os.path.isdir(ruta_item):
@@ -2806,12 +2867,22 @@ def procesarArchivos(request, id):
                         carpeta_destino_final = ruta_item
                         break
             
-            # Si es una estructura totalmente nueva o no hay coincidencia, se crea usando la clave
             if not carpeta_destino_final:
                 carpeta_destino_final = os.path.join(ruta_destino_base, clave_detectada)
                 os.makedirs(carpeta_destino_final, exist_ok=True)
-                
-            ruta_completa_archivo = os.path.join(carpeta_destino_final, nombre_archivo)
+            
+            nombre_sin_ext_limpio = nombre_sin_ext
+            if linea_detectada_num and nombre_sin_ext_limpio.startswith(linea_detectada_num + " "):
+                nombre_sin_ext_limpio = nombre_sin_ext_limpio[len(linea_detectada_num):].strip()
+
+            nombre_final_archivo = f"{nombre_sin_ext_limpio}{ext}"
+            if prefijo in ["3", "4", "5", "6", "7"] and registro_asociado.numero:
+                str_numero = str(registro_asociado.numero).strip()
+                if str_numero in nombre_sin_ext_limpio:
+                    nombre_sin_ext_limpio = nombre_sin_ext_limpio.replace(str_numero, "").replace("  ", " ").strip()
+                    nombre_final_archivo = f"{nombre_sin_ext_limpio}{ext}"
+
+            ruta_completa_archivo = os.path.join(carpeta_destino_final, nombre_final_archivo)
             
             with open(ruta_completa_archivo, 'wb+') as destination:
                 for chunk in f.chunks():
@@ -2824,7 +2895,7 @@ def procesarArchivos(request, id):
                 registro_asociado.estatus = "Completo"
             registro_asociado.save()
                     
-            resultados_proceso.append({'archivo': nombre_archivo, 'success': True, 'mensaje': f'Copiado y enlazado con fecha {fecha_procesada.strftime("%b %y")}'})
+            resultados_proceso.append({'archivo': nombre_final_archivo, 'success': True, 'mensaje': f'Copiado y enlazado con fecha {fecha_procesada.strftime("%b %y")}'})
         except Exception as e:
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'Error en escritura: {str(e)}'})
 
@@ -2832,6 +2903,7 @@ def procesarArchivos(request, id):
         'global_success': any(r['success'] for r in resultados_proceso),
         'resultados': resultados_proceso
     })
+
 
 @login_required(login_url='/login/')
 def avancesMovimientos(request):

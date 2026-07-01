@@ -101,6 +101,7 @@ class Estado(models.Model):
         verbose_name="Color de Identificación" 
     )
     valor = models.IntegerField(default=0)
+    descripcion = models.CharField("descripcion", max_length=100, unique=True, null=True)
     def __str__(self):
         return self.nombre
 
@@ -113,11 +114,13 @@ class Expediente(models.Model):
     usuarioArchivo = models.ForeignKey(User, related_name='Archivado', blank=True, null=True, on_delete=models.CASCADE)
     fechaCreacion = models.DateField(auto_now_add=True, blank=True)
     usuarioNegocios = models.ForeignKey(User, related_name='negocios', blank=True, null=True, on_delete=models.CASCADE)
+    fechaArchivado = models.DateField(null=True,blank=True)
 
     eliminado = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.socio}"
+    
 class EstadosFechas(models.Model):
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
