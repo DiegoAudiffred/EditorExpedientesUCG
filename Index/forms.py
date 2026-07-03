@@ -328,10 +328,12 @@ class CitaForm(forms.ModelForm):
 class ModificarEstados(forms.ModelForm):
     class Meta:
         model = Estado
-        fields = ['nombre', 'color'] 
+        fields = ['nombre', 'color','descripcion'] 
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 '}), 
             'color': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2 rounded-circle'}),
+                        'descripcion': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}),
+
         }
 
 class EditarSocio(forms.ModelForm):

@@ -3,33 +3,19 @@
 {% block body %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<div id="duplicate-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 9999;">
-    <div style="background: white; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-        <h2 style="color: #d9534f; margin: 0; font-family: sans-serif;">EVITA DUPLICAR EXPEDIENTES</h2>
-    </div>
-</div>
 
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const modal = document.getElementById('duplicate-modal');
-        
-        setTimeout(() => {
-            modal.style.display = 'none';
-        }, 3000);
-    });
-</script>
 <div class="container py-4">
 
     <h4 class="mb-3 fnSuperiorRegularTitle2 text-secondary">Crear expediente</h4>
-{% if messages %}
+    {% if messages %}
     {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
     {% endfor %}
-{% endif %}
+    {% endif %}
     <form method="post">
         {% csrf_token %}
 
@@ -57,7 +43,7 @@
                     {% if exp_form.socio_manual_tipo.errors %}<div class="text-danger small">{{
                         exp_form.socio_manual_tipo.errors }}</div>{% endif %}
                 </div>
-     <div class="col-md-4 my-3">
+                <div class="col-md-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Numero Kepler</label>
                     {{ exp_form.socio_manual_numero }}
                     {% if exp_form.socio_manual_numero.errors %}<div class="text-danger small">{{
@@ -67,11 +53,11 @@
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Ejecutivo de Servicios</label>
                     {{ exp_form.usuario }}
                 </div>
-                  <div class="col-md-4 my-3">
+                <div class="col-md-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Ejecutivo de Negocios</label>
                     {{ exp_form.usuarioNegocios }}
                 </div>
-               
+
 
                 <div class="col-md-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Estatus</label>
@@ -91,7 +77,7 @@
 </div>
 
 <script>
-  
+
 
     const socioSelect = document.getElementById('id_socio');
     const nombreManualInput = document.getElementById('id_socio_manual_nombre');
@@ -141,33 +127,33 @@
             .catch(error => console.error('Error al cargar datos del socio:', error));
     }
 
- function handleSocioSelectChange() {
-    const selectedValue = socioSelect.value;
-    if (selectedValue && selectedValue !== '') {
-        nombreManualInput.value = '';
-        
-        tipoManualSelect.disabled = true;
-        nombreManualInput.disabled = true;
-        tipoManualSelectNumero.disabled = true;
+    function handleSocioSelectChange() {
+        const selectedValue = socioSelect.value;
+        if (selectedValue && selectedValue !== '') {
+            nombreManualInput.value = '';
 
-        aplicarEstiloDeshabilitado(tipoManualSelect, true);
-        aplicarEstiloDeshabilitado(nombreManualInput, true);
-        aplicarEstiloDeshabilitado(tipoManualSelectNumero, true);
+            tipoManualSelect.disabled = true;
+            nombreManualInput.disabled = true;
+            tipoManualSelectNumero.disabled = true;
 
-        cargarSocio(selectedValue);
-    } else {
-        tipoManualSelect.disabled = false;
-        nombreManualInput.disabled = false;
-        tipoManualSelectNumero.disabled = false;
+            aplicarEstiloDeshabilitado(tipoManualSelect, true);
+            aplicarEstiloDeshabilitado(nombreManualInput, true);
+            aplicarEstiloDeshabilitado(tipoManualSelectNumero, true);
 
-        aplicarEstiloDeshabilitado(tipoManualSelect, false);
-        aplicarEstiloDeshabilitado(nombreManualInput, false);
-        aplicarEstiloDeshabilitado(tipoManualSelectNumero, false);
-        
-        tipoManualSelect.value = '';
-        tipoManualSelectNumero.value = '';
+            cargarSocio(selectedValue);
+        } else {
+            tipoManualSelect.disabled = false;
+            nombreManualInput.disabled = false;
+            tipoManualSelectNumero.disabled = false;
+
+            aplicarEstiloDeshabilitado(tipoManualSelect, false);
+            aplicarEstiloDeshabilitado(nombreManualInput, false);
+            aplicarEstiloDeshabilitado(tipoManualSelectNumero, false);
+
+            tipoManualSelect.value = '';
+            tipoManualSelectNumero.value = '';
+        }
     }
-}
 
     function handleManualInputChange() {
         const manualName = nombreManualInput.value.trim();
@@ -185,7 +171,7 @@
     nombreManualInput.addEventListener('input', handleManualInputChange);
 
     handleSocioSelectChange();
- 
+
     render();
 
 
@@ -239,7 +225,7 @@
             });
     });
 
- 
+
 </script>
 
 {% endblock %}

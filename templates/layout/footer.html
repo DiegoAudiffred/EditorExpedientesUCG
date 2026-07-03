@@ -7,9 +7,9 @@
     </div>
 
     <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.05);">
-        © 2025 Copyright
-        <!--         <a class="text-white text-decoration-none" href="#">UCG</a>
- -->
+        <audio id="easterEggAudio" src="{% static 'img/easterEgg.mp3' %}"></audio>
+        <p class="text-decoration-none m-0"
+            onclick="let a = document.getElementById('easterEggAudio'); a.volume = 0.5; a.play();">© 2025 Copyright</p>
     </div>
 </footer>
 

@@ -101,13 +101,13 @@ class Estado(models.Model):
         verbose_name="Color de Identificación" 
     )
     valor = models.IntegerField(default=0)
-    descripcion = models.CharField("descripcion", max_length=100, unique=True, null=True)
+    descripcion = models.CharField("descripcion", max_length=100, blank=True, null=True)
     def __str__(self):
         return self.nombre
 
 
 class Expediente(models.Model):
-    socio = models.ForeignKey(Socio, on_delete=models.CASCADE, null=False, blank=False,unique=True)
+    socio = models.OneToOneField(Socio, on_delete=models.CASCADE, null=False, blank=False)
     estatus = models.ForeignKey(Estado, on_delete=models.CASCADE)
     usuario = models.ForeignKey(User, related_name='centroNegocios', blank=True, null=True, on_delete=models.CASCADE)
     usuarioCredito = models.ForeignKey(User, related_name='credito', blank=True, null=True, on_delete=models.CASCADE)
@@ -265,3 +265,4 @@ class RegistroSeccion(models.Model):
 
     def __str__(self):
         return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} ({self.secuencial}) {self.seccion.expediente.socio}"
+

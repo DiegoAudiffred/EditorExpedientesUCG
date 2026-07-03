@@ -49,20 +49,27 @@
             </div>
             {% endif %}
 
-            <div class="col-md-7 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Nombre</label></div>
-            <div class="col-md-3 col-2 fnSuperiorRegularTitle3 d-none d-md-block"><label>Color</label></div>
+            <div class="col-md-4 col-4 fnSuperiorRegularTitle3 d-none d-md-block text-start"><label>Nombre</label></div>
+            <div class="col-md-4 col-4 fnSuperiorRegularTitle3 d-none d-md-block text-start"><label>Descripción</label>
+            </div>
+            <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block text-start"><label>Color</label></div>
             <div class="col-md-2 col-2 fnSuperiorRegularTitle3 d-none d-md-block text-center"><label>Picker</label>
             </div>
-            <div class="col-6"></div>
+
+
+ 
 
             {% for form in formset %}
 
-            <div class="col-md-7 col-12 text-center ">
+            <div class="col-md-4 col-12 text-center ">
                 <div class="fnSuperiorRegularTitle2">{{ form.nombre }}</div>
                 {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors }}</div>{% endif %}
             </div>
-
-            <div class="col-md-3 col-10 text-center">
+            <div class="col-md-4 col-12 text-start ">
+                <div class="fnSuperiorRegularTitle2">{{ form.descripcion }}</div>
+                {% if form.descripcion.errors %}<div class="text-danger small">{{ form.descripcion.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-2 col-10 text-center">
                 <div class="d-flex align-items-center">
                     {{ form.color }}
 
