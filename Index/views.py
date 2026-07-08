@@ -110,26 +110,37 @@ def filtrar_expedientes_ajax(request):
 
     return render(request, 'Index/tablaExpedientex.html', context)
 
+import json
+from django.http import JsonResponse
+
 def agregarRepresentantes(request, id):
     if request.method == 'POST':
         try:
             expediente = Expediente.objects.get(id=id)
             reps_raw = request.POST.get('representantes', '').strip().strip("|")
-            nombres_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
+            items_reps = [x.strip() for x in reps_raw.split("||") if x.strip()]
             
             tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
             area_socio = tipo_persona_map.get(expediente.socio.tipoPersona)
 
-            for nombre in nombres_reps:
-                representante, created_rep = RepresentanteLegal.objects.get_or_create(
-                    nombre=nombre
-                )
+            for item in items_reps:
+                rep_data = json.loads(item)
+                rep_id = rep_data.get('id')
+                rep_nombre = rep_data.get('nombre', '').strip()
+
+                if rep_id:
+                    representante = RepresentanteLegal.objects.get(id=rep_id)
+                else:
+                    representante, created_rep = RepresentanteLegal.objects.get_or_create(
+                        nombre=rep_nombre
+                    )
+                
                 representante.expedientes.add(expediente)
                 
                 nueva, created_sec = SeccionesExpediente.objects.get_or_create(
                     expediente=expediente,
                     tipoDeSeccion='B',
-                    tituloSeccion=f"Representante legal - {nombre}"
+                    tituloSeccion=f"Representante legal - {representante.nombre}"
                 )
                 
                 if created_sec:
@@ -141,7 +152,6 @@ def agregarRepresentantes(request, id):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             
     return JsonResponse({'status': 'error'}, status=400)
-
 
 def agregarObligados(request, id):
     if request.method == 'POST':
@@ -2613,7 +2623,13 @@ def procesarArchivos(request, id):
         else:
             clave_detectada = partes_nombre[0].strip().rstrip('.')
 
-        prefijo = clave_detectada.split('.')[0]
+        partes_c = clave_detectada.split('.')
+        if len(partes_c) == 2 and len(partes_c[1]) == 3:
+            clave_destino_carpeta = f"{partes_c[0]}.{partes_c[1][:2]}"
+        else:
+            clave_destino_carpeta = clave_detectada
+
+        prefijo = clave_destino_carpeta.split('.')[0]
         
         ruta_destino_base = mapeo_secciones.get(prefijo)
         if not ruta_destino_base:
@@ -2681,15 +2697,29 @@ def procesarArchivos(request, id):
                     pass
 
         registro_asociado = mapeo_claves_registro.get(clave_detectada)
-        if not registro_asociado:
-            partes_clave = clave_detectada.split('.')
-            if len(partes_clave) == 2 and len(partes_clave[1]) > 2:
-                clave_truncada = f"{partes_clave[0]}.{partes_clave[1][:2]}"
-                registro_asociado = mapeo_claves_registro.get(clave_truncada)
+        if not registro_asociado and len(partes_c) == 2 and len(partes_c[1]) > 2:
+            clave_truncada = f"{partes_c[0]}.{partes_c[1][:2]}"
+            registro_asociado = mapeo_claves_registro.get(clave_truncada)
 
         if not registro_asociado:
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'No hay renglón en base de datos para la clave {clave_detectada}'})
             continue
+
+        if registro_asociado.estatus and registro_asociado.estatus != "":
+            ultimo_secuencial = RegistroSeccion.objects.filter(
+                seccion=registro_asociado.seccion,
+                apartado=registro_asociado.apartado
+            ).aggregate(max_sec=models.Max('secuencial'))['max_sec'] or 1
+            
+            registro_asociado = RegistroSeccion.objects.create(
+                seccion=registro_asociado.seccion,
+                apartado=registro_asociado.apartado,
+                es_fecha=registro_asociado.es_fecha,
+                secuencial=ultimo_secuencial + 1,
+                comentario=registro_asociado.comentario,
+                comentarioCredito=registro_asociado.comentarioCredito,
+                enviar=registro_asociado.enviar
+            )
 
         fecha_procesada = None
         ultimo_string_num = partes_nombre[-1].strip()
@@ -2728,12 +2758,18 @@ def procesarArchivos(request, id):
                 chk_item = "\\\\?\\UNC" + ruta_item[1:] if ruta_item.startswith("\\\\") and not ruta_item.startswith("\\\\?\\UNC\\") else ruta_item
                 if os.path.isdir(chk_item):
                     item_clean = item.strip()
-                    if item_clean.startswith(clave_detectada + " ") or item_clean.startswith(clave_detectada + ".") or item_clean == clave_detectada:
+                    if item_clean.startswith(clave_destino_carpeta + " ") or item_clean.startswith(clave_destino_carpeta + ".") or item_clean == clave_destino_carpeta:
                         carpeta_destino_final = ruta_item
                         break
             
             if not carpeta_destino_final:
-                carpeta_destino_final = os.path.join(ruta_destino_base, clave_detectada)
+                nombre_personalizado_cat = registro_asociado.apartado.nombreArchivo
+                if nombre_personalizado_cat and nombre_personalizado_cat.strip():
+                    nombre_carpeta = f"{clave_destino_carpeta} {nombre_personalizado_cat.strip()}"
+                else:
+                    nombre_carpeta = clave_destino_carpeta
+                    
+                carpeta_destino_final = os.path.join(ruta_destino_base, nombre_carpeta)
                 chk_destino_final = "\\\\?\\UNC" + carpeta_destino_final[1:] if carpeta_destino_final.startswith("\\\\") and not carpeta_destino_final.startswith("\\\\?\\UNC\\") else carpeta_destino_final
                 os.makedirs(chk_destino_final, exist_ok=True)
             
@@ -2763,7 +2799,7 @@ def procesarArchivos(request, id):
             else:
                 registro_asociado.es_fecha = False
                 registro_asociado.fecha = None
-                registro_asociado.numero = ultimo_string_num
+                registro_asociado.numero = str(ultimo_string_num)
                 msg_exito = f'Copiado y enlazado con parámetro numérico: {ultimo_string_num}'
 
             if not registro_asociado.estatus or registro_asociado.estatus == "":
@@ -2778,7 +2814,6 @@ def procesarArchivos(request, id):
         'global_success': any(r['success'] for r in resultados_proceso),
         'resultados': resultados_proceso
     })
-
 def checarRuta(identificador_socio, secciones):
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
@@ -2821,8 +2856,14 @@ def checarRuta(identificador_socio, secciones):
         
         for registro in registros_existentes:
             clave = str(registro.apartado.clave).strip()
-            prefijo = clave.split('.')[0]
             
+            partes_c = clave.split('.')
+            if len(partes_c) == 2 and len(partes_c[1]) == 3:
+                clave_busqueda = f"{partes_c[0]}.{partes_c[1][:2]}"
+            else:
+                clave_busqueda = clave
+
+            prefijo = clave_busqueda.split('.')[0]
             ruta_busqueda = mapeo_secciones.get(prefijo)
 
             if not ruta_busqueda:
@@ -2873,7 +2914,7 @@ def checarRuta(identificador_socio, secciones):
 
             try:
                 items_directorio = os.listdir(chk_busqueda)
-                clave_normalizada = clave.lower()
+                clave_normalizada = clave_busqueda.lower()
                 
                 for nombre_item in items_directorio:
                     ruta_item = os.path.join(ruta_busqueda, nombre_item)
@@ -2967,7 +3008,6 @@ def checarRuta(identificador_socio, secciones):
                 }
 
     return resultados
-
 
 @login_required(login_url='/login/')
 def avancesMovimientos(request):

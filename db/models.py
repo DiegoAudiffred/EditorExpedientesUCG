@@ -250,6 +250,7 @@ class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del reng
 
     def __str__(self):
         return f"{self.tipoDeSeccion} - {self.clave}"
+    
 class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.CASCADE)
