@@ -241,6 +241,7 @@ class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del reng
     tipoDeSeccion = models.CharField(max_length=7, choices=SECCIONES)
     clave = models.CharField(max_length=10)
     descripcion = models.TextField()
+    nombreArchivo = models.TextField(null=True,blank=True)
     areaDondeAplica = models.CharField(max_length=8, choices=AREAS, null=True, blank=True) 
 
     class Meta:

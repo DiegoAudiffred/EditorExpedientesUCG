@@ -162,7 +162,11 @@
             {{ formApartado.descripcion }}
             {% if formApartado.descripcion.errors %}<div class="text-danger small">{{ formApartado.descripcion.errors }}</div>{% endif %}
         </div>
-        
+        <div class="mb-3">
+            <label class="fnSuperiorRegularTitle3" for="{{ formApartado.descripcion.id_for_label }}">Nombre Archivo</label>
+            {{ formApartado.nombreArchivo }}
+            {% if formApartado.nombreArchivo.errors %}<div class="text-danger small">{{ formApartado.nombreArchivo.errors }}</div>{% endif %}
+        </div>
         <div class="mb-3">
             <label class="fnSuperiorRegularTitle3" for="{{ formApartado.areaDondeAplica.id_for_label }}">Área Donde Aplica</label>
             {{ formApartado.areaDondeAplica }}

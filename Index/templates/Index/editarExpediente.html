@@ -766,11 +766,11 @@
                 target="_blank">Exportar a Excel</a>
             <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
                 valores vacios</a>
-                {% if request.user.username == 'Audi' %}
+               
                             {% include 'Index/modalCargarArchivos.html' %}
                 
 
-                {% endif %}
+          
             <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>
 
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"

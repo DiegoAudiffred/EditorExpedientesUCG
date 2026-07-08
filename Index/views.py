@@ -397,205 +397,6 @@ def editarExpediente(request, id):
     return render(request, 'Index/editarExpediente.html', context)
 
 
-def checarRuta(identificador_socio, secciones):
-    rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
-
-    carpeta_socio = None
-    try:
-        ruta_scan = "\\\\?\\UNC" + rutaServidor[1:] if rutaServidor.startswith("\\\\") and not rutaServidor.startswith("\\\\?\\UNC\\") else rutaServidor
-        dirs_servidor = os.listdir(ruta_scan)
-        for nombre_dir in dirs_servidor:
-            if identificador_socio in nombre_dir:
-                carpeta_socio = os.path.join(rutaServidor, nombre_dir)
-                break
-    except Exception as e:
-        return {}
-
-    if not carpeta_socio:
-        return {}
-
-    rutaMaestra = os.path.join(carpeta_socio, "Maestra")
-    rutaOperativa = os.path.join(carpeta_socio, "Operativa")
-
-    mapeo_secciones = {
-        "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
-        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
-        "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
-        "5": os.path.join(rutaOperativa, "V. Contratos"),
-        "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
-        "7": os.path.join(rutaOperativa, "VII. Correspondencia")
-    }
-    
-    meses_es = {
-        1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
-        7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"
-    }
-    
-    resultados = {}
-
-    for seccion in secciones:
-        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado', 'seccion__expediente')
-        
-        for registro in registros_existentes:
-            clave = str(registro.apartado.clave).strip()
-            prefijo = clave.split('.')[0]
-            
-            ruta_busqueda = mapeo_secciones.get(prefijo)
-
-            if not ruta_busqueda:
-                continue
-                
-            chk_busqueda = "\\\\?\\UNC" + ruta_busqueda[1:] if ruta_busqueda.startswith("\\\\") and not ruta_busqueda.startswith("\\\\?\\UNC\\") else ruta_busqueda
-            if prefijo in ["3", "4", "5", "6", "7"] and not os.path.exists(chk_busqueda):
-                try:
-                    expediente_actual = registro.seccion.expediente
-                    lineas_asociadas = Linea.objects.filter(expediente=expediente_actual)
-                    
-                    chk_operativa = "\\\\?\\UNC" + rutaOperativa[1:] if rutaOperativa.startswith("\\\\") and not rutaOperativa.startswith("\\\\?\\UNC\\") else rutaOperativa
-                    if os.path.exists(chk_operativa):
-                        subdirs_operativa = os.listdir(chk_operativa)
-                        enrutado_exitoso = False
-                        
-                        for linea in lineas_asociadas:
-                            num_kepler = str(expediente_actual.socio.numeroKepler).strip()
-                            prefijo_linea = f"{linea.numero} {num_kepler}"
-                            #print(f"[*] Buscando carpeta operativa con prefijo: '{prefijo_linea}'")
-                            
-                            for subdir in subdirs_operativa:
-                                if subdir.strip().startswith(prefijo_linea):
-                                    ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
-                                    chk_subdir = "\\\\?\\UNC" + ruta_subdir_completa[1:] if ruta_subdir_completa.startswith("\\\\") and not ruta_subdir_completa.startswith("\\\\?\\UNC\\") else ruta_subdir_completa
-                                    if os.path.isdir(chk_subdir):
-                                        nombre_carpeta_seccion = os.path.basename(mapeo_secciones.get(prefijo))
-                                        posible_ruta = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
-                                        chk_posible = "\\\\?\\UNC" + posible_ruta[1:] if posible_ruta.startswith("\\\\") and not posible_ruta.startswith("\\\\?\\UNC\\") else posible_ruta
-                                        if os.path.exists(chk_posible):
-                                            ruta_busqueda = posible_ruta
-                                            #print(f"[+] Carpeta operativa encontrada: {ruta_busqueda}")
-                                            enrutado_exitoso = True
-                                            break
-                            if enrutado_exitoso:
-                                break
-                except Exception as ex_op:
-                    print(f"[-] Error escaneando Operativa: {ex_op}")
-
-            chk_busqueda = "\\\\?\\UNC" + ruta_busqueda[1:] if ruta_busqueda.startswith("\\\\") and not ruta_busqueda.startswith("\\\\?\\UNC\\") else ruta_busqueda
-            if not os.path.exists(chk_busqueda):
-                #print(f"[-] La ruta de búsqueda no existe en disco: {ruta_busqueda}")
-                continue
-                
-            archivo_mas_reciente = None
-            mtime_maximo = 0
-
-            #print(f"\n[v] Evaluando Registro ID {registro.id} | Clave estricta: '{clave}'")
-            #print(f"    [INFO DB] es_fecha: {registro.es_fecha} | fecha original en DB: '{registro.fecha}' | numero original en DB: '{registro.numero}'")
-
-            try:
-                items_directorio = os.listdir(chk_busqueda)
-                clave_normalizada = clave.lower()
-                
-                for nombre_item in items_directorio:
-                    ruta_item = os.path.join(ruta_busqueda, nombre_item)
-                    nombre_item_clean = nombre_item.strip()
-                    item_normalizado = re.sub(r'\s+', ' ', nombre_item_clean).lower()
-                    
-                    if not item_normalizado.startswith(clave_normalizada):
-                        continue
-                        
-                    archivos_a_evaluar = []
-                    
-                    chk_item = "\\\\?\\UNC" + ruta_item[1:] if ruta_item.startswith("\\\\") and not ruta_item.startswith("\\\\?\\UNC\\") else ruta_item
-                    if os.path.isdir(chk_item):
-                        #print(f"    [->] Entrando a subcarpeta válida: '{nombre_item}'")
-                        try:
-                            sub_items = os.listdir(chk_item)
-                            for sub_item in sub_items:
-                                archivos_a_evaluar.append((sub_item, os.path.join(ruta_item, sub_item)))
-                        except Exception as e_sub:
-                            pass
-                        #    print(f"        [-] Error al listar subcarpeta: {e_sub}")
-                    else:
-                        archivos_a_evaluar.append((nombre_item, ruta_item))
-                    
-                    for nombre_arch, ruta_arch in archivos_a_evaluar:
-                        arch_norm = re.sub(r'\s+', ' ', nombre_arch.strip()).lower()
-                        
-                        if not arch_norm.startswith(clave_normalizada):
-                            continue
-                            
-                        coincide = False
-                        
-                        if registro.es_fecha:
-                            if registro.fecha:
-                                fecha_obj = registro.fecha
-                                if isinstance(fecha_obj, str):
-                                    parsed = False
-                                    for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d"):
-                                        try:
-                                            fecha_obj = datetime.strptime(fecha_obj.strip(), fmt)
-                                            parsed = True
-                                            break
-                                        except ValueError:
-                                            continue
-                                    if not parsed:
-                                        continue
-
-                                mes_texto = meses_es.get(fecha_obj.month, "")
-                                anio_dos_digitos = fecha_obj.strftime("%y")
-                                criterio_fecha = f"'{mes_texto}' y '{anio_dos_digitos}' estrictos"
-                                
-                                patron_fecha_estricto = rf"{mes_texto}\s*{anio_dos_digitos}\b"
-                                if re.search(patron_fecha_estricto, arch_norm):
-                                    coincide = True
-                      
-                        else:
-                            if registro.numero:
-                                criterio_num = re.sub(r'\s+', ' ', str(registro.numero).strip()).lower()
-                                
-                                if criterio_num in arch_norm:
-                                    coincide = True
-                                else:
-                                    match_fecha_texto = re.search(r"([a-z]{3})\s+(\d{2}|\d{4})", criterio_num)
-                                    if match_fecha_texto:
-                                        mes_buscado = match_fecha_texto.group(1)
-                                        anio_detectado = match_fecha_texto.group(2)
-                                        anio_corto = anio_detectado[-2:]
-                                        patron_flex = rf"{mes_buscado}\s*(20)?{anio_corto}"
-                                        
-                                        if re.search(patron_flex, arch_norm):
-                                            coincide = True
-                                     
-                                    else:
-                                        for m_val in meses_es.values():
-                                            if m_val in criterio_num and m_val in arch_norm:
-                                                coincide = True
-                                                break
-                                        
-                                 
-                        
-                        if coincide:
-                            try:
-                                chk_arch = "\\\\?\\UNC" + ruta_arch[1:] if ruta_arch.startswith("\\\\") and not ruta_arch.startswith("\\\\?\\UNC\\") else ruta_arch
-                                mtime = os.path.getmtime(chk_arch)
-                                if mtime > mtime_maximo:
-                                    mtime_maximo = mtime
-                                    archivo_mas_reciente = ruta_arch
-                            except Exception as e_mtime:
-                                    print(f"        [-] Error al obtener mtime del archivo: {e_mtime}")
-            except Exception as e:
-                continue
-
-            if archivo_mas_reciente:
-                resultados[registro.id] = {
-                    'clave': clave,
-                    'ruta': archivo_mas_reciente,
-                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
-                }
-
-
-    return resultados
-
 
 
 @login_required(login_url='/login/')
@@ -2726,7 +2527,6 @@ def notificarFaltantes(request,expedienteID):
     return redirect('Index:editarExpediente', expediente.id)
 
 
-
 @login_required(login_url='/login/')
 def procesarArchivos(request, id):
     if request.method != "POST":
@@ -2741,8 +2541,9 @@ def procesarArchivos(request, id):
 
     carpeta_socio = None
     try:
-        if os.path.exists(rutaServidor):
-            for nombre_dir in os.listdir(rutaServidor):
+        ruta_scan = "\\\\?\\UNC" + rutaServidor[1:] if rutaServidor.startswith("\\\\") and not rutaServidor.startswith("\\\\?\\UNC\\") else rutaServidor
+        if os.path.exists(ruta_scan):
+            for nombre_dir in os.listdir(ruta_scan):
                 if kepler != "0000" and kepler in nombre_dir:
                     carpeta_socio = os.path.join(rutaServidor, nombre_dir)
                     break
@@ -2753,7 +2554,7 @@ def procesarArchivos(request, id):
         if not carpeta_socio:
             nombre_nueva_carpeta = f"{kepler} {nombre_socio}".strip()
             carpeta_socio = os.path.join(rutaServidor, nombre_nueva_carpeta)
-            os.makedirs(carpeta_socio, exist_ok=True)
+            os.makedirs("\\\\?\\UNC" + carpeta_socio[1:] if carpeta_socio.startswith("\\\\") and not carpeta_socio.startswith("\\\\?\\UNC\\") else carpeta_socio, exist_ok=True)
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error de acceso o creación de carpeta raíz: {str(e)}'}, status=500)
@@ -2826,17 +2627,24 @@ def procesarArchivos(request, id):
                 lineas_asociadas = Linea.objects.filter(expediente=expediente)
 
             if lineas_asociadas.exists():
-                os.makedirs(rutaOperativa, exist_ok=True)
+                chk_operativa = "\\\\?\\UNC" + rutaOperativa[1:] if rutaOperativa.startswith("\\\\") and not rutaOperativa.startswith("\\\\?\\UNC\\") else rutaOperativa
+                os.makedirs(chk_operativa, exist_ok=True)
                 try:
-                    subdirs_operativa = os.listdir(rutaOperativa)
+                    subdirs_operativa = os.listdir(chk_operativa)
                     encontrado = False
                     
                     for linea in lineas_asociadas:
-                        prefijo_linea = f"{linea.numero} "
+                        num_kepler = str(expediente.socio.numeroKepler).strip()
+                        if num_kepler == "" or num_kepler == "0000" or num_kepler == "0" or expediente.socio.numeroKepler is None:
+                            prefijo_linea = f"{linea.numero} CS"
+                        else:
+                            prefijo_linea = f"{linea.numero} {num_kepler} CS"
+                        
                         for subdir in subdirs_operativa:
                             if subdir.strip().startswith(prefijo_linea):
                                 ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
-                                if os.path.isdir(ruta_subdir_completa):
+                                chk_subdir = "\\\\?\\UNC" + ruta_subdir_completa[1:] if ruta_subdir_completa.startswith("\\\\") and not ruta_subdir_completa.startswith("\\\\?\\UNC\\") else ruta_subdir_completa
+                                if os.path.isdir(chk_subdir):
                                     nombre_carpeta_seccion = os.path.basename(ruta_destino_base)
                                     ruta_destino_base = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
                                     encontrado = True
@@ -2847,7 +2655,6 @@ def procesarArchivos(request, id):
                     if not encontrado:
                         linea_primera = lineas_asociadas.first()
                         num_l = str(linea_primera.numero).strip()
-                        kepler_l = kepler
                         abrev_l = str(linea_primera.abreviacion).strip() if linea_primera.abreviacion else ""
                         monto_l = f"{linea_primera.monto:,}"
                         
@@ -2857,11 +2664,17 @@ def procesarArchivos(request, id):
                             y_str = linea_primera.fecha.strftime("%Y")
                             fecha_str = f"{m_str} {y_str}".strip()
                         
-                        nombre_nueva_linea_dir = f"{num_l} {kepler_l} {abrev_l} ${monto_l} {fecha_str}".strip()
+                        num_kepler = str(expediente.socio.numeroKepler).strip()
+                        if num_kepler == "" or num_kepler == "0000" or num_kepler == "0" or expediente.socio.numeroKepler is None:
+                            nombre_nueva_linea_dir = f"{num_l} {abrev_l} ${monto_l} {fecha_str}".strip()
+                        else:
+                            nombre_nueva_linea_dir = f"{num_l} {num_kepler} {abrev_l} ${monto_l} {fecha_str}".strip()
+                            
                         ruta_nueva_linea_completa = os.path.join(rutaOperativa, nombre_nueva_linea_dir)
-                        os.makedirs(ruta_nueva_linea_completa, exist_ok=True)
+                        chk_nueva_linea = "\\\\?\\UNC" + ruta_nueva_linea_completa[1:] if ruta_nueva_linea_completa.startswith("\\\\") and not ruta_nueva_linea_completa.startswith("\\\\?\\UNC\\") else ruta_nueva_linea_completa
+                        os.makedirs(chk_nueva_linea, exist_ok=True)
                         
-                        nombre_carpeta_seccion = os.path.basename(ruta_destino_base)
+                        nombre_carpeta_seccion = os.path.basename(mapeo_secciones.get(prefijo))
                         ruta_destino_base = os.path.join(ruta_nueva_linea_completa, nombre_carpeta_seccion)
                         
                 except Exception:
@@ -2878,29 +2691,42 @@ def procesarArchivos(request, id):
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'No hay renglón en base de datos para la clave {clave_detectada}'})
             continue
 
-        match_fecha = re.search(r'([a-z]{3})\s+(\d{2})$', nombre_sin_ext.strip().lower())
         fecha_procesada = None
-        
-        if match_fecha:
-            mes_texto = match_fecha.group(1)
-            anio_texto = match_fecha.group(2)
-            if mes_texto in meses_map:
-                try:
-                    fecha_procesada = datetime(int(f"20{anio_texto}"), meses_map[mes_texto], 1).date()
-                except ValueError:
-                    pass
+        ultimo_string_num = partes_nombre[-1].strip()
+
+        if len(partes_nombre) >= 2:
+            posible_fecha_str = f"{partes_nombre[-2]} {partes_nombre[-1]}".strip().lower()
+            match_fecha = re.search(r'([a-z]{3})\s+(\d{2})$', posible_fecha_str)
+            if match_fecha:
+                mes_texto = match_fecha.group(1)
+                anio_texto = match_fecha.group(2)
+                if mes_texto in meses_map:
+                    try:
+                        fecha_procesada = datetime(int(f"20{anio_texto}"), meses_map[mes_texto], 1).date()
+                    except ValueError:
+                        pass
 
         if not fecha_procesada:
-            resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': 'Estructura de fecha incorrecta al final del nombre'})
-            continue
+            ultimo_bloque = partes_nombre[-1].strip().lower()
+            match_fecha_unico = re.search(r'([a-z]{3})\s+(\d{2})$', ultimo_bloque)
+            if match_fecha_unico:
+                mes_texto = match_fecha_unico.group(1)
+                anio_texto = match_fecha_unico.group(2)
+                if mes_texto in meses_map:
+                    try:
+                        fecha_procesada = datetime(int(f"20{anio_texto}"), meses_map[mes_texto], 1).date()
+                    except ValueError:
+                        pass
 
         try:
-            os.makedirs(ruta_destino_base, exist_ok=True)
+            chk_destino_base = "\\\\?\\UNC" + ruta_destino_base[1:] if ruta_destino_base.startswith("\\\\") and not ruta_destino_base.startswith("\\\\?\\UNC\\") else ruta_destino_base
+            os.makedirs(chk_destino_base, exist_ok=True)
             
             carpeta_destino_final = None
-            for item in os.listdir(ruta_destino_base):
+            for item in os.listdir(chk_destino_base):
                 ruta_item = os.path.join(ruta_destino_base, item)
-                if os.path.isdir(ruta_item):
+                chk_item = "\\\\?\\UNC" + ruta_item[1:] if ruta_item.startswith("\\\\") and not ruta_item.startswith("\\\\?\\UNC\\") else ruta_item
+                if os.path.isdir(chk_item):
                     item_clean = item.strip()
                     if item_clean.startswith(clave_detectada + " ") or item_clean.startswith(clave_detectada + ".") or item_clean == clave_detectada:
                         carpeta_destino_final = ruta_item
@@ -2908,7 +2734,8 @@ def procesarArchivos(request, id):
             
             if not carpeta_destino_final:
                 carpeta_destino_final = os.path.join(ruta_destino_base, clave_detectada)
-                os.makedirs(carpeta_destino_final, exist_ok=True)
+                chk_destino_final = "\\\\?\\UNC" + carpeta_destino_final[1:] if carpeta_destino_final.startswith("\\\\") and not carpeta_destino_final.startswith("\\\\?\\UNC\\") else carpeta_destino_final
+                os.makedirs(chk_destino_final, exist_ok=True)
             
             nombre_sin_ext_limpio = nombre_sin_ext
             if linea_detectada_num and nombre_sin_ext_limpio.startswith(linea_detectada_num + " "):
@@ -2922,19 +2749,28 @@ def procesarArchivos(request, id):
                     nombre_final_archivo = f"{nombre_sin_ext_limpio}{ext}"
 
             ruta_completa_archivo = os.path.join(carpeta_destino_final, nombre_final_archivo)
+            chk_completa_archivo = "\\\\?\\UNC" + ruta_completa_archivo[1:] if ruta_completa_archivo.startswith("\\\\") and not ruta_completa_archivo.startswith("\\\\?\\UNC\\") else ruta_completa_archivo
             
-            with open(ruta_completa_archivo, 'wb+') as destination:
+            with open(chk_completa_archivo, 'wb+') as destination:
                 for chunk in f.chunks():
                     destination.write(chunk)
             
-            registro_asociado.es_fecha = True
-            registro_asociado.fecha = fecha_procesada
-            registro_asociado.numero = None
+            if fecha_procesada:
+                registro_asociado.es_fecha = True
+                registro_asociado.fecha = fecha_procesada
+                registro_asociado.numero = None
+                msg_exito = f'Copiado y enlazado con fecha {fecha_procesada.strftime("%b %y")}'
+            else:
+                registro_asociado.es_fecha = False
+                registro_asociado.fecha = None
+                registro_asociado.numero = ultimo_string_num
+                msg_exito = f'Copiado y enlazado con parámetro numérico: {ultimo_string_num}'
+
             if not registro_asociado.estatus or registro_asociado.estatus == "":
-                registro_asociado.estatus = "Completo"
+                registro_asociado.estatus = "ok"
             registro_asociado.save()
                     
-            resultados_proceso.append({'archivo': nombre_final_archivo, 'success': True, 'mensaje': f'Copiado y enlazado con fecha {fecha_procesada.strftime("%b %y")}'})
+            resultados_proceso.append({'archivo': nombre_final_archivo, 'success': True, 'mensaje': msg_exito})
         except Exception as e:
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'Error en escritura: {str(e)}'})
 
@@ -2942,6 +2778,195 @@ def procesarArchivos(request, id):
         'global_success': any(r['success'] for r in resultados_proceso),
         'resultados': resultados_proceso
     })
+
+def checarRuta(identificador_socio, secciones):
+    rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+
+    carpeta_socio = None
+    try:
+        ruta_scan = "\\\\?\\UNC" + rutaServidor[1:] if rutaServidor.startswith("\\\\") and not rutaServidor.startswith("\\\\?\\UNC\\") else rutaServidor
+        dirs_servidor = os.listdir(ruta_scan)
+        for nombre_dir in dirs_servidor:
+            if identificador_socio in nombre_dir:
+                carpeta_socio = os.path.join(rutaServidor, nombre_dir)
+                break
+    except Exception as e:
+        return {}
+
+    if not carpeta_socio:
+        return {}
+
+    rutaMaestra = os.path.join(carpeta_socio, "Maestra")
+    rutaOperativa = os.path.join(carpeta_socio, "Operativa")
+
+    mapeo_secciones = {
+        "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
+        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
+        "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
+        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
+        "5": os.path.join(rutaOperativa, "V. Contratos"),
+        "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
+        "7": os.path.join(rutaOperativa, "VII. Correspondencia")
+    }
+    
+    meses_es = {
+        1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
+        7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"
+    }
+    
+    resultados = {}
+
+    for seccion in secciones:
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado', 'seccion__expediente')
+        
+        for registro in registros_existentes:
+            clave = str(registro.apartado.clave).strip()
+            prefijo = clave.split('.')[0]
+            
+            ruta_busqueda = mapeo_secciones.get(prefijo)
+
+            if not ruta_busqueda:
+                continue
+                
+            chk_busqueda = "\\\\?\\UNC" + ruta_busqueda[1:] if ruta_busqueda.startswith("\\\\") and not ruta_busqueda.startswith("\\\\?\\UNC\\") else ruta_busqueda
+            if prefijo in ["3", "4", "5", "6", "7"] and not os.path.exists(chk_busqueda):
+                try:
+                    expediente_actual = registro.seccion.expediente
+                    lineas_asociadas = Linea.objects.filter(expediente=expediente_actual)
+                    
+                    chk_operativa = "\\\\?\\UNC" + rutaOperativa[1:] if rutaOperativa.startswith("\\\\") and not rutaOperativa.startswith("\\\\?\\UNC\\") else rutaOperativa
+                    if os.path.exists(chk_operativa):
+                        subdirs_operativa = os.listdir(chk_operativa)
+                        enrutado_exitoso = False
+                        
+                        for linea in lineas_asociadas:
+                            num_kepler = str(expediente_actual.socio.numeroKepler).strip()
+                            
+                            if num_kepler == "" or num_kepler == "0000" or num_kepler == "0" or expediente_actual.socio.numeroKepler is None:
+                                prefijo_linea = f"{linea.numero} CS"
+                            else:
+                                prefijo_linea = f"{linea.numero} {num_kepler} CS"
+                            
+                            for subdir in subdirs_operativa:
+                                if subdir.strip().startswith(prefijo_linea):
+                                    ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
+                                    chk_subdir = "\\\\?\\UNC" + ruta_subdir_completa[1:] if ruta_subdir_completa.startswith("\\\\") and not ruta_subdir_completa.startswith("\\\\?\\UNC\\") else ruta_subdir_completa
+                                    if os.path.isdir(chk_subdir):
+                                        nombre_carpeta_seccion = os.path.basename(mapeo_secciones.get(prefijo))
+                                        posible_ruta = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
+                                        chk_posible = "\\\\?\\UNC" + posible_ruta[1:] if posible_ruta.startswith("\\\\") and not posible_ruta.startswith("\\\\?\\UNC\\") else posible_ruta
+                                        if os.path.exists(chk_posible):
+                                            ruta_busqueda = posible_ruta
+                                            enrutado_exitoso = True
+                                            break
+                            if enrutado_exitoso:
+                                break
+                except Exception as ex_op:
+                    print(f"[-] Error escaneando Operativa: {ex_op}")
+
+            chk_busqueda = "\\\\?\\UNC" + ruta_busqueda[1:] if ruta_busqueda.startswith("\\\\") and not ruta_busqueda.startswith("\\\\?\\UNC\\") else ruta_busqueda
+            if not os.path.exists(chk_busqueda):
+                continue
+                
+            archivo_mas_reciente = None
+            mtime_maximo = 0
+
+            try:
+                items_directorio = os.listdir(chk_busqueda)
+                clave_normalizada = clave.lower()
+                
+                for nombre_item in items_directorio:
+                    ruta_item = os.path.join(ruta_busqueda, nombre_item)
+                    nombre_item_clean = nombre_item.strip()
+                    item_normalizado = re.sub(r'\s+', ' ', nombre_item_clean).lower()
+                    
+                    if not item_normalizado.startswith(clave_normalizada):
+                        continue
+                        
+                    archivos_a_evaluar = []
+                    
+                    chk_item = "\\\\?\\UNC" + ruta_item[1:] if ruta_item.startswith("\\\\") and not ruta_item.startswith("\\\\?\\UNC\\") else ruta_item
+                    if os.path.isdir(chk_item):
+                        try:
+                            sub_items = os.listdir(chk_item)
+                            for sub_item in sub_items:
+                                archivos_a_evaluar.append((sub_item, os.path.join(ruta_item, sub_item)))
+                        except Exception as e_sub:
+                            pass
+                    else:
+                        archivos_a_evaluar.append((nombre_item, ruta_item))
+                    
+                    for nombre_arch, ruta_arch in archivos_a_evaluar:
+                        arch_norm = re.sub(r'\s+', ' ', nombre_arch.strip()).lower()
+                        
+                        if not arch_norm.startswith(clave_normalizada):
+                            continue
+                            
+                        coincide = False
+                        
+                        if registro.es_fecha:
+                            if registro.fecha:
+                                fecha_obj = registro.fecha
+                                if isinstance(fecha_obj, str):
+                                    parsed = False
+                                    for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d"):
+                                        try:
+                                            fecha_obj = datetime.strptime(fecha_obj.strip(), fmt)
+                                            parsed = True
+                                            break
+                                        except ValueError:
+                                            continue
+                                    if not parsed:
+                                        continue
+
+                                mes_texto = meses_es.get(fecha_obj.month, "")
+                                anio_dos_digitos = fecha_obj.strftime("%y")
+                                
+                                patron_fecha_estricto = rf"{mes_texto}\s*{anio_dos_digitos}\b"
+                                if re.search(patron_fecha_estricto, arch_norm):
+                                    coincide = True
+                        else:
+                            if registro.numero:
+                                criterio_num = re.sub(r'\s+', ' ', str(registro.numero).strip()).lower()
+                                
+                                if criterio_num in arch_norm:
+                                    coincide = True
+                                else:
+                                    match_fecha_texto = re.search(r"([a-z]{3})\s+(\d{2}|\d{4})", criterio_num)
+                                    if match_fecha_texto:
+                                        mes_buscado = match_fecha_texto.group(1)
+                                        anio_detectado = match_fecha_texto.group(2)
+                                        anio_corto = anio_detectado[-2:]
+                                        patron_flex = rf"{mes_buscado}\s*(20)?{anio_corto}"
+                                        
+                                        if re.search(patron_flex, arch_norm):
+                                            coincide = True
+                                    else:
+                                        for m_val in meses_es.values():
+                                            if m_val in criterio_num and m_val in arch_norm:
+                                                coincide = True
+                                                break
+                        
+                        if coincide:
+                            try:
+                                chk_arch = "\\\\?\\UNC" + ruta_arch[1:] if ruta_arch.startswith("\\\\") and not ruta_arch.startswith("\\\\?\\UNC\\") else ruta_arch
+                                mtime = os.path.getmtime(chk_arch)
+                                if mtime > mtime_maximo:
+                                    mtime_maximo = mtime
+                                    archivo_mas_reciente = ruta_arch
+                            except Exception as e_mtime:
+                                print(f"        [-] Error al obtener mtime del archivo: {e_mtime}")
+            except Exception as e:
+                continue
+
+            if archivo_mas_reciente:
+                resultados[registro.id] = {
+                    'clave': clave,
+                    'ruta': archivo_mas_reciente,
+                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
+                }
+
+    return resultados
 
 
 @login_required(login_url='/login/')
@@ -2967,7 +2992,16 @@ def avancesMovimientos(request):
 
     return render(request, 'Index/avancesMovimientos.html', contest)
 
+"""Temas a considerar:
 
+
+
+2.-Crear copias cuando se suben mas de 1 con la misma clave 
+3.-Formato para carpetas al cargar archivo
+5.-Apartado para archivados
+
+
+"""
 
 
 

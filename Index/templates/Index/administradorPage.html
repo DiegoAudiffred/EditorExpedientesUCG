@@ -70,6 +70,7 @@
         <thead>
             <tr>
                 <th>Usuario</th>
+                <th>Correo</th>
                 <th>Rol</th>
                 <th>Último Login</th>
                 <th>Estatus</th>
@@ -81,6 +82,7 @@
             <tr
                 class="{% if user.is_active %} {% if current_user_id == user.id %}  bg-quinto {% else %}  bg-tercero {% endif %} {% else %} bg-corporateGray900 {% endif %}">
                 <td class="text-white fw-bold text-truncate">{{ user.username }} </td>
+                <td class="text-white fw-bold text-truncate">{{ user.email }} </td>
                 <td><span class="badge bg-primary">{{ user.roles }}</span></td>
 
                 <td class="text-white fw-bold">

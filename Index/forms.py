@@ -367,12 +367,15 @@ class EditarSocio(forms.ModelForm):
 class ModificarApartado(forms.ModelForm):
     class Meta:
         model = ApartadoCatalogo
-        fields = ['tipoDeSeccion', 'clave', 'descripcion', 'areaDondeAplica']
+        fields = ['tipoDeSeccion', 'clave', 'descripcion', 'areaDondeAplica','nombreArchivo']
         widgets = {
             'tipoDeSeccion': forms.Select(attrs={'class': 'form-select  border border-3 border-primary my-2'}),
             'clave': forms.TextInput(attrs={'class': 'form-control  border border-3 border-primary my-2'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control  border border-3 border-primary my-2', 'rows': 3}),
             'areaDondeAplica': forms.Select(attrs={'class': 'form-select  border border-3 border-primary my-2'}),
+            'nombreArchivo': forms.Textarea(attrs={'class': 'form-control  border border-3 border-primary my-2', 'rows': 1}),
+
+            
         }
 
 class SelectorApartadoForm(forms.Form):
