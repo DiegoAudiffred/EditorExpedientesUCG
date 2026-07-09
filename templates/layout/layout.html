@@ -27,19 +27,17 @@
 </head>
 
 <body class="d-flex flex-column min-vh-100">
-    <!-- Navbar -->
+
     {% include 'layout/navbar.html' %}
 
-    <!-- Contenedor principal que ocupa todo el espacio disponible -->
     <main class="flex-grow-1">
         {% block body %}
         {% endblock %}
     </main>
 
-    <!-- Footer siempre al final -->
     {% include 'layout/footer.html' %}
 
-    <!-- Scripts -->
+
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"
         integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB"
         crossorigin="anonymous"></script>

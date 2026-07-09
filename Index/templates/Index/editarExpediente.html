@@ -766,9 +766,7 @@
                 target="_blank">Exportar a Excel</a>
             <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
                 valores vacios</a>
-                 {% if request.user.roles == 'Administrador' %}     
                             {% include 'Index/modalCargarArchivos.html' %}
-                 {% endif %}
 
 
           

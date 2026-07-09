@@ -1,4 +1,5 @@
 import csv
+import ctypes
 import email
 from io import BytesIO
 import mimetypes
@@ -468,16 +469,42 @@ def lineaCrear(request, id):
 
 def servirArchivo(request):
     ruta_archivo = request.GET.get('ruta')
-    if not ruta_archivo or not os.path.exists(ruta_archivo):
+    if not ruta_archivo:
         raise Http404("El archivo no existe")
 
-    nombre_archivo = os.path.basename(ruta_archivo)
-    mime_type, _ = mimetypes.guess_type(ruta_archivo)
+    def obtener_ruta_larga_windows(ruta):
+        try:
+            if not ruta.startswith("\\\\"):
+                return ruta
+            ruta_preparada = "\\\\?\\UNC" + ruta[1:] if not ruta.startswith("\\\\?\\UNC\\") else ruta
+            buf = ctypes.create_unicode_buffer(2048)
+            get_long_path_name = ctypes.windll.kernel32.GetLongPathNameW
+            resultado = get_long_path_name(ruta_preparada, buf, 2048)
+            if resultado > 0:
+                ruta_larga = buf.value
+                if ruta_larga.startswith("\\\\?\\UNC\\"):
+                    return "\\\\" + ruta_larga[8:]
+                return ruta_larga
+        except Exception:
+            pass
+        return ruta
+
+    ruta_real = obtener_ruta_larga_windows(ruta_archivo)
+    chk_ruta = "\\\\?\\UNC" + ruta_real[1:] if ruta_real.startswith("\\\\") and not ruta_real.startswith("\\\\?\\UNC\\") else ruta_real
+
+    if not os.path.exists(chk_ruta) or os.path.isdir(chk_ruta):
+        ruta_real = obtener_ruta_larga_windows(ruta_archivo.upper())
+        chk_ruta = "\\\\?\\UNC" + ruta_real[1:] if ruta_real.startswith("\\\\") and not ruta_real.startswith("\\\\?\\UNC\\") else ruta_real
+        
+        if not os.path.exists(chk_ruta) or os.path.isdir(chk_ruta):
+            raise Http404("El archivo no existe")
+
+    nombre_archivo = os.path.basename(ruta_real)
+    mime_type, _ = mimetypes.guess_type(chk_ruta)
     
-    response = FileResponse(open(ruta_archivo, 'rb'), content_type=mime_type)
+    response = FileResponse(open(chk_ruta, 'rb'), content_type=mime_type)
     response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
     return response
-
 
         
         
@@ -1007,6 +1034,7 @@ def obtener_apartado_data(request, apartado_id):
         'tipoDeSeccion': apartado.tipoDeSeccion,
         'clave': apartado.clave,
         'descripcion': apartado.descripcion,
+        'nombreArchivo': apartado.nombreArchivo,
         'areaDondeAplica': apartado.areaDondeAplica,
     }
     return JsonResponse(data)
@@ -2549,6 +2577,23 @@ def procesarArchivos(request, id):
     nombre_socio = str(expediente.socio.nombre).strip().upper()
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
+    def obtener_ruta_larga_windows(ruta):
+        try:
+            if not ruta.startswith("\\\\"):
+                return ruta
+            ruta_preparada = "\\\\?\\UNC" + ruta[1:] if not ruta.startswith("\\\\?\\UNC\\") else ruta
+            buf = ctypes.create_unicode_buffer(2048)
+            get_long_path_name = ctypes.windll.kernel32.GetLongPathNameW
+            resultado = get_long_path_name(ruta_preparada, buf, 2048)
+            if resultado > 0:
+                ruta_larga = buf.value
+                if ruta_larga.startswith("\\\\?\\UNC\\"):
+                    return "\\\\" + ruta_larga[8:]
+                return ruta_larga
+        except Exception:
+            pass
+        return ruta
+
     carpeta_socio = None
     try:
         ruta_scan = "\\\\?\\UNC" + rutaServidor[1:] if rutaServidor.startswith("\\\\") and not rutaServidor.startswith("\\\\?\\UNC\\") else rutaServidor
@@ -2569,6 +2614,7 @@ def procesarArchivos(request, id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error de acceso o creación de carpeta raíz: {str(e)}'}, status=500)
 
+    carpeta_socio = obtener_ruta_larga_windows(carpeta_socio)
     rutaMaestra = os.path.join(carpeta_socio, "Maestra")
     rutaOperativa = os.path.join(carpeta_socio, "Operativa")
 
@@ -2624,7 +2670,7 @@ def procesarArchivos(request, id):
             clave_detectada = partes_nombre[0].strip().rstrip('.')
 
         partes_c = clave_detectada.split('.')
-        if len(partes_c) == 2 and len(partes_c[1]) == 3:
+        if len(partes_c) == 2 and len(partes_c[1]) >= 3:
             clave_destino_carpeta = f"{partes_c[0]}.{partes_c[1][:2]}"
         else:
             clave_destino_carpeta = clave_detectada
@@ -2636,6 +2682,8 @@ def procesarArchivos(request, id):
             resultados_proceso.append({'archivo': nombre_archivo, 'success': False, 'mensaje': f'Clave "{clave_detectada}" no mapea a Maestra/Operativa'})
             continue
 
+        ruta_destino_base = obtener_ruta_larga_windows(ruta_destino_base)
+
         if prefijo in ["3", "4", "5", "6", "7"]:
             if linea_detectada_num:
                 lineas_asociadas = Linea.objects.filter(expediente=expediente, numero=linea_detectada_num)
@@ -2643,7 +2691,8 @@ def procesarArchivos(request, id):
                 lineas_asociadas = Linea.objects.filter(expediente=expediente)
 
             if lineas_asociadas.exists():
-                chk_operativa = "\\\\?\\UNC" + rutaOperativa[1:] if rutaOperativa.startswith("\\\\") and not rutaOperativa.startswith("\\\\?\\UNC\\") else rutaOperativa
+                rutaOperativa_larga = obtener_ruta_larga_windows(rutaOperativa)
+                chk_operativa = "\\\\?\\UNC" + rutaOperativa_larga[1:] if rutaOperativa_larga.startswith("\\\\") and not rutaOperativa_larga.startswith("\\\\?\\UNC\\") else rutaOperativa_larga
                 os.makedirs(chk_operativa, exist_ok=True)
                 try:
                     subdirs_operativa = os.listdir(chk_operativa)
@@ -2658,7 +2707,8 @@ def procesarArchivos(request, id):
                         
                         for subdir in subdirs_operativa:
                             if subdir.strip().startswith(prefijo_linea):
-                                ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
+                                ruta_subdir_completa = os.path.join(rutaOperativa_larga, subdir)
+                                ruta_subdir_completa = obtener_ruta_larga_windows(ruta_subdir_completa)
                                 chk_subdir = "\\\\?\\UNC" + ruta_subdir_completa[1:] if ruta_subdir_completa.startswith("\\\\") and not ruta_subdir_completa.startswith("\\\\?\\UNC\\") else ruta_subdir_completa
                                 if os.path.isdir(chk_subdir):
                                     nombre_carpeta_seccion = os.path.basename(ruta_destino_base)
@@ -2686,7 +2736,8 @@ def procesarArchivos(request, id):
                         else:
                             nombre_nueva_linea_dir = f"{num_l} {num_kepler} {abrev_l} ${monto_l} {fecha_str}".strip()
                             
-                        ruta_nueva_linea_completa = os.path.join(rutaOperativa, nombre_nueva_linea_dir)
+                        ruta_nueva_linea_completa = os.path.join(rutaOperativa_larga, nombre_nueva_linea_dir)
+                        ruta_nueva_linea_completa = obtener_ruta_larga_windows(ruta_nueva_linea_completa)
                         chk_nueva_linea = "\\\\?\\UNC" + ruta_nueva_linea_completa[1:] if ruta_nueva_linea_completa.startswith("\\\\") and not ruta_nueva_linea_completa.startswith("\\\\?\\UNC\\") else ruta_nueva_linea_completa
                         os.makedirs(chk_nueva_linea, exist_ok=True)
                         
@@ -2697,7 +2748,7 @@ def procesarArchivos(request, id):
                     pass
 
         registro_asociado = mapeo_claves_registro.get(clave_detectada)
-        if not registro_asociado and len(partes_c) == 2 and len(partes_c[1]) > 2:
+        if not registro_asociado and len(partes_c) == 2 and len(partes_c[1]) >= 2:
             clave_truncada = f"{partes_c[0]}.{partes_c[1][:2]}"
             registro_asociado = mapeo_claves_registro.get(clave_truncada)
 
@@ -2749,12 +2800,14 @@ def procesarArchivos(request, id):
                         pass
 
         try:
+            ruta_destino_base = obtener_ruta_larga_windows(ruta_destino_base)
             chk_destino_base = "\\\\?\\UNC" + ruta_destino_base[1:] if ruta_destino_base.startswith("\\\\") and not ruta_destino_base.startswith("\\\\?\\UNC\\") else ruta_destino_base
             os.makedirs(chk_destino_base, exist_ok=True)
             
             carpeta_destino_final = None
             for item in os.listdir(chk_destino_base):
                 ruta_item = os.path.join(ruta_destino_base, item)
+                ruta_item = obtener_ruta_larga_windows(ruta_item)
                 chk_item = "\\\\?\\UNC" + ruta_item[1:] if ruta_item.startswith("\\\\") and not ruta_item.startswith("\\\\?\\UNC\\") else ruta_item
                 if os.path.isdir(chk_item):
                     item_clean = item.strip()
@@ -2770,6 +2823,7 @@ def procesarArchivos(request, id):
                     nombre_carpeta = clave_destino_carpeta
                     
                 carpeta_destino_final = os.path.join(ruta_destino_base, nombre_carpeta)
+                carpeta_destino_final = obtener_ruta_larga_windows(carpeta_destino_final)
                 chk_destino_final = "\\\\?\\UNC" + carpeta_destino_final[1:] if carpeta_destino_final.startswith("\\\\") and not carpeta_destino_final.startswith("\\\\?\\UNC\\") else carpeta_destino_final
                 os.makedirs(chk_destino_final, exist_ok=True)
             
@@ -2785,6 +2839,7 @@ def procesarArchivos(request, id):
                     nombre_final_archivo = f"{nombre_sin_ext_limpio}{ext}"
 
             ruta_completa_archivo = os.path.join(carpeta_destino_final, nombre_final_archivo)
+            ruta_completa_archivo = obtener_ruta_larga_windows(ruta_completa_archivo)
             chk_completa_archivo = "\\\\?\\UNC" + ruta_completa_archivo[1:] if ruta_completa_archivo.startswith("\\\\") and not ruta_completa_archivo.startswith("\\\\?\\UNC\\") else ruta_completa_archivo
             
             with open(chk_completa_archivo, 'wb+') as destination:
@@ -2814,6 +2869,8 @@ def procesarArchivos(request, id):
         'global_success': any(r['success'] for r in resultados_proceso),
         'resultados': resultados_proceso
     })
+
+
 def checarRuta(identificador_socio, secciones):
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
