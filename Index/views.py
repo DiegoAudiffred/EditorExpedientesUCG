@@ -257,6 +257,8 @@ def editarExpediente(request, id):
     if request.method == "POST":
         post = request.POST
         datos_agrupados = {}
+        
+        es_solo_credito = "guardar_credito" in post
 
         for key, value in post.items():
             if not key.startswith("registro-"):
@@ -288,47 +290,52 @@ def editarExpediente(request, id):
            
             if not registro:
                 continue
-           
-            if registro.seccion.tipoDeSeccion == 'VII' and 'descripcion_libre' in campos:
-                registro.comentario = campos['descripcion_libre']
-            elif 'comentario' in campos:
-                registro.comentario = campos['comentario']
+            
+            if es_solo_credito:
+                if 'comentarioCredito' in campos:
+                    registro.comentarioCredito = campos['comentarioCredito']
+                    registro.save()
+            else:
+                if registro.seccion.tipoDeSeccion == 'VII' and 'descripcion_libre' in campos:
+                    registro.comentario = campos['descripcion_libre']
+                elif 'comentario' in campos:
+                    registro.comentario = campos['comentario']
 
-            if 'estatus' in campos:
-                registro.estatus = campos['estatus']
+                if 'estatus' in campos:
+                    registro.estatus = campos['estatus']
 
-            if 'comentarioCredito' in campos:
-                registro.comentarioCredito = campos['comentarioCredito']
-           
-            if 'es_fecha' in campos:
-                registro.es_fecha = campos['es_fecha'].lower() == 'true'
+                if 'comentarioCredito' in campos:
+                    registro.comentarioCredito = campos['comentarioCredito']
+               
+                if 'es_fecha' in campos:
+                    registro.es_fecha = campos['es_fecha'].lower() == 'true'
 
-            if registro.es_fecha:
-                registro.numero = None
-                if 'fecha_date' in campos:
-                    val_fecha = campos['fecha_date']
-                    if val_fecha:
-                        try:
-                            registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
-                        except ValueError:
+                if registro.es_fecha:
+                    registro.numero = None
+                    if 'fecha_date' in campos:
+                        val_fecha = campos['fecha_date']
+                        if val_fecha:
+                            try:
+                                registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
+                            except ValueError:
+                                registro.fecha = None
+                        else:
                             registro.fecha = None
                     else:
                         registro.fecha = None
                 else:
                     registro.fecha = None
-            else:
-                registro.fecha = None
-                if 'fecha_num' in campos:
-                    val_numero = campos['fecha_num']
-                    if val_numero:
-                        try:
-                            registro.numero = val_numero
-                        except ValueError:
+                    if 'fecha_num' in campos:
+                        val_numero = campos['fecha_num']
+                        if val_numero:
+                            try:
+                                registro.numero = val_numero
+                            except ValueError:
+                                registro.numero = None
+                        else:
                             registro.numero = None
-                    else:
-                        registro.numero = None
-           
-            registro.save()
+               
+                registro.save()
 
         messages.success(request, 'Datos guardados con éxito.')
         return redirect(reverse('Index:editarExpediente', args=[expediente.pk]))
@@ -408,8 +415,6 @@ def editarExpediente(request, id):
     return render(request, 'Index/editarExpediente.html', context)
 
 
-
-
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
     expedienteInstance = get_object_or_404(Expediente, pk=id)
@@ -466,7 +471,6 @@ def lineaCrear(request, id):
     return JsonResponse({'status': 'error'}, status=405)
 
 @login_required(login_url='/login/')
-
 def servirArchivo(request):
     ruta_archivo = request.GET.get('ruta')
     if not ruta_archivo:
@@ -505,9 +509,7 @@ def servirArchivo(request):
     response = FileResponse(open(chk_ruta, 'rb'), content_type=mime_type)
     response['Content-Disposition'] = f'inline; filename="{nombre_archivo}"'
     return response
-
-        
-        
+    
 @login_required(login_url='/login/')
 def expediente_cambiar_usuario(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -535,6 +537,7 @@ def cambiarUsuarioCredito(request, id):
 
 
     return redirect('Index:editarExpediente', id=expediente.id)
+
 @login_required(login_url='/login/')
 def expediente_llenar(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -550,7 +553,6 @@ def expediente_llenar(request, id):
                     registro.estatus = registro.estatus
                 registro.save()
     return redirect('Index:editarExpediente', id=expediente.id)
-
 
 @login_required(login_url='/login/')
 def crearExpediente(request):
@@ -737,6 +739,7 @@ def _generar_con_debug_extremo(seccion_obj, area_socio, linea_instance=None):
                 seccion=seccion_obj, 
                 apartado=ap
             )
+
 @login_required(login_url='/login/')    
 def expediente_eliminar(request,id):
     expediente = Expediente.objects.get(id=id)
@@ -744,8 +747,6 @@ def expediente_eliminar(request,id):
     expediente.eliminado = True
     expediente.save()
     return redirect('Index:expedientesLayout')
-
-
 
 def correoParaRevision(expediente,reenviado):
     destinatario = ["portiz@ucg.com.mx","dCorrea@ucg.com.mx", "mrubio@ucg.com.mx",]#"daudiffred@ucg.com.mx"
@@ -929,7 +930,6 @@ def rechazarExpediente(request,expedienteID):
         print("Error al enviar correo:", e)
     return redirect('Index:editarExpediente', expediente.id)
 
-
 def darAlta(expediente, nuevo_estatus_nombre, usuario):
     #estadoActual = EstadosFechas.objects.filter(
     #    expediente=expediente, 
@@ -946,6 +946,7 @@ def darAlta(expediente, nuevo_estatus_nombre, usuario):
             fecha=datetime.now(),
             usuario=usuario
         )
+
 @login_required(login_url='/login/')
 def cambiarEstado(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
@@ -2871,21 +2872,133 @@ def procesarArchivos(request, id):
     })
 
 
+
+def _to_unc(ruta):
+    """Convierte una ruta \\\\servidor\\... a formato largo \\\\?\\UNC\\servidor\\...
+    (necesario en Windows para rutas largas)."""
+    if ruta.startswith("\\\\") and not ruta.startswith("\\\\?\\UNC\\"):
+        return "\\\\?\\UNC" + ruta[1:]
+    return ruta
+
+
+def _match_fecha(registro, arch_norm, meses_es, indent="      "):
+    """
+    Determina si un archivo coincide con la FECHA del registro.
+
+    Regla estricta: solo aplica si registro.es_fecha == True y registro.fecha
+    existe y se puede parsear. El patrón buscado es "<mes_texto><año 2 dígitos>"
+    (ej. "may26") permitiendo espacios entre ambos, tal como en
+    "1.01 conoce a tu socio may 26".
+
+    NOTA: si tus archivos usan formato numérico tipo "15/05/2026" en vez de
+    "may 26", agrega ese patrón aquí (ver comentario más abajo).
+    """
+    if not (registro.es_fecha and registro.fecha):
+        print(f"{indent}[FECHA] registro.es_fecha=False o sin fecha asignada -> no aplica")
+        return False
+
+    fecha_obj = registro.fecha
+    if isinstance(fecha_obj, str):
+        parsed = False
+        for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d"):
+            try:
+                fecha_obj = datetime.strptime(fecha_obj.strip(), fmt)
+                parsed = True
+                break
+            except ValueError:
+                continue
+        if not parsed:
+            print(f"{indent}[FECHA] No se pudo parsear '{registro.fecha}' -> no aplica")
+            return False
+
+    mes_texto = meses_es.get(fecha_obj.month, "").lower()
+    anio_dos_digitos = fecha_obj.strftime("%y")
+
+    # Patrón 1: "may26" / "may 26" (mes en texto + año 2 dígitos)
+    patron_texto = rf"{mes_texto}\s*{anio_dos_digitos}\b"
+
+    # Patrón 2 (opcional): fecha numérica tipo dd/mm/aaaa o dd-mm-aaaa,
+    # útil si algunos archivos usan "15/05/2026" en vez de "may 26".
+    dia = fecha_obj.strftime("%d")
+    mes_num = fecha_obj.strftime("%m")
+    anio_completo = fecha_obj.strftime("%Y")
+    patron_numerico = rf"{dia}[\/\-\s]{mes_num}[\/\-\s]{anio_completo}"
+
+    print(f"{indent}[FECHA] Buscando '{mes_texto} {anio_dos_digitos}' (regex texto: {patron_texto}) "
+          f"o '{dia}/{mes_num}/{anio_completo}' (regex numérico: {patron_numerico}) en '{arch_norm}'")
+
+    if re.search(patron_texto, arch_norm):
+        print(f"{indent}[FECHA] \u2714 Coincidencia por patrón de texto (mes+año)")
+        return True
+
+    if re.search(patron_numerico, arch_norm):
+        print(f"{indent}[FECHA] \u2714 Coincidencia por patrón numérico (dd/mm/aaaa)")
+        return True
+
+    print(f"{indent}[FECHA] \u2718 Sin coincidencia de fecha")
+    return False
+
+
+def _match_identificador(registro, arch_norm, indent="      "):
+    """
+    Determina si un archivo coincide con el NÚMERO/IDENTIFICADOR del registro.
+
+    Regla estricta: solo aplica si registro.es_fecha == False. El valor de
+    registro.numero (o registro.identificador si existiera) debe aparecer
+    literalmente en el nombre del archivo, ej. "ggpt" en
+    "1.01 conoce a tu socio ggpt".
+    """
+    if registro.es_fecha:
+        print(f"{indent}[ID] registro.es_fecha=True -> este registro se valida por fecha, no por identificador")
+        return False
+
+    criterio_val = None
+    if registro.numero:
+        criterio_val = re.sub(r'\s+', ' ', str(registro.numero).strip()).lower()
+    elif hasattr(registro, 'identificador') and registro.identificador:
+        criterio_val = re.sub(r'\s+', ' ', str(registro.identificador).strip()).lower()
+
+    if not criterio_val:
+        print(f"{indent}[ID] Registro sin numero/identificador asignado -> no aplica")
+        return False
+
+    print(f"{indent}[ID] Buscando identificador '{criterio_val}' en '{arch_norm}'")
+    if criterio_val in arch_norm:
+        print(f"{indent}[ID] \u2714 Coincidencia por identificador")
+        return True
+
+    print(f"{indent}[ID] \u2718 Sin coincidencia de identificador")
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Función principal
+# ---------------------------------------------------------------------------
+
 def checarRuta(identificador_socio, secciones):
+
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+
+    print(f"\n{'='*80}\n[INICIO] checarRuta(identificador_socio='{identificador_socio}', secciones={secciones})\n{'='*80}")
 
     carpeta_socio = None
     try:
-        ruta_scan = "\\\\?\\UNC" + rutaServidor[1:] if rutaServidor.startswith("\\\\") and not rutaServidor.startswith("\\\\?\\UNC\\") else rutaServidor
+        ruta_scan = _to_unc(rutaServidor)
+        print(f"[1] Escaneando servidor raíz: {ruta_scan}")
         dirs_servidor = os.listdir(ruta_scan)
         for nombre_dir in dirs_servidor:
             if identificador_socio in nombre_dir:
                 carpeta_socio = os.path.join(rutaServidor, nombre_dir)
+                print(f"[1] \u2714 Carpeta de socio encontrada: {carpeta_socio}")
                 break
+        if not carpeta_socio:
+            print(f"[1] \u2718 Ningún directorio contiene '{identificador_socio}' en el servidor")
     except Exception as e:
+        print(f"[1] \u2718 ERROR al listar el servidor: {e}")
         return {}
 
     if not carpeta_socio:
+        print("[FIN] No se encontró carpeta de socio -> se retorna {}")
         return {}
 
     rutaMaestra = os.path.join(carpeta_socio, "Maestra")
@@ -2900,171 +3013,178 @@ def checarRuta(identificador_socio, secciones):
         "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
         "7": os.path.join(rutaOperativa, "VII. Correspondencia")
     }
-    
+
     meses_es = {
         1: "ene", 2: "feb", 3: "mar", 4: "abr", 5: "may", 6: "jun",
         7: "jul", 8: "ago", 9: "sep", 10: "oct", 11: "nov", 12: "dic"
     }
-    
+
     resultados = {}
 
     for seccion in secciones:
-        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado', 'seccion__expediente')
-        
+        print(f"\n[2] --- Procesando sección: {seccion} ---")
+        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related(
+            'apartado', 'seccion__expediente'
+        )
+        print(f"[2] {registros_existentes.count()} registro(s) encontrados en BD para esta sección")
+
         for registro in registros_existentes:
+            print(f"\n  [3] Registro id={registro.id} | clave={registro.apartado.clave} | "
+                  f"es_fecha={registro.es_fecha} | fecha={registro.fecha} | numero={registro.numero}")
+
             clave = str(registro.apartado.clave).strip()
-            
             partes_c = clave.split('.')
             if len(partes_c) == 2 and len(partes_c[1]) == 3:
                 clave_busqueda = f"{partes_c[0]}.{partes_c[1][:2]}"
             else:
                 clave_busqueda = clave
+            print(f"  [3] clave_busqueda normalizada: '{clave_busqueda}'")
 
             prefijo = clave_busqueda.split('.')[0]
-            ruta_busqueda = mapeo_secciones.get(prefijo)
+            ruta_base_seccion = mapeo_secciones.get(prefijo)
 
-            if not ruta_busqueda:
+            if not ruta_base_seccion:
+                print(f"  [3] \u2718 Prefijo '{prefijo}' no está en mapeo_secciones -> se omite registro")
                 continue
-                
-            chk_busqueda = "\\\\?\\UNC" + ruta_busqueda[1:] if ruta_busqueda.startswith("\\\\") and not ruta_busqueda.startswith("\\\\?\\UNC\\") else ruta_busqueda
-            if prefijo in ["3", "4", "5", "6", "7"] and not os.path.exists(chk_busqueda):
+
+            ruta_final_busqueda = ruta_base_seccion
+            print(f"  [4] Ruta base de la sección: {ruta_base_seccion}")
+
+            # ---- Enrutamiento por línea de crédito para secciones III-VII ----
+            if prefijo in ["3", "4", "5", "6", "7"]:
                 try:
                     expediente_actual = registro.seccion.expediente
                     lineas_asociadas = Linea.objects.filter(expediente=expediente_actual)
-                    
-                    chk_operativa = "\\\\?\\UNC" + rutaOperativa[1:] if rutaOperativa.startswith("\\\\") and not rutaOperativa.startswith("\\\\?\\UNC\\") else rutaOperativa
+                    print(f"  [4] Líneas asociadas al expediente: {[l.numero for l in lineas_asociadas]}")
+
+                    chk_operativa = _to_unc(rutaOperativa)
                     if os.path.exists(chk_operativa):
                         subdirs_operativa = os.listdir(chk_operativa)
                         enrutado_exitoso = False
-                        
+
                         for linea in lineas_asociadas:
-                            num_kepler = str(expediente_actual.socio.numeroKepler).strip()
-                            
-                            if num_kepler == "" or num_kepler == "0000" or num_kepler == "0" or expediente_actual.socio.numeroKepler is None:
-                                prefijo_linea = f"{linea.numero} CS"
-                            else:
-                                prefijo_linea = f"{linea.numero} {num_kepler} CS"
-                            
+                            num_linea = str(linea.numero).strip()
+                            prefijo_linea_solo = f"{num_linea} "
+
                             for subdir in subdirs_operativa:
-                                if subdir.strip().startswith(prefijo_linea):
+                                if subdir.strip().startswith(prefijo_linea_solo):
                                     ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
-                                    chk_subdir = "\\\\?\\UNC" + ruta_subdir_completa[1:] if ruta_subdir_completa.startswith("\\\\") and not ruta_subdir_completa.startswith("\\\\?\\UNC\\") else ruta_subdir_completa
-                                    if os.path.isdir(chk_subdir):
-                                        nombre_carpeta_seccion = os.path.basename(mapeo_secciones.get(prefijo))
-                                        posible_ruta = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
-                                        chk_posible = "\\\\?\\UNC" + posible_ruta[1:] if posible_ruta.startswith("\\\\") and not posible_ruta.startswith("\\\\?\\UNC\\") else posible_ruta
-                                        if os.path.exists(chk_posible):
-                                            ruta_busqueda = posible_ruta
-                                            enrutado_exitoso = True
-                                            break
+                                    nombre_carpeta_seccion = os.path.basename(ruta_base_seccion)
+                                    posible_ruta = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
+                                    print(f"  [4] \u2714 Línea '{num_linea}' -> carpeta '{subdir}' -> "
+                                          f"ruta final: {posible_ruta}")
+                                    ruta_final_busqueda = posible_ruta
+                                    enrutado_exitoso = True
+                                    break
                             if enrutado_exitoso:
                                 break
-                except Exception as ex_op:
-                    print(f"[-] Error escaneando Operativa: {ex_op}")
 
-            chk_busqueda = "\\\\?\\UNC" + ruta_busqueda[1:] if ruta_busqueda.startswith("\\\\") and not ruta_busqueda.startswith("\\\\?\\UNC\\") else ruta_busqueda
+                        if not enrutado_exitoso:
+                            print(f"  [4] \u2718 Ninguna carpeta en Operativa coincide con las líneas del expediente; "
+                                  f"se usará la ruta base de la sección")
+                    else:
+                        print(f"  [4] \u2718 Ruta Operativa no existe en disco: {chk_operativa}")
+                except Exception as e_enrutamiento:
+                    print(f"  [4] \u2718 EXCEPCIÓN durante enrutamiento por línea: {e_enrutamiento}")
+
+            chk_busqueda = _to_unc(ruta_final_busqueda)
+            print(f"  [5] Ruta final a escanear: {chk_busqueda}")
+
             if not os.path.exists(chk_busqueda):
+                print(f"  [5] \u2718 La ruta no existe en disco -> se omite registro")
                 continue
-                
+
             archivo_mas_reciente = None
             mtime_maximo = 0
 
             try:
                 items_directorio = os.listdir(chk_busqueda)
                 clave_normalizada = clave_busqueda.lower()
-                
+                print(f"  [6] {len(items_directorio)} elemento(s) en el directorio")
+
+                # ¿Existe una subcarpeta que empiece con la clave? (ej. "1.01 ...")
+                for item in items_directorio:
+                    if item.lower().strip().startswith(clave_normalizada):
+                        posible_sub_carpeta = os.path.join(ruta_final_busqueda, item)
+                        chk_sub_carpeta = _to_unc(posible_sub_carpeta)
+                        if os.path.isdir(chk_sub_carpeta):
+                            print(f"  [6] La clave corresponde a una subcarpeta: {item} -> se entra a ella")
+                            ruta_final_busqueda = posible_sub_carpeta
+                            chk_busqueda = chk_sub_carpeta
+                            items_directorio = os.listdir(chk_busqueda)
+                            break
+
                 for nombre_item in items_directorio:
-                    ruta_item = os.path.join(ruta_busqueda, nombre_item)
+                    ruta_item = os.path.join(ruta_final_busqueda, nombre_item)
                     nombre_item_clean = nombre_item.strip()
                     item_normalizado = re.sub(r'\s+', ' ', nombre_item_clean).lower()
-                    
+
                     if not item_normalizado.startswith(clave_normalizada):
                         continue
-                        
+
+                    print(f"  [7] Elemento con la clave correcta: '{nombre_item}'")
+
                     archivos_a_evaluar = []
-                    
-                    chk_item = "\\\\?\\UNC" + ruta_item[1:] if ruta_item.startswith("\\\\") and not ruta_item.startswith("\\\\?\\UNC\\") else ruta_item
+                    chk_item = _to_unc(ruta_item)
+
                     if os.path.isdir(chk_item):
                         try:
                             sub_items = os.listdir(chk_item)
                             for sub_item in sub_items:
                                 archivos_a_evaluar.append((sub_item, os.path.join(ruta_item, sub_item)))
-                        except Exception as e_sub:
-                            pass
+                            print(f"  [7] Es carpeta, contiene {len(sub_items)} archivo(s) a evaluar")
+                        except Exception as e:
+                            print(f"  [7] \u2718 No se pudo listar subcarpeta: {e}")
                     else:
                         archivos_a_evaluar.append((nombre_item, ruta_item))
-                    
+
                     for nombre_arch, ruta_arch in archivos_a_evaluar:
                         arch_norm = re.sub(r'\s+', ' ', nombre_arch.strip()).lower()
-                        
+
                         if not arch_norm.startswith(clave_normalizada):
                             continue
-                            
-                        coincide = False
-                        
-                        if registro.es_fecha:
-                            if registro.fecha:
-                                fecha_obj = registro.fecha
-                                if isinstance(fecha_obj, str):
-                                    parsed = False
-                                    for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d"):
-                                        try:
-                                            fecha_obj = datetime.strptime(fecha_obj.strip(), fmt)
-                                            parsed = True
-                                            break
-                                        except ValueError:
-                                            continue
-                                    if not parsed:
-                                        continue
 
-                                mes_texto = meses_es.get(fecha_obj.month, "")
-                                anio_dos_digitos = fecha_obj.strftime("%y")
-                                
-                                patron_fecha_estricto = rf"{mes_texto}\s*{anio_dos_digitos}\b"
-                                if re.search(patron_fecha_estricto, arch_norm):
-                                    coincide = True
+                        print(f"    -> Evaluando archivo: '{nombre_arch}'")
+
+                        # --- REGLA ESTRICTA: solo fecha O solo identificador, según es_fecha ---
+                        if registro.es_fecha:
+                            coincide = _match_fecha(registro, arch_norm, meses_es)
                         else:
-                            if registro.numero:
-                                criterio_num = re.sub(r'\s+', ' ', str(registro.numero).strip()).lower()
-                                
-                                if criterio_num in arch_norm:
-                                    coincide = True
-                                else:
-                                    match_fecha_texto = re.search(r"([a-z]{3})\s+(\d{2}|\d{4})", criterio_num)
-                                    if match_fecha_texto:
-                                        mes_buscado = match_fecha_texto.group(1)
-                                        anio_detectado = match_fecha_texto.group(2)
-                                        anio_corto = anio_detectado[-2:]
-                                        patron_flex = rf"{mes_buscado}\s*(20)?{anio_corto}"
-                                        
-                                        if re.search(patron_flex, arch_norm):
-                                            coincide = True
-                                    else:
-                                        for m_val in meses_es.values():
-                                            if m_val in criterio_num and m_val in arch_norm:
-                                                coincide = True
-                                                break
-                        
-                        if coincide:
-                            try:
-                                chk_arch = "\\\\?\\UNC" + ruta_arch[1:] if ruta_arch.startswith("\\\\") and not ruta_arch.startswith("\\\\?\\UNC\\") else ruta_arch
-                                mtime = os.path.getmtime(chk_arch)
-                                if mtime > mtime_maximo:
-                                    mtime_maximo = mtime
-                                    archivo_mas_reciente = ruta_arch
-                            except Exception as e_mtime:
-                                print(f"        [-] Error al obtener mtime del archivo: {e_mtime}")
+                            coincide = _match_identificador(registro, arch_norm)
+
+                        if not coincide:
+                            print(f"    -> \u2718 Archivo descartado (sin fecha/identificador válido)")
+                            continue
+
+                        try:
+                            chk_arch = _to_unc(ruta_arch)
+                            mtime = os.path.getmtime(chk_arch)
+                            print(f"    -> \u2714 Archivo válido, mtime={datetime.fromtimestamp(mtime)}")
+                            if mtime > mtime_maximo:
+                                mtime_maximo = mtime
+                                archivo_mas_reciente = ruta_arch
+                        except Exception as e:
+                            print(f"    -> \u2718 No se pudo obtener mtime: {e}")
+
+                if archivo_mas_reciente:
+                    print(f"  [8] \u2714 RESULTADO: archivo más reciente = {archivo_mas_reciente}")
+                    resultados[registro.id] = {
+                        'clave': clave,
+                        'ruta': archivo_mas_reciente,
+                        'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
+                    }
+                else:
+                    print(f"  [8] \u2718 RESULTADO: ningún archivo cumplió fecha/identificador estricto "
+                          f"-> registro {registro.id} sin ruta")
             except Exception as e:
+                print(f"  [6] \u2718 EXCEPCIÓN escaneando directorio: {e}")
                 continue
 
-            if archivo_mas_reciente:
-                resultados[registro.id] = {
-                    'clave': clave,
-                    'ruta': archivo_mas_reciente,
-                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
-                }
-
+    print(f"\n[FIN] Total de registros con archivo encontrado: {len(resultados)} de "
+          f"{sum(RegistroSeccion.objects.filter(seccion=s).count() for s in secciones)}")
     return resultados
+
+
 
 @login_required(login_url='/login/')
 def avancesMovimientos(request):

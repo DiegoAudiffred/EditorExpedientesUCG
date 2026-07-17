@@ -649,24 +649,27 @@
            data-secuencial="{{ registro.secuencial }}"
            {% if registro.enviar %}checked{% endif %}>
 </td>
-
-<td class="align-middle" >
+<td class="align-middle">
     {% if fila.archivo_url %}
-    <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
-        target="_blank" title="Click para abrir archivo"
-        style="text-decoration: none; color: #0d6efd;">
-        {{ apartado.descripcion }}
-    </a>
+        <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
+           target="_blank" title="Click para abrir archivo"
+           style="text-decoration: none; color: #0d6efd;">
+            {% if apartado.tipoDeSeccion == 'VII' %}
+                {{ registro.comentario|default:apartado.descripcion }}
+            {% else %}
+                {{ apartado.descripcion }}
+            {% endif %}
+        </a> 
     {% else %}  
-    {% if apartado.tipoDeSeccion == 'VII' %}
-        <input type="text" 
-               class="form-control border border-3 border-primary my-1 form-control-sm"
-               name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-descripcion_libre"
-               value="{{ registro.comentario|default_if_none:'' }}"
-               placeholder="Escribe la descripción aquí...">
-    {% else %}
-        {{ apartado.descripcion }} 
-    {% endif %}
+        {% if apartado.tipoDeSeccion == 'VII' %}
+            <input type="text" 
+                   class="form-control border border-3 border-primary my-1 form-control-sm"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-descripcion_libre"
+                   value="{{ registro.comentario|default_if_none:'' }}"
+                   placeholder="Escribe la descripción aquí..."> 
+        {% else %}
+            {{ apartado.descripcion }}  
+        {% endif %}
     {% endif %}
 </td>
                             <td class="align-middle">
@@ -759,19 +762,7 @@
 
         <div class="d-flex justify-content-end">
             {% if request.user.roles == 'Administrador' %}             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
- {% endif %}
-            <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a
-                PDF</a>
-            <a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}"
-                target="_blank">Exportar a Excel</a>
-            <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
-                valores vacios</a>
-                            {% include 'Index/modalCargarArchivos.html' %}
-
-
-          
-            <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>
-
+            
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
                 aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered ">
@@ -793,8 +784,28 @@
                     </div>
                 </div>
             </div>
+ {% endif %}
+
+             {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}           
+
+            <a class="btn btn-secondary mx-2 text-white" href="{% url 'Index:exportarPDF' expediente.id %}">Exportar a
+                PDF</a>
+            <a class="btn btn-green mx-2 text-white" href="{% url 'Index:exportarExcel' expediente.id %}"
+                target="_blank">Exportar a Excel</a>
+            <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
+                valores vacios</a>
+                            {% include 'Index/modalCargarArchivos.html' %}
+
+
+          
+            <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>
+
 
             <button class="btn btn-primary ms-2" type="submit" id="save-button">Guardar</button>
+        {% endif%}
+          {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}           
+    <button class="btn btn-primary ms-2" type="submit" name="guardar_credito" id="save-credit-button">Guardar comentarios de crédito</button>
+{% endif %}
         </div>
 
     </form>
