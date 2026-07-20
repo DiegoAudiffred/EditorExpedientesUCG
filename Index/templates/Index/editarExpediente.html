@@ -475,12 +475,14 @@
                         {% endif %}
                     </div>
                     
-                    <form action="{% url 'Index:lineaEliminar' expediente.id linea.id %}" method="POST" class="m-0" onsubmit="return confirm('¿Estás seguro de eliminar esta línea? Se borrarán todos sus apartados asociados.');">
+                    {% if request.user.roles == 'Administrador'%}
+                      <form action="{% url 'Index:lineaEliminar' expediente.id linea.id %}" method="POST" class="m-0" onsubmit="return confirm('¿Estás seguro de eliminar esta línea? Se borrarán todos sus apartados asociados.');">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger px-3 fw-bold rounded-2">
                             Borrar
                         </button>
                     </form>
+                    {% endif %}
                 </div>
             </div>
             {% empty %}
@@ -557,40 +559,97 @@
     <form method="post" novalidate id="main-edit-form">
         {% csrf_token %}
 
-        <ul class="nav nav-tabs mb-3" id="seccionTabs" role="tablist">
-            {% for item in secciones %}
-            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-secondary  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
-                role="presentation">
-                <button class="nav-link {% if forloop.first %}active{% endif %} text-quinto"
-                    id="tab-{{ item.seccion.pk }} " data-bs-toggle="tab" data-bs-target="#seccion-{{ item.seccion.pk }}"
-                    type="button" role="tab">
-                    {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }})
-                </button>
-            </li>
-            {% endfor %}
-            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
-                role="presentation">
-                <button class="nav-link text-quinto btn-" id="tab-agregarObligado" data-bs-toggle="tab"
-                    data-bs-target="#seccion-agregarObligado" type="button" role="tab">
-                    Agregar Obligado Solidario +
-                </button>
-            </li>
-            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
-                role="presentation">
-                <button class="nav-link text-quinto" id="tab-agregarRepresentante" data-bs-toggle="tab"
-                    data-bs-target="#seccion-agregarRepresentante" type="button" role="tab">
-                    Agregar Representante Legal +
-                </button>
-            </li>
-            <li class="nav-item border border-primary border-2 border-right border-left border-top border-bottom-0 m-1 bg-cuarto  fw-bold rounded rounded-3 rounded-top rounded-end rounded-start"
-                role="presentation">
-                <button class="nav-link text-quinto" id="tab-agregarLinea" data-bs-toggle="tab"
-                    data-bs-target="#seccion-agregarLinea" type="button" role="tab">
-                    Agregar Linea +
-                </button>
-            </li>
-        </ul>
+<div class="accordion mb-4" id="acordeonSecciones">
 
+    <div class="accordion-item my-2">
+        <h2 class="accordion-header" id="headingMaestra">
+            <button class="accordion-button fw-bold text-primary fs-5 border border-3 border-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMaestra" aria-expanded="true" aria-controls="collapseMaestra">
+                Maestra
+            </button>
+        </h2>
+        <div id="collapseMaestra" class="accordion-collapse collapse show" aria-labelledby="headingMaestra" data-bs-parent="#acordeonSecciones">
+            <div class="accordion-body border border-3 border-primary">
+                <ul class="nav nav-pills flex-wrap gap-1" id="pillsMaestra" role="tablist">
+                    {% for item in secciones %}
+                        {% if item.seccion.tipoDeSeccion == 'A' or item.seccion.tipoDeSeccion == 'B' or item.seccion.tipoDeSeccion == 'C' or item.seccion.tipoDeSeccion == 'I' or item.seccion.tipoDeSeccion == 'II' %}
+                            <li class="nav-item border border-primary border-2 bg-secondary fw-bold rounded-3" role="presentation">
+                                <button class="nav-link {% if forloop.first %}active{% endif %} "
+                                    id="tab-{{ item.seccion.pk }}" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#seccion-{{ item.seccion.pk }}"
+                                    type="button" 
+                                    role="tab">
+                                    {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }}) 
+                                </button>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion-item my-2>
+        <h2 class="accordion-header" id="headingOperativa">
+            <button class="accordion-button collapsed fw-bold text-primary fs-5 border border-3 border-cuarto" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOperativa" aria-expanded="false" aria-controls="collapseOperativa">
+                Operativa
+            </button>
+        </h2>
+        <div id="collapseOperativa" class="accordion-collapse collapse" aria-labelledby="headingOperativa" data-bs-parent="#acordeonSecciones">
+            <div class="accordion-body border border-3 border-cuarto">
+                <ul class="nav nav-pills flex-wrap gap-1" id="pillsOperativa" role="tablist">
+                    {% for item in secciones %}
+                        {% if item.seccion.tipoDeSeccion != 'A' and item.seccion.tipoDeSeccion != 'B' and item.seccion.tipoDeSeccion != 'C' and item.seccion.tipoDeSeccion != 'I' and item.seccion.tipoDeSeccion != 'II' %}
+                            <li class="nav-item border border-primary border-2 bg-secondary fw-bold rounded-3" role="presentation">
+                                <button class="nav-link"
+                                    id="tab-{{ item.seccion.pk }}" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#seccion-{{ item.seccion.pk }}"
+                                    type="button" 
+                                    role="tab">
+                                    {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }}) 
+                                </button>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion-item my-2">
+        <h2 class="accordion-header" id="headingAcciones">
+            <button class="accordion-button collapsed fw-bold text-primary fs-5 border border-3 border-tercero" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAcciones" aria-expanded="false" aria-controls="collapseAcciones">
+                Acciones disponibles
+            </button>
+        </h2>
+        <div id="collapseAcciones" class="accordion-collapse collapse" aria-labelledby="headingAcciones" data-bs-parent="#acordeonSecciones">
+            <div class="accordion-body border border-3 border-tercero">
+                <ul class="nav nav-pills flex-wrap gap-1" id="pillsAcciones" role="tablist">
+                    <li class="nav-item border border-primary border-2 bg-cuarto fw-bold rounded-3" role="presentation">
+                        <button class="nav-link" id="tab-agregarObligado" data-bs-toggle="tab"
+                            data-bs-target="#seccion-agregarObligado" type="button" role="tab">
+                            Agregar Obligado Solidario +
+                        </button>
+                    </li>
+                    <li class="nav-item border border-primary border-2 bg-cuarto fw-bold rounded-3" role="presentation">
+                        <button class="nav-link" id="tab-agregarRepresentante" data-bs-toggle="tab"
+                            data-bs-target="#seccion-agregarRepresentante" type="button" role="tab">
+                            Agregar Representante Legal +
+                        </button>
+                    </li>
+                    <li class="nav-item border border-primary border-2 bg-cuarto fw-bold rounded-3" role="presentation">
+                        <button class="nav-link" id="tab-agregarLinea" data-bs-toggle="tab"
+                            data-bs-target="#seccion-agregarLinea" type="button" role="tab">
+                            Agregar Linea +
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
         <div class="tab-content">
  {% for item in secciones %}
 
@@ -649,11 +708,22 @@
            data-secuencial="{{ registro.secuencial }}"
            {% if registro.enviar %}checked{% endif %}>
 </td>
+<style>
+    .texto-4-lineas {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
 <td class="align-middle">
     {% if fila.archivo_url %}
         <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
-           target="_blank" title="Click para abrir archivo"
-           style="text-decoration: none; color: #0d6efd;">
+           target="_blank" 
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top"
+           title="{% if apartado.tipoDeSeccion == 'VII' %}{{ registro.comentario|default:apartado.descripcion }}{% else %}{{ apartado.descripcion }}{% endif %}"
+           style="text-decoration: none; color: #0d6efd; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">
             {% if apartado.tipoDeSeccion == 'VII' %}
                 {{ registro.comentario|default:apartado.descripcion }}
             {% else %}
@@ -662,16 +732,26 @@
         </a> 
     {% else %}  
         {% if apartado.tipoDeSeccion == 'VII' %}
-            <input type="text" 
-                   class="form-control border border-3 border-primary my-1 form-control-sm"
-                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-descripcion_libre"
-                   value="{{ registro.comentario|default_if_none:'' }}"
-                   placeholder="Escribe la descripción aquí..."> 
+            <textarea class="form-control border border-3 border-primary my-1 form-control-sm"
+                      name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-descripcion_libre"
+                      rows="4"
+                      data-bs-toggle="tooltip"
+                      title="{{ registro.comentario|default_if_none:'' }}"
+                      placeholder="Escribe la descripción aquí...">{{ registro.comentario|default_if_none:'' }}</textarea>
         {% else %}
-            {{ apartado.descripcion }}  
+            <div data-bs-toggle="tooltip" 
+                 data-bs-placement="top"
+                 title="{{ apartado.descripcion }}"
+                 style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">
+                {{ apartado.descripcion }}
+            </div>
         {% endif %}
     {% endif %}
 </td>
+<script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+</script>
                             <td class="align-middle">
     {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' %}
         <div class="d-flex align-items-center gap-1 container-alternar-fecha">
@@ -758,7 +838,7 @@
             {% include 'Index/editarExpedienteRepObl.html' %}
             {% include 'Index/editarExpedienteLinea.html' %}
         </div>
-        <h4> Total de registros llenados: {{totalRegistrosLlenos}} de {{totalRegistros}}</h4>
+        <h4> Total de registros: {{totalRegistros}} | Llenados: {{totalRegistrosLlenos}} - No Aplican: {{totalRegistrosNA}}</h4>
 
         <div class="d-flex justify-content-end">
             {% if request.user.roles == 'Administrador' %}             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>

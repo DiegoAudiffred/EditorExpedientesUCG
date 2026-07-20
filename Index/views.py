@@ -362,7 +362,7 @@ def editarExpediente(request, id):
    
     totalRegistros = 0
     totalRegistrosLlenos = 0
-
+    totalRegistrosNA = 0
     es_credito = request.user.roles in ['Credito', 'Gerente de Credito']
     estatus_recepcion = expediente.estatus.nombre == "Completo"
 
@@ -372,13 +372,15 @@ def editarExpediente(request, id):
         filas = []
         for registro in registros_existentes:
             if es_credito and estatus_recepcion:
-                if not registro.estatus or registro.estatus.strip() == "" or registro.estatus.strip().upper() == "N/A":
+                if not (registro.numero or registro.fecha):                   
                     continue
 
             totalRegistros += 1
 
-            if registro.estatus and registro.estatus != "":
+            if registro.numero or registro.fecha:
                 totalRegistrosLlenos += 1
+            else:
+                totalRegistrosNA+=1
 
             fecha_html = ""
             if registro.es_fecha:
@@ -394,16 +396,17 @@ def editarExpediente(request, id):
                 'apartado': registro.apartado,
                 'registro': registro,
                 'fecha_html': fecha_html,
-                'archivo_url': info_archivo['ruta'] if info_archivo else None
+                'archivo_url': info_archivo['ruta'] if info_archivo else None,
             })
            
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
         })
-       
     context['totalRegistros'] = totalRegistros
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
+    context['totalRegistrosNA'] = totalRegistrosNA
+         
     context['rep_form'] = rep_form
     context["obl_form"] = obl_form
     context["lin_form"] = lin_form
