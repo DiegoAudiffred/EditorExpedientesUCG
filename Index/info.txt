@@ -1,0 +1,147 @@
+===============================================================================
+SQL CHEAT SHEET PARA INGENIERÍA DE DATOS & MLOPS
+Ejemplos aplicados: Umamusume Pretty Derby Dataset
+===============================================================================
+
+1. FILTRADO Y CONSULTAS BÁSICAS
+-------------------------------------------------------------------------------
+-- Filtrar corredoras activas de la clase 'Senior' con velocidad alta
+SELECT 
+    character_id, 
+    name, 
+    speed_stat, 
+    stamina_stat
+FROM uma_musume
+WHERE status = 'active' 
+  AND (class_rank = 'Senior' OR class_rank = 'Open')
+  AND speed_stat >= 800;
+
+-- Uso de IN, BETWEEN y LIKE
+SELECT * FROM races 
+WHERE track_surface IN ('Turf', 'Dirt');
+
+SELECT * FROM uma_musume 
+WHERE stamina_stat BETWEEN 600 AND 900;
+
+SELECT * FROM skills 
+WHERE skill_name LIKE 'Arc%'; -- Habilidades que empiezan con 'Arc'
+
+
+2. AGREGACIÓN Y AGRUPACIÓN
+-------------------------------------------------------------------------------
+-- Métricas acumuladas por tipo de estrategia de carrera (Eishin, Pace, etc.)
+SELECT 
+    running_style,
+    COUNT(character_id) AS total_runners,
+    AVG(speed_stat) AS avg_speed,
+    MAX(stamina_stat) AS max_stamina
+FROM uma_musume
+GROUP BY running_style
+HAVING COUNT(character_id) >= 3;
+
+
+3. UNIONES DE TABLAS (JOINs)
+-------------------------------------------------------------------------------
+-- Obtener resultados de carreras combinando corredoras, carreras y entrenadores
+SELECT 
+    r.race_name,
+    u.name AS runner_name,
+    u.running_style,
+    res.finish_position,
+    t.trainer_name
+FROM race_results res
+INNER JOIN races r ON res.race_id = r.id
+LEFT JOIN uma_musume u ON res.uma_id = u.id
+LEFT JOIN trainers t ON u.trainer_id = t.id;
+
+
+4. LIMPIEZA Y MANIPULACIÓN DE TEXTO
+-------------------------------------------------------------------------------
+-- Estandarizar nombres de habilidades y códigos de perfil
+SELECT 
+    UPPER(name) AS uppercase_name,
+    LOWER(nick_name) AS clean_nickname,
+    TRIM(title) AS clean_title,
+    CONCAT(name, ' (', running_style, ')') AS full_profile,
+    SUBSTRING(uma_code FROM 1 FOR 4) AS team_prefix,
+    REPLACE(attribute_type, 'old_', '') AS clean_attribute
+FROM raw_uma_profiles;
+
+
+5. VALORES NULOS Y CONDICIONALES
+-------------------------------------------------------------------------------
+-- Asignar valor por defecto en campos nulos
+SELECT 
+    name,
+    COALESCE(preferred_distance, 'Medium') AS distance_aptitude
+FROM uma_musume;
+
+-- Categorización de velocidad con CASE WHEN
+SELECT 
+    name,
+    speed_stat,
+    CASE 
+        WHEN speed_stat >= 1000 THEN 'SS/S'
+        WHEN speed_stat BETWEEN 800 AND 999 THEN 'A/B'
+        WHEN speed_stat BETWEEN 600 AND 799 THEN 'C/D'
+        ELSE 'E/F'
+    END AS speed_rank
+FROM uma_musume;
+
+
+6. MANEJO DE FECHAS Y TIEMPOS
+-------------------------------------------------------------------------------
+-- Extraer información de logs de entrenamiento
+SELECT 
+    session_id,
+    training_date,
+    EXTRACT(YEAR FROM training_date) AS training_year,
+    EXTRACT(MONTH FROM training_date) AS training_month,
+    DATE_TRUNC('day', training_date) AS session_day
+FROM training_logs
+WHERE training_date >= CURRENT_DATE - INTERVAL '14 days';
+
+
+7. FUNCIONES DE VENTANA (WINDOW FUNCTIONS)
+-------------------------------------------------------------------------------
+-- Obtener la mejor posición histórica de cada Uma Musume por carrera
+WITH ranked_results AS (
+    SELECT 
+        uma_id,
+        race_id,
+        finish_position,
+        race_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY uma_id 
+            ORDER BY finish_position ASC, race_date DESC
+        ) AS top_rank
+    FROM race_results
+)
+SELECT uma_id, race_id, finish_position, race_date
+FROM ranked_results
+WHERE top_rank = 1;
+
+
+8. EXPRESIONES DE TABLA COMUNES (CTEs - WITH)
+-------------------------------------------------------------------------------
+-- Filtrar datos limpios y luego calcular métricas agregadas por equipo
+WITH clean_uma_data AS (
+    SELECT 
+        id,
+        name,
+        COALESCE(team_id, 0) AS team_id,
+        speed_stat
+    FROM raw_uma_data
+    WHERE is_active = TRUE
+),
+team_performance AS (
+    SELECT 
+        team_id,
+        COUNT(id) AS total_members,
+        AVG(speed_stat) AS team_avg_speed
+    FROM clean_uma_data
+    GROUP BY team_id
+)
+SELECT * FROM team_performance 
+ORDER BY team_avg_speed DESC;
+===============================================================================

@@ -40,12 +40,15 @@ def is_active_user(user):
 
 @login_required(login_url='/login/')    
 def index(request):
+
+    return render(request, 'Index/index.html')
+def preguntasIndex(request):
     estados = Estado.objects.all()
     context = {
    
         'estados':estados,
     }
-    return render(request, 'Index/index.html',context)
+    return render(request, 'Index/preguntasIndex.html',context)
 
 @login_required(login_url='/login/')    
 def expedientesLayout(request):
@@ -363,24 +366,23 @@ def editarExpediente(request, id):
     totalRegistros = 0
     totalRegistrosLlenos = 0
     totalRegistrosNA = 0
+    totalRegistrosVacios = 0
     es_credito = request.user.roles in ['Credito', 'Gerente de Credito']
     estatus_recepcion = expediente.estatus.nombre == "Completo"
 
     for seccion in secciones:
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave', 'secuencial')
-       
+
         filas = []
         for registro in registros_existentes:
-            if es_credito and estatus_recepcion:
-                if not (registro.numero or registro.fecha):                   
-                    continue
-
             totalRegistros += 1
 
-            if registro.numero or registro.fecha:
+            if registro.estatus == "N/A":
+                totalRegistrosNA += 1
+            elif registro.numero or registro.fecha:
                 totalRegistrosLlenos += 1
             else:
-                totalRegistrosNA+=1
+                totalRegistrosVacios += 1
 
             fecha_html = ""
             if registro.es_fecha:
@@ -389,24 +391,38 @@ def editarExpediente(request, id):
             else:
                 if registro.numero is not None:
                     fecha_html = str(registro.numero)
-           
+
             info_archivo = archivos_encontrados.get(registro.id)
-           
+
             filas.append({
                 'apartado': registro.apartado,
                 'registro': registro,
                 'fecha_html': fecha_html,
                 'archivo_url': info_archivo['ruta'] if info_archivo else None,
             })
-           
+
         context['secciones'].append({
             'seccion': seccion,
             'filas': filas,
         })
+
+    if totalRegistros != (totalRegistrosLlenos + totalRegistrosVacios + totalRegistrosNA):
+        context['mensajeInfo'] = "Los registros no coinciden con los status"
+
+
     context['totalRegistros'] = totalRegistros
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
     context['totalRegistrosNA'] = totalRegistrosNA
-         
+    context['totalRegistrosVacios'] = totalRegistrosVacios
+    total_util = totalRegistrosLlenos + totalRegistrosVacios
+    
+    if total_util > 0:
+        porcentaje = (totalRegistrosLlenos / total_util) * 100
+    else:
+        porcentaje = 0
+    
+    context['porcentajeLlenado'] = round(porcentaje, 2)
+
     context['rep_form'] = rep_form
     context["obl_form"] = obl_form
     context["lin_form"] = lin_form
@@ -842,6 +858,7 @@ def rechazarExpediente(request,expedienteID):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
     getEstado = Estado.objects.get(nombre='Rechazado')
     expediente.estatus = getEstado
+    expediente.usuarioCredito = request.user
     expediente.save()
     darAlta(expediente,getEstado.nombre,request.user)
 
@@ -1238,7 +1255,13 @@ def exportarPDF(request, id):
         for sec in secciones_data:
             html_string += f'<tr><td colspan="5" class="titulo-seccion">{sec["titulo"]}</td></tr>'
             for reg in sec['registros']:
-                fecha = reg.fecha.strftime("%d/%m/%Y") if reg.fecha else ""
+                if reg.fecha:
+                                    fecha = reg.fecha.strftime("%d/%m/%Y") if reg.fecha else ""
+
+                elif reg.numero:
+                    fecha = reg.numero    
+                else:
+                    fecha=""
                 html_string += f"""
                     <tr>
                         <td class="col-clave" style="text-align: center;">{reg.apartado.clave}</td>
@@ -2293,12 +2316,29 @@ def revisionExpediente(request, expedienteID,observaciones):
         darAlta(expediente,getEstado.nombre,request.user)
 
     elif observaciones == "N":
-        print("aqui")
         getEstado = Estado.objects.get(nombre='En revisión con observaciones')
         expediente.estatus = getEstado
         expediente.save()
         darAlta(expediente,getEstado.nombre,request.user)
-
+        asunto = f"Expediente en recepción con obersavciones: Expediente {expediente.id} - {expediente.socio.nombre}"
+        cuerpo_html = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                    <p>Estimado usuario,</p>
+                    <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido recepcionado con comentarios.</p>
+                    <p>Atte {expediente.usuarioCredito.username}.</p>
+                    <div style="margin: 30px 0; text-align: center;">
+                        <a href="{url_final}" 
+                           style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Revisar Expediente
+                        </a>
+                    </div>
+                    <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
+                        <ul style="margin-bottom: 0; padding-left: 20px;">
+        """
     elif observaciones == "R":
         from email.message import EmailMessage
 
@@ -2307,6 +2347,26 @@ def revisionExpediente(request, expedienteID,observaciones):
         expediente.save()
 
         darAlta(expediente,getEstado.nombre,request.user)
+        asunto = f"RECHAZO EN RECEPCIÓN: Expediente {expediente.id} - {expediente.socio.nombre}"
+        cuerpo_html = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                    <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+                    <p>Estimado usuario,</p>
+                    <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido rechazado durante su recepción.</p>
+                    <p>Atte {expediente.usuarioCredito.username}.</p>
+                    <div style="margin: 30px 0; text-align: center;">
+                        <a href="{url_final}" 
+                           style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Revisar Expediente
+                        </a>
+                    </div>
+                    <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
+                        <ul style="margin-bottom: 0; padding-left: 20px;">
+        """
+    if observaciones == "R" or observaciones == "N":
         seccionesConComentarios = []
         secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
 
@@ -2327,31 +2387,31 @@ def revisionExpediente(request, expedienteID,observaciones):
         #destinatario = ["daudiffred@ucg.com.mx"]    
         dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
         url_final = f"{dominio}{expediente.id}/"
-        asunto = f"RECHAZO EN RECEPCIÓN: Expediente {expediente.id} - {expediente.socio.nombre}"
+        #asunto = f"RECHAZO EN RECEPCIÓN: Expediente {expediente.id} - {expediente.socio.nombre}"
 
         comentarios_texto = ""
         for item in seccionesConComentarios:
             comentarios_texto += f"\n- [{item['nombreSeccion']} - {item['claveApartado']}]: {item['comentario']}"
 
 
-        cuerpo_html = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-                <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-                    <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
-                    <p>Estimado usuario,</p>
-                    <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido rechazado durante su recepción.</p>
-                    <p>Atte {expediente.usuarioCredito.username}.</p>
-                    <div style="margin: 30px 0; text-align: center;">
-                        <a href="{url_final}" 
-                           style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                            Revisar Expediente
-                        </a>
-                    </div>
-                    <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                        <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
-                        <ul style="margin-bottom: 0; padding-left: 20px;">
-        """
+        #cuerpo_html = f"""
+        #<html>
+        #    <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+        #        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+        #            <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
+        #            <p>Estimado usuario,</p>
+        #            <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} ha sido rechazado durante su recepción.</p>
+        #            <p>Atte {expediente.usuarioCredito.username}.</p>
+        #            <div style="margin: 30px 0; text-align: center;">
+        #                <a href="{url_final}" 
+        #                   style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+        #                    Revisar Expediente
+        #                </a>
+        #            </div>
+        #            <div style="background-color: #fdf2f2; border-left: 4px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        #                <h4 style="margin-top: 0; color: #a94442;">Detalle de observaciones por sección:</h4>
+        #                <ul style="margin-bottom: 0; padding-left: 20px;">
+        #"""
 
         for item in seccionesConComentarios:
             cuerpo_html += f"""
@@ -2624,9 +2684,9 @@ def procesarArchivos(request, id):
 
     mapeo_secciones = {
         "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
-        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
+        "2": os.path.join(rutaMaestra, "II. Informacion Financiera"),
         "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
+        "4": os.path.join(rutaOperativa, "IV. Informacion de garantias"),
         "5": os.path.join(rutaOperativa, "V. Contratos"),
         "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
         "7": os.path.join(rutaOperativa, "VII. Correspondencia")
@@ -3009,9 +3069,9 @@ def checarRuta(identificador_socio, secciones):
 
     mapeo_secciones = {
         "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
-        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
+        "2": os.path.join(rutaMaestra, "II. Informacion Financiera"),
         "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
+        "4": os.path.join(rutaOperativa, "IV. Informacion de garantias"),
         "5": os.path.join(rutaOperativa, "V. Contratos"),
         "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
         "7": os.path.join(rutaOperativa, "VII. Correspondencia")
@@ -3205,12 +3265,103 @@ def avancesMovimientos(request):
             else:
                 estados_exp[i].dias_siguiente = None
 
-    contest = {
+    context = {
         'expediente': expediente,
         'todosEstados': todosEstados,
     }
 
-    return render(request, 'Index/avancesMovimientos.html', contest)
+    return render(request, 'Index/avancesMovimientos.html', context)
+
+def correoArchivado(expediente, porcentajeLlenado):
+    
+    if float(porcentajeLlenado) < 50:
+        color_porcentaje = "#dc3545"
+    elif porcentajeLlenado < 100:
+        color_porcentaje = "#ffc107"
+    else:
+        color_porcentaje = "#198754"
+
+    destinatario = {
+        email for email in [
+            "bvillanueva@ucg.com.mx",
+            expediente.usuario.email,
+            expediente.usuarioNegocios.email,
+            "pOrtiz@ucg.com.mx"
+            #"dAudiffred@ucg.com.mx"
+        ] if email
+    }
+    dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
+    urlFinal = f"{dominio}{expediente.id}/"
+    
+    usuarioNombre = expediente.usuarioCredito.username 
+
+    asunto = "Expediente archivado para revisión"
+    cuerpoHtml = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #2c3e50;">Expediente Archivado</h2>
+                <p>Estimado usuario,</p>
+                <p>Le informamos que el expediente <strong>{expediente.id}</strong> correspondiente al socio <strong>{expediente.socio.nombre}</strong> ha sido archivado exitosamente.</p>
+                
+                <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 8px; text-align: center;">
+                    <span style="font-size: 0.9em; color: #6c757d; font-weight: bold; display: block;">PORCENTAJE DE COMPLETADO</span>
+                    <span style="font-size: 1.8em; font-weight: bold; color: {color_porcentaje};">{porcentajeLlenado}%</span>
+                </div>
+
+                <div style="margin: 30px 0; text-align: center;">
+                    <a href="{urlFinal}" 
+                       style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Revisar Expediente
+                    </a>
+                </div>
+                <p style="font-size: 0.9em; color: #555;">
+                    Atentamente,<br>
+                    <strong>{usuarioNombre}</strong>
+                </p>
+                <hr style="border: 0; border-top: 1px solid #eee;">
+                <p style="font-size: 0.8em; color: #999; text-align: center;">
+                    Este es un mensaje automático, por favor no responda a este correo.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    SMTP_HOST = "ucg.com.mx"
+    SMTP_PORT = 587
+    USUARIO = "informacion@ucg.com.mx"
+    CONTRASENA = "UcG911_@!#"
+
+    mensaje = email.message.EmailMessage()
+    mensaje["From"] = USUARIO
+    mensaje["To"] = ", ".join(destinatario)
+    mensaje["Subject"] = asunto
+    
+    mensaje.add_alternative(cuerpoHtml, subtype="html")
+
+    try:
+        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        servidor.starttls()
+        servidor.login(USUARIO, CONTRASENA)
+        servidor.send_message(mensaje)
+        servidor.quit()
+        print("Correo enviado correctamente")
+    except Exception as e:
+        print("Error al enviar correo:", e)
+
+
+def archivarExpediente(request, id,porcentajeLlenado):
+    expediente = get_object_or_404(Expediente, pk=id)
+    correoArchivado(expediente,porcentajeLlenado)
+    getEstado = get_object_or_404(Estado, nombre='Archivado')
+    expediente.usuarioArchivo = request.user
+    expediente.fechaArchivado = timezone.now()
+    expediente.estatus = getEstado
+    expediente.save()
+
+    darAlta(expediente, getEstado.nombre, request.user)
+
+    return redirect('Index:editarExpediente', expediente.id)
 
 """Temas a considerar:
 

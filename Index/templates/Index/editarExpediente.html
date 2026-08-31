@@ -5,12 +5,19 @@
 <div class="container py-4">
     {% if expediente.eliminado == False %}
     <div class="row">
-        <div class="col-12 fnSuperiorRegularTitle">
+        <div class="col-11 fnSuperiorRegularTitle text-truncate">
 
-            <b class="text-tercero">{{expediente.socio}}</b> - {{expediente.socio.numeroKepler}}
+            <b class="text-tercero ">{{expediente.socio}}</b> - 
 
         </div>
-        <div class="col-12 my-2 fnSuperiorRegularTitle4">
+        <div class="col-1 fnSuperiorRegularTitle text-end">
+            {% if expediente.socio.numeroKepler %}
+                            {{expediente.socio.numeroKepler}}
+            {% else %}
+                0000
+            {% endif %}
+        </div>
+        <div class="col-6 my-2 fnSuperiorRegularTitle4 text-truncate">
             Estatus actual:
             <span style="background-color: {{ expediente.estatus.color }};" class="rounded rounded-3 px-3 fw-bold py-2">
                 {{ expediente.estatus }}
@@ -66,7 +73,7 @@
         </div>
 
 
-<div class="col-12 my-2">
+<div class="col-6 my-2 justify-content-end text-end">
     {% if expediente.estatus.nombre == 'Completo' %}
         {% if citaAsignada %} 
             <h4 class="mb-3 fw-bold" 
@@ -96,87 +103,69 @@
     {% endif %}
 </div>
     
+      <div class="row">
+    {% if expediente.estatus.nombre == 'Nuevo' %}
         <div class="col-4 my-2">
-            {% if expediente.estatus.nombre == 'Completo' %}
-            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
-            <a href="{% url 'Index:recepcionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">He
-                recibido el expediente fisico</a>
-            {% endif %}
-
-            {% endif %}
-            {% if expediente.estatus.nombre == 'Nuevo'  %}
-                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
-
-            <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold">Enviar expediente
-                a crédito</a>
-            {% endif %}
-
-            {% endif %}
-            {% if expediente.estatus.nombre == 'Rechazado' %}
-                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
-                <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold">Reenviar expediente
-                a crédito</a>
-                {% endif %}
-            {% endif %}
-            {% if expediente.estatus.nombre == 'Recepción con observaciones' %}
-                            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
-
-            <a href="{% url 'Index:enviarExpediente' expediente.id True %}" class="btn btn-primary fw-bold">Reenviar expediente
-                a crédito</a>
-            {% endif %}
-
-            {% endif %}
-
-                         {% if expediente.estatus.nombre == 'Recepción' %}
-            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
-            <a href="{% url 'Index:revisionExpediente' expediente.id 'S'%}" class="btn btn-primary fw-bold w-100">Pasar a revisíon</a>
-            {% endif %}
-
-      
-
-            {% endif %}   
-            {% if expediente.estatus.nombre == 'En revisión' %}
-                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
-                <a href="" class="btn btn-primary fw-bold"> Archivar Expediente </a>
-                {% endif %}
-            {% endif %}
-
-        </div>
-        <div class="col-4 my-2">
-            {% if expediente.estatus.nombre == 'Completo' %}
-                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-
-            <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">He
-                recibido el expediente fisico c/observaciones</a>
-            {% endif %}
-            {% endif %}
-                 {% if expediente.estatus.nombre == 'Recepción' %}
-                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-
-            <a href="{% url 'Index:revisionExpediente' expediente.id 'N'%}" class="btn btn-primary fw-bold w-100">Pasar a revisíon c/observaciones</a>
-            {% endif %}
-            {% endif %}
-            {% if expediente.estatus.nombre == 'En revisión' %}
-                {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
-                <a href="" class="btn btn-primary fw-bold"> Rechzar Expediente</a>
-                {% endif %}
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}
+                <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold w-100">Enviar expediente a crédito</a>
             {% endif %}
         </div>
-        <div class="col-4 my-2">
-{% if expediente.estatus.nombre == 'Completo' %}
-                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href="{% url 'Index:rechazarExpediente' expediente.id %}"
-                class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
-            {% endif %}            {% endif %}
-{% if expediente.estatus.nombre == 'Recepción' %}
-                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito'%}
-            <a href="{% url 'Index:revisionExpediente' expediente.id 'R'%}"
-                class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
-            {% endif %}            {% endif %}
 
+    {% elif expediente.estatus.nombre == 'Completo' %}
+        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:recepcionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">He recibido el expediente fisico</a>
+            </div>
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:recepcionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">He recibido el expediente fisico c/observaciones</a>
+            </div>
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:rechazarExpediente' expediente.id %}" class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
+            </div>
+        {% endif %}
+
+    {% elif expediente.estatus.nombre == 'Recepción' %}
+        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:revisionExpediente' expediente.id 'S' %}" class="btn btn-primary fw-bold w-100">Pasar a revisíon</a>
+            </div>
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:revisionExpediente' expediente.id 'N' %}" class="btn btn-primary fw-bold w-100">Pasar a revisíon c/observaciones</a>
+            </div>
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:revisionExpediente' expediente.id 'R' %}" class="btn btn-primary fw-bold w-100">Rechazar expediente</a>
+            </div>
+        {% endif %}
+
+    {% elif expediente.estatus.nombre == 'En revisión' %}
+        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+            <div class="col-4 my-2">
+                <a href="{% url 'Index:archivarExpediente' expediente.id porcentajeLlenado %}" class="btn btn-primary fw-bold w-100">Archivar Expediente</a>
+            </div>
+           <!--  <div class="col-4 my-2">
+                <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold w-100">Rechazar Expediente</a>
+            </div> -->
+        {% endif %}
+
+    {% elif expediente.estatus.nombre == 'Rechazado' %}
+        <div class="col-4 my-2">
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}
+                <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold w-100">Reenviar expediente a crédito</a>
+            {% endif %}
         </div>
+
+    {% elif expediente.estatus.nombre == 'Recepción con observaciones' %}
+        <div class="col-4 my-2">
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}
+                <a href="{% url 'Index:enviarExpediente' expediente.id True %}" class="btn btn-primary fw-bold w-100">Reenviar expediente a crédito</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
 
         <div class="col-4 my-2 my-2">
+        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios'%}
+
             <h5 class="mb-3">Ejecutivo de Servicios asignado: <b class="text-tercero" data-bs-toggle="modal"
                     style="cursor: pointer;" data-bs-target="#asignadoModal">{{expediente.usuario}}</b>
 
@@ -212,14 +201,19 @@
                     </div>
                 </div>
             </div>
+        {% else %}
+          <h5 class="mb-3">Ejecutivo de Servicios asignado: <b class="text-tercero"> {{expediente.usuario}}</b> </h5>
+
+        {% endif %}    
         </div>
 
         <div class="col-4 my-2">
-            <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero " data-bs-toggle="modal"
+      
+            {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+                  <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero " data-bs-toggle="modal"
                     style="cursor: pointer;" data-bs-target="#asignadoModalCredito">{% if expediente.usuarioCredito %} {{expediente.usuarioCredito}} {% else %} Sin asignar {% endif %}</b>
 
             </h5>
-            {% if request.user.roles == 'Administrador'%}
 <div class="modal fade" id="asignadoModalCredito" tabindex="-1" aria-labelledby="asignadoModalCreditoLabel"
                 aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
@@ -251,10 +245,15 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
-            
+        {% else %}
+        <h5 class="mb-3">Personal de credito asignado a: <b class="text-tercero" >{% if expediente.usuarioCredito %} {{expediente.usuarioCredito}} {% else %} Sin asignar {% endif %}</b>
+
+            </h5>
+        {% endif %}                
         </div>
         <div class="col-4 my-2 my-2">
+                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}
+
             <h5 class="mb-3">Ejecutivo de Negocios asignado: <b class="text-tercero" data-bs-toggle="modal"
                     style="cursor: pointer;" data-bs-target="#asignadoModalNegocios">{{expediente.usuarioNegocios}}</b> </h5>
                           <div class="modal fade" id="asignadoModalNegocios" tabindex="-1" aria-labelledby="asignadoModalNegociosLabel"
@@ -288,7 +287,10 @@
                     </div>
                 </div>
             </div>
+       {% else %}
+          <h5 class="mb-3">Ejecutivo de Negocios asignado: <b class="text-tercero"> {{expediente.usuarioNegocios}}</b> </h5>
 
+        {% endif %}    
         </div>
     </div>
 
@@ -686,7 +688,7 @@
                                 <tbody>
                                     {% for fila in item.filas %}
                                     {% with apartado=fila.apartado registro=fila.registro %}
-                                    <tr class="{% if registro.estatus == 'rechazado' %} bg-yellow {% endif %}">
+                                    <tr class="{% if registro.estatus == 'rechazado' %} bg-yellow {% endif %} ">
 {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
 
 <th class="align-middle">
@@ -700,6 +702,8 @@
 {% endif %}                          <td class="align-middle">{{ apartado.clave }}{% if registro.secuencial != 1 %} -  {{ registro.secuencial }} {% endif %}</td>
                                
 <td class="align-middle">
+{% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+
     <input type="checkbox" 
            class="mi-clase" 
            id="checkbox-{{ fila.apartado.pk }}-{{ registro.secuencial }}" 
@@ -707,6 +711,7 @@
            data-apartado="{{ fila.apartado.pk }}" 
            data-secuencial="{{ registro.secuencial }}"
            {% if registro.enviar %}checked{% endif %}>
+    {% endif %}
 </td>
 <style>
     .texto-4-lineas {
@@ -716,7 +721,7 @@
     overflow: hidden;
 }
 </style>
-<td class="align-middle">
+<td class="align-middle ">
     {% if fila.archivo_url %}
         <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
            target="_blank" 
@@ -838,8 +843,57 @@ const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstra
             {% include 'Index/editarExpedienteRepObl.html' %}
             {% include 'Index/editarExpedienteLinea.html' %}
         </div>
-        <h4> Total de registros: {{totalRegistros}} | Llenados: {{totalRegistrosLlenos}} - No Aplican: {{totalRegistrosNA}}</h4>
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <div class="row text-center g-3">
+            <div class="col-6 col-md-2">
+                <div class="p-2 border rounded bg-light">
+                    <small class="text-muted d-block fw-bold">TOTAL REGISTROS</small>
+                    <span class="fs-4 fw-bold text-dark">{{ totalRegistros }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-2 border rounded bg-success-subtle border-success">
+                    <small class="text-success d-block fw-bold">LLENADOS</small>
+                    <span class="fs-4 fw-bold text-success">{{ totalRegistrosLlenos }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-2 border rounded bg-warning-subtle border-warning">
+                    <small class="text-warning-emphasis d-block fw-bold">VACÍOS</small>
+                    <span class="fs-4 fw-bold text-warning-emphasis">{{ totalRegistrosVacios }}</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-2 border rounded bg-dark-subtle border-dark">
+                    <small class="text-dark d-block fw-bold">NO APLICAN</small>
+                    <span class="fs-4 fw-bold text-dark">{{ totalRegistrosNA }}</span>
+                </div>
+            </div>   
+      <div class="col-6 col-md-4">
+    <div class="p-2 border rounded bg-dark-subtle border-dark">
+        <small class="text-dark d-block fw-bold">% Completado</small>
+        <span class="fs-4 fw-bold 
+            {% if porcentajeLlenado < 50 %}
+                text-red
+            {% elif porcentajeLlenado >= 50 and porcentajeLlenado < 100 %}
+                text-yellow
+            {% elif porcentajeLlenado >= 100 %}
+                text-green
+            {% endif %}">
+            {{ porcentajeLlenado }}%
+        </span>
+    </div>
+</div>
+        </div>
 
+        {% if mensajeInfo %}
+            <div class="alert alert-warning mt-3 mb-0 text-center" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ mensajeInfo }}
+            </div>
+        {% endif %}
+    </div>
+</div>
         <div class="d-flex justify-content-end">
             {% if request.user.roles == 'Administrador' %}             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
             

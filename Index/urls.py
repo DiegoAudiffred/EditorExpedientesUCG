@@ -9,6 +9,7 @@ urlpatterns = [
 
 
     path("",views.index,name='index'),
+    path("preguntasIndex",views.preguntasIndex,name='preguntasIndex'),
 
     path("expedientes/",views.expedientesLayout,name='expedientesLayout'),
 
@@ -42,6 +43,10 @@ urlpatterns = [
     path('expediente/procesarArchivos/<int:id>/', views.procesarArchivos, name='procesarArchivos'),
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
+    path('expediente/archivarExpediente/<int:id>/<str:porcentajeLlenado>', views.archivarExpediente, name='archivarExpediente'),
+
+
+
 
     path('obtener-socio-data/<int:socio_id>/', views.obtener_socio_data, name='obtener_socio_data'),
     

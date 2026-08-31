@@ -115,7 +115,7 @@ class Expediente(models.Model):
     fechaCreacion = models.DateField(auto_now_add=True, blank=True)
     usuarioNegocios = models.ForeignKey(User, related_name='negocios', blank=True, null=True, on_delete=models.CASCADE)
     fechaArchivado = models.DateField(null=True,blank=True)
-
+    expedienteResagado = models.BooleanField(default=False)
     eliminado = models.BooleanField(default=False)
 
     def __str__(self):
@@ -206,7 +206,7 @@ class SeccionesExpediente(models.Model):
         ('I', 'Actividades vulnerables'),
         ('II','Informacion Financiera'),
         ('III','Estudio de Crédito'),
-        ('IV','Información de garantias'),
+        ('IV','Informacion de garantias'),
         ('V','Contratos'),
         ('VI','Seguimiento'),
         ('VII','Correspondencia')
