@@ -929,7 +929,7 @@ const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstra
             <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
                 valores vacios</a>
                             {% include 'Index/modalCargarArchivos.html' %}
-
+                            {% include 'Index/modalDetectarArchivos.html' %}
 
           
             <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>

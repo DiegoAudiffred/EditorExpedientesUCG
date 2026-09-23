@@ -2684,9 +2684,9 @@ def procesarArchivos(request, id):
 
     mapeo_secciones = {
         "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
-        "2": os.path.join(rutaMaestra, "II. Informacion Financiera"),
+        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
         "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Informacion de garantias"),
+        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
         "5": os.path.join(rutaOperativa, "V. Contratos"),
         "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
         "7": os.path.join(rutaOperativa, "VII. Correspondencia")
@@ -3069,9 +3069,9 @@ def checarRuta(identificador_socio, secciones):
 
     mapeo_secciones = {
         "1": os.path.join(rutaMaestra, "I. Identificación del Socio"),
-        "2": os.path.join(rutaMaestra, "II. Informacion Financiera"),
+        "2": os.path.join(rutaMaestra, "II. Información Financiera"),
         "3": os.path.join(rutaOperativa, "III. Estudio de Crédito"),
-        "4": os.path.join(rutaOperativa, "IV. Informacion de garantias"),
+        "4": os.path.join(rutaOperativa, "IV. Información de garantias"),
         "5": os.path.join(rutaOperativa, "V. Contratos"),
         "6": os.path.join(rutaOperativa, "VI. Seguimiento"),
         "7": os.path.join(rutaOperativa, "VII. Correspondencia")

@@ -204,9 +204,9 @@ class SeccionesExpediente(models.Model):
         ('B', 'Representante legal'),
         ('C', 'Obligado solidario y garantes'),
         ('I', 'Actividades vulnerables'),
-        ('II','Informacion Financiera'),
+        ('II','Información Financiera'),
         ('III','Estudio de Crédito'),
-        ('IV','Informacion de garantias'),
+        ('IV','Información de Garantias'),
         ('V','Contratos'),
         ('VI','Seguimiento'),
         ('VII','Correspondencia')
