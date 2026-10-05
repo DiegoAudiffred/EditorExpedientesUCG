@@ -117,6 +117,7 @@ class Expediente(models.Model):
     fechaArchivado = models.DateField(null=True,blank=True)
     expedienteResagado = models.BooleanField(default=False)
     eliminado = models.BooleanField(default=False)
+    contemplado = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.socio}"

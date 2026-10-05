@@ -2,50 +2,105 @@
 {% load static %}
 
 {% block body %}
-<div class="container my-4">
-    <div class="table-responsive">
-        <table class="table table-bordered align-middle">
-            <thead>
-                <tr>
-                    <th style="width: 25%;">Expediente / Socio</th>
-                    <th style="width: 75%;">Línea de Tiempo de Estados</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for exp in expediente %}
-                <tr>
-                    <td style="background-color: {{exp.estatus.color}};">
-                        {{exp.socio.nombre}} 
-                    </td>
-                    <td>
-              <div class="d-flex align-items-center flex-wrap">
-    {% for eventos in todosEstados %}
-        {% if eventos.expediente == exp %}
-            <div class="d-flex flex-column align-items-center mx-2 my-2">
-                <div class="rounded rounded-5 p-2 text-center" style="background-color: {{eventos.estado.color}}; min-width: 120px;">
-                    <b>{{eventos.estado.nombre}}</b>
-                </div>
-                <small class="mt-1" style="font-size: 0.60rem;">
-                    {{ eventos.fecha|date:"d / m / y" }}
-                </small>
+<style>
+.timeline-container {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap; /* Permite que los elementos se manden abajo */
+        gap: 10px 0;      /* Espacio vertical cuando se bajan */
+        padding: 10px 0;
+    }
+    .timeline-step {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .timeline-card {
+        border-radius: 8px;
+        padding: 8px 12px;
+        min-width: 140px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        text-align: center;
+    }
+    .timeline-arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
+        color: #6c757d;
+    }
+    .timeline-arrow .line {
+        height: 2px;
+        width: 30px;
+        background-color: #dee2e6;
+        position: relative;
+    }
+    .border-left-indicator {
+        border-left: 6px solid transparent;
+    }
+</style>
+
+<div class="container-fluid my-4 px-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0 fw-bold">Línea de Tiempo de Expedientes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 25%; min-width: 200px;">Socio / Expediente</th>
+                            <th style="width: 75%;">Progreso de Estados</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exp in expedientes %}
+                        <tr>
+                            <td class="border-left-indicator" style="border-left-color: {{ exp.estatus.color|default:'#6c757d' }};">
+                                <div class="fw-bold text-dark">{{ exp.socio.nombre }}</div>
+                                <small class="text-muted">Estado actual: 
+                                    <span class="badge" style="background-color: {{ exp.estatus.color }};">
+                                        {{ exp.estatus.nombre }}
+                                    </span>
+                                </small>
+                            </td>
+                            <td>
+                                <div class="timeline-container">
+                                    {% for evento in exp.lista_estados %}
+                                        <div class="timeline-step">
+                                            <div class="timeline-card text-quinto shadow-lg" style="background-color: {{ evento.estado.color }};">
+                                                <div class="fw-bold small">{{ evento.estado.nombre }}</div>
+                                                <small class="d-block  text-white fw-bold">
+                                                    {{ evento.fecha|date:"d/m/Y" }}
+                                                </small>
+                                            </div>
+
+                                            {% if evento.dias_siguiente != None %}
+                                                <div class="timeline-arrow">
+                                                    <span class="badge rounded-pill bg-primary text-dark border mb-1" style="font-size: 0.7rem;">
+                                                        {{ evento.dias_siguiente }}d
+                                                    </span>
+                                                    <i class="bi bi-arrow-right"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <span class="text-muted small italic">Sin movimientos registrados</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center py-4 text-muted">No hay expedientes disponibles.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            
-            {% if eventos.dias_siguiente != None %}
-                <div class="d-flex flex-column align-items-center mx-2 my-2">
-                    <span class="badge bg-secondary mb-1" style="font-size: 0.75rem;">
-                        {{ eventos.dias_siguiente }} días
-                    </span>
-                    <span class="fw-bold">&rarr;</span>
-                </div>
-            {% endif %}
-        {% endif %}
-    {% endfor %}
-</div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        </div>
     </div>
 </div>
 {% endblock %}

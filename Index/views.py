@@ -19,7 +19,7 @@ from django.contrib.auth.decorators import user_passes_test,login_required
 from django.core.paginator import Paginator
 from django.contrib import messages 
 from django.shortcuts import render
-from django.db.models import Q
+from django.db.models import Q, Count, Prefetch
 from openpyxl.styles import *
 from openpyxl.styles.borders import Border, Side
 import smtplib
@@ -40,8 +40,12 @@ def is_active_user(user):
 
 @login_required(login_url='/login/')    
 def index(request):
-
-    return render(request, 'Index/index.html')
+    estados = Estado.objects.all()
+    context = {
+   
+        'estados':estados,
+    }
+    return render(request, 'Index/index.html',context)
 def preguntasIndex(request):
     estados = Estado.objects.all()
     context = {
@@ -54,14 +58,17 @@ def preguntasIndex(request):
 def expedientesLayout(request):
     expedientes = Expediente.objects.all().order_by('-id').filter(eliminado = False)
     estatus = Estado.objects.all()
-    usuarios = User.objects.exclude(roles__in=['Administrador', 'Credito', 'Gerente de Credito'])   
+    usuarios = User.objects.exclude(roles__in=['Administrador', 'Credito', 'Gerente de Credito','Ejecutivo de Negocios'])   
     usuariosCredito = User.objects.filter(roles__in=['Credito','Gerente de Credito']) 
- 
+    usuariosNegocios = User.objects.filter(roles__in=['Ejecutivo de Negocios','Gerente Centro de Negocios']) 
     contexto = {
             'expedientes': expedientes,
             'estatus': estatus,
             'usuarios': usuarios,
             'usuariosCredito': usuariosCredito,
+            'usuariosNegocios':usuariosNegocios,
+            #'expedienteResagado':
+            #'contemplado':
         }
     return render(request, 'Index/expedientesLayout.html',contexto)
 
@@ -69,31 +76,50 @@ def expedientesLayout(request):
 def filtrar_expedientes_ajax(request):
     estatus_id = request.GET.get('estatus', '0')
     usuario_id = request.GET.get('usuarios', '0')
-    usaurioCredito_id = request.GET.get('usuariosCredito', '0')
+    usuarioNegocios_id = request.GET.get('usuariosNegocios', '0')
+    usuarioCredito_id = request.GET.get('usuariosCredito', '0')
     socio_query = request.GET.get('socio', '').strip()
 
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
+    # Parámetros para Atrasados y Contemplados ('1' o '0')
+    expediente_resagado = request.GET.get('expedienteResagado', '0')
+    contemplado = request.GET.get('contemplado', '0')
+
     page_number = request.GET.get('page', 1)
 
     expedientes = Expediente.objects.all()
 
+    # Filtros estándar
     if estatus_id != '0':
         expedientes = expedientes.filter(estatus_id=estatus_id)
 
     if usuario_id != '0':
         expedientes = expedientes.filter(usuario_id=usuario_id)
 
-    if usaurioCredito_id != '0':
-        expedientes = expedientes.filter(usuario_id=usaurioCredito_id)
+    if usuarioNegocios_id != '0':
+        expedientes = expedientes.filter(usuario_id=usuarioNegocios_id)
 
+    if usuarioCredito_id != '0':
+        expedientes = expedientes.filter(usuario_id=usuarioCredito_id)
+
+    # Filtro por Atrasados (Resagados)
+    if expediente_resagado == '1':
+        expedientes = expedientes.filter(expedienteResagado=True)
+
+    # Filtro por Contemplados (A analizar)
+    if contemplado == '1':
+        expedientes = expedientes.filter(contemplado=True)
+
+    # Búsqueda por socio
     if socio_query:
         expedientes = expedientes.filter(
             Q(socio__nombre__icontains=socio_query) |
             Q(socio__id__icontains=socio_query)
         ).distinct()
 
+    # Filtro por fechas
     if fecha_inicio and fecha_fin:
         expedientes = expedientes.filter(fechaCreacion__range=[fecha_inicio, fecha_fin])
     elif fecha_inicio:
@@ -101,7 +127,7 @@ def filtrar_expedientes_ajax(request):
     elif fecha_fin:
         expedientes = expedientes.filter(fechaCreacion__lte=fecha_fin)
 
-    expedientes = expedientes.order_by('-id').filter(eliminado = False)
+    expedientes = expedientes.order_by('-id').filter(eliminado=False)
 
     paginator = Paginator(expedientes, 10)
     page_obj = paginator.get_page(page_number)
@@ -113,7 +139,6 @@ def filtrar_expedientes_ajax(request):
     }
 
     return render(request, 'Index/tablaExpedientex.html', context)
-
 import json
 from django.http import JsonResponse
 
@@ -1289,17 +1314,32 @@ def exportarPDF(request, id):
 
 
 
+
+
 @login_required(login_url='/login/')    
 def avances(request):
-    mes_actual = datetime.now().month
-    ano_actual = datetime.now().year
-    
+    fecha_actual = datetime.now()
+    mes_actual = fecha_actual.month
+    ano_actual = fecha_actual.year
+    semana_actual = fecha_actual.isocalendar()[1]
+
     mes_seleccionado = int(request.GET.get('mes', mes_actual))
     ano_seleccionado = int(request.GET.get('ano', ano_actual))
+    semana_seleccionada = request.GET.get('semana', '')
     tipo_reporte = request.GET.get('tipo_reporte', 'actual')
 
+    fecha_inicio_semana = None
+    fecha_fin_semana = None
+    rango_semana_texto = ""
+
+    if semana_seleccionada:
+        semana_int = int(semana_seleccionada)
+        fecha_inicio_semana = datetime.strptime(f'{ano_seleccionado}-W{semana_int}-1', "%Y-W%W-%w").date()
+        fecha_fin_semana = fecha_inicio_semana + timedelta(days=6)
+        rango_semana_texto = f"Del {fecha_inicio_semana.strftime('%d/%m/%Y')} al {fecha_fin_semana.strftime('%d/%m/%Y')}"
+
     if request.user.roles == 'Gerente Centro de Negocios':
-        usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios','Gerente Centro de Negocios']).distinct()
+        usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Gerente Centro de Negocios']).distinct()
         estados = Estado.objects.all().order_by('id')
     elif request.user.roles == 'Gerente de Credito':
         usuarios = User.objects.filter(roles__in=['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']).distinct()
@@ -1310,7 +1350,7 @@ def avances(request):
     else:
         usuarios = User.objects.none()
         estados = Estado.objects.none()
-    
+
     data_por_usuario = {}
 
     lista_usuarios = list(usuarios)
@@ -1330,18 +1370,18 @@ def avances(request):
         else:
             username_key = us.username
             rol_usuario = us.roles.strip() if us.roles else ""
-            grafica_barras = rol_usuario in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']
-            if grafica_barras:
+            grafica_barras = rol_usuario in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito', 'Ejecutivo de Servicios', 'Gerente Centro de Negocios']
+            if rol_usuario in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']:
                 expedientes_totales = Expediente.objects.filter(usuarioCredito=us, eliminado=False)
             else:
                 expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
 
         numExpedientes = expedientes_totales.count()
-        
+
         conteo_por_estado = {}
         historico_cambios = {}
         estado_cierre_mes = {}
-        
+
         for estado in estados:
             conteo_por_estado[estado.nombre] = {
                 'count': 0,
@@ -1358,28 +1398,36 @@ def avances(request):
         else:
             expedientes_ids = expedientes_totales.values_list('id', flat=True)
             for exp_id in expedientes_ids:
-                ultimo_cambio = EstadosFechas.objects.filter(
-                    expediente_id=exp_id,
-                    fecha__month=mes_seleccionado,
-                    fecha__year=ano_seleccionado
-                ).order_by('-fecha', '-hora').first()
-                
+                filtros_fechas = {'expediente_id': exp_id}
+                if semana_seleccionada and fecha_inicio_semana and fecha_fin_semana:
+                    filtros_fechas['fecha__range'] = (fecha_inicio_semana, fecha_fin_semana)
+                else:
+                    filtros_fechas['fecha__month'] = mes_seleccionado
+                    filtros_fechas['fecha__year'] = ano_seleccionado
+
+                ultimo_cambio = EstadosFechas.objects.filter(**filtros_fechas).order_by('-fecha', '-hora').first()
+
                 if ultimo_cambio:
                     if ultimo_cambio.estado.nombre in conteo_por_estado:
                         conteo_por_estado[ultimo_cambio.estado.nombre]['count'] += 1
                 else:
+                    limite_fecha = fecha_inicio_semana if semana_seleccionada else datetime(ano_seleccionado, mes_seleccionado, 1).date()
                     ultimo_cambio_historico = EstadosFechas.objects.filter(
                         expediente_id=exp_id,
-                        fecha__lt=datetime(ano_seleccionado, mes_seleccionado, 1).date()
+                        fecha__lt=limite_fecha
                     ).order_by('-fecha', '-hora').first()
+
                     if ultimo_cambio_historico and ultimo_cambio_historico.estado.nombre in conteo_por_estado:
                         conteo_por_estado[ultimo_cambio_historico.estado.nombre]['count'] += 1
 
-        historial_periodo = EstadosFechas.objects.filter(
-            expediente__in=expedientes_totales,
-            fecha__month=mes_seleccionado,
-            fecha__year=ano_seleccionado
-        )
+        filtros_historial = {'expediente__in': expedientes_totales}
+        if semana_seleccionada and fecha_inicio_semana and fecha_fin_semana:
+            filtros_historial['fecha__range'] = (fecha_inicio_semana, fecha_fin_semana)
+        else:
+            filtros_historial['fecha__month'] = mes_seleccionado
+            filtros_historial['fecha__year'] = ano_seleccionado
+
+        historial_periodo = EstadosFechas.objects.filter(**filtros_historial)
 
         for registro in historial_periodo:
             if registro.estado.nombre in historico_cambios:
@@ -1387,21 +1435,31 @@ def avances(request):
 
         expedientes_ids = expedientes_totales.values_list('id', flat=True)
         for exp_id in expedientes_ids:
-            ultimo_cambio = EstadosFechas.objects.filter(
-                expediente_id=exp_id,
-                fecha__month=mes_seleccionado,
-                fecha__year=ano_seleccionado
-            ).order_by('-fecha', '-hora').first()
-            
+            filtros_cierre = {'expediente_id': exp_id}
+            if semana_seleccionada and fecha_inicio_semana and fecha_fin_semana:
+                filtros_cierre['fecha__range'] = (fecha_inicio_semana, fecha_fin_semana)
+            else:
+                filtros_cierre['fecha__month'] = mes_seleccionado
+                filtros_cierre['fecha__year'] = ano_seleccionado
+
+            ultimo_cambio = EstadosFechas.objects.filter(**filtros_cierre).order_by('-fecha', '-hora').first()
+
             if ultimo_cambio and ultimo_cambio.estado.nombre in estado_cierre_mes:
                 estado_cierre_mes[ultimo_cambio.estado.nombre] += 1
-        
+
         if tipo_reporte == 'actual':
             expedientes_completados = expedientes_totales.filter(estatus__id=2).count()
         else:
             expedientes_completados = 0
             for exp_id in expedientes_ids:
-                uc = EstadosFechas.objects.filter(expediente_id=exp_id, fecha__month=mes_seleccionado, fecha__year=ano_seleccionado).order_by('-fecha', '-hora').first()
+                filtros_comp = {'expediente_id': exp_id}
+                if semana_seleccionada and fecha_inicio_semana and fecha_fin_semana:
+                    filtros_comp['fecha__range'] = (fecha_inicio_semana, fecha_fin_semana)
+                else:
+                    filtros_comp['fecha__month'] = mes_seleccionado
+                    filtros_comp['fecha__year'] = ano_seleccionado
+
+                uc = EstadosFechas.objects.filter(**filtros_comp).order_by('-fecha', '-hora').first()
                 if uc and uc.estado.id == 2:
                     expedientes_completados += 1
 
@@ -1409,7 +1467,7 @@ def avances(request):
             porcentaje_completado = (expedientes_completados / numExpedientes) * 100
         else:
             porcentaje_completado = 0
-            
+
         if numExpedientes > 0 or us is not None:
             data_por_usuario[username_key] = {
                 'total': numExpedientes,
@@ -1419,19 +1477,65 @@ def avances(request):
                 'historico_cambios': historico_cambios,
                 'estado_cierre_mes': estado_cierre_mes
             }
-            
+
+    if tipo_reporte == 'actual':
+        expedientes_negocios_qs = Expediente.objects.filter(eliminado=False)
+    else:
+        filtros_negocios_fechas = {}
+        if semana_seleccionada and fecha_inicio_semana and fecha_fin_semana:
+            filtros_negocios_fechas['fecha__range'] = (fecha_inicio_semana, fecha_fin_semana)
+        else:
+            filtros_negocios_fechas['fecha__month'] = mes_seleccionado
+            filtros_negocios_fechas['fecha__year'] = ano_seleccionado
+
+        ids_periodo = EstadosFechas.objects.filter(**filtros_negocios_fechas).values_list('expediente_id', flat=True).distinct()
+        expedientes_negocios_qs = Expediente.objects.filter(id__in=ids_periodo, eliminado=False)
+
+    agrupado_negocios = (
+        expedientes_negocios_qs
+        .values('usuarioNegocios__first_name', 'usuarioNegocios__last_name', 'usuarioNegocios__username')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    labels_negocios = []
+    data_negocios = []
+
+    for item in agrupado_negocios:
+        nombre_completo = f"{item['usuarioNegocios__first_name'] or ''} {item['usuarioNegocios__last_name'] or ''}".strip()
+        if not nombre_completo:
+            nombre_completo = item['usuarioNegocios__username'] or 'Sin Asignar'
+        labels_negocios.append(nombre_completo)
+        data_negocios.append(item['total'])
+
+    semanas_rango = []
+    for num_semana in range(1, 54):
+        try:
+            inicio = datetime.strptime(f'{ano_seleccionado}-W{num_semana}-1', "%Y-W%W-%w").date()
+            fin = inicio + timedelta(days=6)
+            etiqueta = f"Semana {num_semana} - {inicio.strftime('%d/%m/%Y')} al {fin.strftime('%d/%m/%Y')}"
+            semanas_rango.append({'numero': num_semana, 'texto': etiqueta})
+        except ValueError:
+            pass
+
     context = {
         'data_por_usuario': data_por_usuario,
         'estados_list': estados,
         'mes_seleccionado': mes_seleccionado,
         'ano_seleccionado': ano_seleccionado,
+        'semana_seleccionada': semana_seleccionada,
+        'rango_semana_texto': rango_semana_texto,
         'tipo_reporte': tipo_reporte,
         'meses_rango': range(1, 13),
-        'anos_rango': range(datetime.now().year - 3, datetime.now().year + 1)
+        'semanas_rango': semanas_rango,
+        'anos_rango': range(datetime.now().year - 3, datetime.now().year + 1),
+        'labels_negocios': labels_negocios,
+        'data_negocios': data_negocios,
     }
-    
+
     return render(request, 'Index/avancesLayout.html', context)
-@login_required(login_url='/login/')
+
+login_required(login_url='/login/')
 #@user_passes_test(is_admin)
 def administrador(request):
 
@@ -3251,23 +3355,25 @@ def checarRuta(identificador_socio, secciones):
 
 @login_required(login_url='/login/')
 def avancesMovimientos(request):
-    expediente = Expediente.objects.all().order_by('socio__nombre')    
-    todosEstados = EstadosFechas.objects.all().order_by('fecha')
-    
-    for exp in expediente:
-        estados_exp = [e for e in todosEstados if e.expediente_id == exp.id]
-        for i in range(len(estados_exp)):
-            if i < len(estados_exp) - 1:
-                fecha_actual = estados_exp[i].fecha
-                fecha_siguiente = estados_exp[i+1].fecha
-                diferencia = (fecha_siguiente - fecha_actual).days
-                estados_exp[i].dias_siguiente = diferencia
+    expedientes = Expediente.objects.select_related('socio', 'estatus').prefetch_related(
+        Prefetch(
+            'estadosfechas_set',
+            queryset=EstadosFechas.objects.select_related('estado').order_by('fecha'),
+            to_attr='lista_estados'
+        )
+    ).order_by('socio__nombre')
+
+    for exp in expedientes:
+        estados = exp.lista_estados
+        total = len(estados)
+        for i in range(total):
+            if i < total - 1:
+                estados[i].dias_siguiente = (estados[i+1].fecha - estados[i].fecha).days
             else:
-                estados_exp[i].dias_siguiente = None
+                estados[i].dias_siguiente = None
 
     context = {
-        'expediente': expediente,
-        'todosEstados': todosEstados,
+        'expedientes': expedientes,
     }
 
     return render(request, 'Index/avancesMovimientos.html', context)
@@ -3362,6 +3468,27 @@ def archivarExpediente(request, id,porcentajeLlenado):
     darAlta(expediente, getEstado.nombre, request.user)
 
     return redirect('Index:editarExpediente', expediente.id)
+def generarLista(request):
+    response = HttpResponse(content_type='text/plain; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="lista_expedientes.txt"'
+
+    expedientes = Expediente.objects.all()
+
+    lineas = []
+    for e in expedientes:
+        nombre_socio = getattr(e.socio, 'nombre', 'Sin Nombre')
+        
+        numero_kepler = getattr(e.socio, 'numeroKepler', None)
+        if not numero_kepler:
+            numero_kepler = '0000'
+
+        linea = f"{nombre_socio}, {numero_kepler}\n"
+        lineas.append(linea)
+
+    response.writelines(lineas)
+    return response
+
+
 
 """Temas a considerar:
 

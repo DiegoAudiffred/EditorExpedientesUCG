@@ -7,6 +7,7 @@
 <div class="container mt-4">
     <h2 class="mb-4">Progreso Detallado de Expedientes por Usuario y Estado</h2>
     <a href="{% url 'Index:avancesMovimientos' %}">Avances por expedientes</a>
+    
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="" class="row g-3 align-items-center">
@@ -14,8 +15,19 @@
                     <label for="tipo_reporte" class="form-label font-weight-bold">Tipo de Vista:</label>
                     <select name="tipo_reporte" id="tipo_reporte" class="form-select">
                         <option value="actual" {% if tipo_reporte == 'actual' %}selected{% endif %}>Estado Actual (Al día de hoy)</option>
-                        <option value="historico" {% if tipo_reporte == 'historico' %}selected{% endif %}>Cierre de Mes (Histórico)</option>
+                        <option value="historico" {% if tipo_reporte == 'historico' %}selected{% endif %}>Cierre de Periodo (Histórico)</option>
                     </select>
+                </div>
+                <div class="col-auto">
+                    <label for="semana" class="form-label font-weight-bold">Filtrar por Semana:</label>
+               <select name="semana" class="form-select">
+    <option value="">Seleccione una semana</option>
+    {% for sem in semanas_rango %}
+        <option value="{{ sem.numero }}" {% if semana_seleccionada|add:"0" == sem.numero %}selected{% endif %}>
+            {{ sem.texto }}
+        </option>
+    {% endfor %}
+</select>
                 </div>
                 <div class="col-auto">
                     <label for="mes" class="form-label font-weight-bold">Filtrar por Mes:</label>
@@ -46,55 +58,29 @@
                     <button type="submit" class="btn btn-primary mt-2">Aplicar Filtros</button>
                 </div>
             </form>
+            {% if rango_semana_texto %}
+                <div class="alert alert-info py-2 mb-0 mt-3">
+                    <strong>Fechas de la semana filtrada:</strong> {{ rango_semana_texto }}
+                </div>
+            {% endif %}
         </div>
     </div>
 
-    {% if request.user.roles == "Administrador" or request.user.roles == "Gerente Centro de Negocios" %}
-    <div class="row">
-        {% for username, data in data_por_usuario.items %}
-            {% if not data.grafica_barras %}
-            <div class="col-md-12 mb-4">
-                <div class="card shadow-sm h-100 {% if username == 'Sin Asignar' %}border-danger{% endif %}">
-                    <div class="card-header {% if username == 'Sin Asignar' %}bg-danger text-white{% else %}bg-light{% endif %}">
-                        <h4>{{ username }} - Avance: <span class="badge {% if data.porcentaje == 100 %} bg-green {% elif data.porcentaje < 100 and data.porcentaje >= 75 %} bg-primary {% elif data.porcentaje < 75 and data.porcentaje >= 50 %} bg-yellow text-dark {% elif data.porcentaje < 50 and data.porcentaje >= 0 %} bg-red {% endif %}">{{ data.porcentaje }}%</span></h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4 d-flex flex-column align-items-center justify-content-center">
-                                <div style="width: 100%; max-width: 220px; max-height: 220px; margin-bottom: 15px;">
-                                    {% if data.total > 0 %}
-                                        <canvas id="chart-dona-{{ username }}"></canvas>
-                                    {% else %}
-                                        <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
-                                    {% endif %}
-                                </div>
-                                <p class="text-center">Total de Expedientes: <strong>{{ data.total }}</strong></p>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>Historial de Cambios en el Mes</h6>
-                                <div style="position: relative; height:200px; width:100%">
-                                    <canvas id="chart-cambios-{{ username }}"></canvas>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <h6>Estatus de Cierre del Mes</h6>
-                                <div style="position: relative; height:200px; width:100%">
-                                    <canvas id="chart-cierre-{{ username }}"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    {% if request.user.roles == "Administrador" or request.user.roles == "Gerente Centro de Negocios" or request.user.roles == "Gerente de Credito" %}
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Expedientes por Ejecutivo de Negocios</h5>
+        </div>
+        <div class="card-body">
+            <div style="position: relative; height: 260px; width: 100%;">
+                <canvas id="chart-negocios"></canvas>
             </div>
-            {% endif %}
-        {% endfor %}
+        </div>
     </div>
-    {% endif %}
 
-    {% if request.user.roles == "Administrador" or request.user.roles == "Gerente de Credito" %}
     <div class="row">
         {% for username, data in data_por_usuario.items %}
-            {% if data.grafica_barras %}
             <div class="col-md-12 mb-4">
                 <div class="card shadow-sm h-100 {% if username == 'Sin Asignar' %}border-danger{% endif %}">
                     <div class="card-header {% if username == 'Sin Asignar' %}bg-danger text-white{% else %}bg-light{% endif %}">
@@ -103,9 +89,13 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 d-flex flex-column align-items-center justify-content-center">
-                                <div style="width: 100%; min-height: 200px; margin-bottom: 15px;">
+                                <div style="width: 100%; min-height: 200px; max-height: 220px; margin-bottom: 15px;">
                                     {% if data.total > 0 %}
-                                        <canvas id="chart-barra-{{ username }}"></canvas>
+                                        {% if data.grafica_barras %}
+                                            <canvas id="chart-barra-{{ username }}"></canvas>
+                                        {% else %}
+                                            <canvas id="chart-dona-{{ username }}"></canvas>
+                                        {% endif %}
                                     {% else %}
                                         <p class="text-muted text-center">Aún no hay expedientes registrados.</p>
                                     {% endif %}
@@ -113,13 +103,13 @@
                                 <p class="text-center">Total de Expedientes: <strong>{{ data.total }}</strong></p>
                             </div>
                             <div class="col-md-4">
-                                <h6>Historial de Cambios en el Mes</h6>
+                                <h6>Historial de Cambios en el Periodo</h6>
                                 <div style="position: relative; height:200px; width:100%">
                                     <canvas id="chart-cambios-{{ username }}"></canvas>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <h6>Estatus de Cierre del Mes</h6>
+                                <h6>Estatus de Cierre del Periodo</h6>
                                 <div style="position: relative; height:200px; width:100%">
                                     <canvas id="chart-cierre-{{ username }}"></canvas>
                                 </div>
@@ -128,7 +118,6 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
         {% endfor %}
     </div>
     {% endif %}
@@ -139,6 +128,32 @@
 <script>
     const dataElement = document.getElementById('user-data-estados');
     const dataUsuarios = JSON.parse(dataElement.textContent);
+
+    const labelsNegocios = {{ labels_negocios|safe }};
+    const dataNegocios = {{ data_negocios|safe }};
+
+    const ctxNegocios = document.getElementById('chart-negocios');
+    if (ctxNegocios) {
+        new Chart(ctxNegocios.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labelsNegocios,
+                datasets: [{
+                    label: 'Expedientes por Ejecutivo de Negocios',
+                    data: dataNegocios,
+                    backgroundColor: '#4e73df',
+                    borderColor: '#4e73df',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
 
     function createProgressChart(canvasId, estadosData, usarBarras) {
         const canvasTag = document.getElementById(canvasId);
@@ -224,8 +239,8 @@
                 createProgressChart(`${prefix}${username}`, data.estados, data.grafica_barras);
             }
             
-            createTimeAnalysisChart(`chart-cambios-${username}`, data.historico_cambios, '#36A2EB', 'Transiciones en el mes');
-            createTimeAnalysisChart(`chart-cierre-${username}`, data.estado_cierre_mes, '#FF6384', 'Quedaron al final del mes');
+            createTimeAnalysisChart(`chart-cambios-${username}`, data.historico_cambios, '#36A2EB', 'Transiciones en el periodo');
+            createTimeAnalysisChart(`chart-cierre-${username}`, data.estado_cierre_mes, '#FF6384', 'Quedaron al final del periodo');
         }
     }
 </script>

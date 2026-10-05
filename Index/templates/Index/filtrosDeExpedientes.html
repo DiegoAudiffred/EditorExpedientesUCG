@@ -1,6 +1,5 @@
-<div class="row d-flex align-items-end justify-content-end border border-3 rounded-4 shadow-lg border-primary my-3"
+<div class="row d-flex align-items-end justify-content-end border border-3 rounded-4 shadow-lg border-primary my-3 p-3"
     id="filtros-expedientes" data-url="{% url 'Index:filtrar_expedientes_ajax' %}">
-
 
     <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle3 text-quinto">Estatus</div>
@@ -14,7 +13,7 @@
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle3 text-quinto">E.Negocios</div>
+        <div class="fnSuperiorRegularTitle3 text-quinto">E.Servicios</div>
         <select name="usuarios" id="usuarios-select"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
             <option value="0">Cualquiera</option>
@@ -23,6 +22,18 @@
             {% endfor %}
         </select>
     </div>
+
+    <div class="col-lg-2 col-6">
+        <div class="fnSuperiorRegularTitle3 text-quinto">E.Negocios</div>
+        <select name="usuariosNegocios" id="usuariosNegocios-select"
+            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
+            <option value="0">Cualquiera</option>
+            {% for option in usuariosNegocios %}
+            <option value="{{option.id}}">{{option.nombreCompleto}}</option>
+            {% endfor %}
+        </select>
+    </div>
+
     <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle3 text-quinto">E.Credito</div>
         <select name="usuariosCredito" id="usuariosCredito-select"
@@ -35,7 +46,7 @@
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle3 text-quinto">N. de socio</div>
+        <div class="fnSuperiorRegularTitle3 text-quinto">Nombre del socio</div>
         <input type="text" id="socio-input"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero"
             placeholder="Buscar por nombre">
@@ -52,87 +63,148 @@
         <input type="date" id="fecha-fin-input" name="fecha_fin"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
-    <div class="col-lg-2 col-6 py-2">
-        <button id="boton-reset-datos" class="btn bg-quinto text-white rounded rounded-4 py-1  w-100">
-            Reiniciar
+
+    <div class="col-lg-2 col-6">
+        <div class="fnSuperiorRegularTitle3 text-black"> Atrasados</div>
+        <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-atrasados-datos">
+            <i class="fa fa-hourglass" aria-hidden="true" style="color: #e67e22;"></i> Expedientes atrasados
         </button>
     </div>
 
-</div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <div class="col-lg-2 col-6">
+        <div class="fnSuperiorRegularTitle3 text-black"> A analizar</div>
+        <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-analizar-datos">
+            <i class="fa fa-bar-chart" aria-hidden="true" style="color: #27ae60;"></i> Expedientes a analizar
+        </button>
+    </div>
 
+    <div class="col-lg-2 col-6">
+        <button id="boton-reset-datos" class="btn bg-quinto text-white rounded rounded-4 py-1 w-100">
+            Reiniciar
+        </button>
+    </div>
+</div>
 <script>
     $(document).ready(function () {
-        const filtrosContainer = document.getElementById('filtros-expedientes');
+    const filtrosContainer = document.getElementById('filtros-expedientes');
+    if (!filtrosContainer) return;
 
-        if (!filtrosContainer) return;
+    const filterUrl = filtrosContainer.dataset.url;
 
-        const filterUrl = filtrosContainer.dataset.url;
+    const estatusSelect = document.getElementById('estatus-select');
+    const usuariosSelect = document.getElementById('usuarios-select');
+    const usuariosNegociosSelect = document.getElementById('usuariosNegocios-select');
+    const usuariosCreditoSelect = document.getElementById('usuariosCredito-select');
+    const socioInput = document.getElementById('socio-input');
+    const fechaInicioInput = document.getElementById('fecha-inicio-input');
+    const fechaFinInput = document.getElementById('fecha-fin-input');
+    const botonReset = document.getElementById('boton-reset-datos');
+    const botonAtrasados = document.getElementById('boton-atrasados-datos');
+    const botonAnalizar = document.getElementById('boton-analizar-datos');
 
-        const estatusSelect = document.getElementById('estatus-select');
-        const usuariosSelect = document.getElementById('usuarios-select');
-        const usuariosCreditoSelect = document.getElementById('usuariosCredito-select');
-        const socioInput = document.getElementById('socio-input');
-        const fechaInicioInput = document.getElementById('fecha-inicio-input');
-        const fechaFinInput = document.getElementById('fecha-fin-input');
-        const botonReset = document.getElementById('boton-reset-datos');
+    // Estado de los botones de filtro
+    let atrasadosActivo = false;
+    let contempladosActivo = false;
 
-        function ejecutarFiltro(page = 1) {
-            const params = {
-                'estatus': estatusSelect.value,
-                'usuarios': usuariosSelect.value,
-                'usuariosCredito': usuariosCreditoSelect.value,
-                'socio': socioInput.value,
-                'fecha_inicio': fechaInicioInput.value,
-                'fecha_fin': fechaFinInput.value,
-                'page': page
-            };
-
-            $.ajax({
-                url: filterUrl,
-                type: 'GET',
-                data: params,
-                success: function (response) {
-                    $('#resultados-expedientes').html(response);
-                },
-                error: function (xhr, status, error) {
-                    console.error("Error AJAX:", error);
-                }
-            });
+    function actualizarEstiloBoton(boton, activo) {
+        if (activo) {
+            boton.classList.add('bg-primary', 'text-white');
+            boton.classList.remove('');
+        } else {
+            boton.classList.remove('bg-primary', 'text-white');
+            boton.classList.add('');
         }
+    }
 
-        function resetearFiltros() {
-            estatusSelect.value = "0";
-            usuariosSelect.value = "0";
-            usuariosCreditoSelect.value = "0";
-            socioInput.value = "";
-            fechaInicioInput.value = "";
-            fechaFinInput.value = "";
-            ejecutarFiltro(1);
-        }
+    function ejecutarFiltro(page = 1) {
+        const params = {
+            'estatus': estatusSelect.value,
+            'usuarios': usuariosSelect.value,
+            'usuariosNegocios': usuariosNegociosSelect ? usuariosNegociosSelect.value : '0',
+            'usuariosCredito': usuariosCreditoSelect.value,
+            'socio': socioInput.value,
+            'fecha_inicio': fechaInicioInput.value,
+            'fecha_fin': fechaFinInput.value,
+            'page': page,
+            'expedienteResagado': atrasadosActivo ? '1' : '0',
+            'contemplado': contempladosActivo ? '1' : '0'
+        };
 
-        // Triggers
-        estatusSelect.addEventListener('change', () => ejecutarFiltro(1));
-        usuariosSelect.addEventListener('change', () => ejecutarFiltro(1));
-        usuariosCreditoSelect.addEventListener('change', () => ejecutarFiltro(1));
-        fechaInicioInput.addEventListener('change', () => ejecutarFiltro(1));
-        fechaFinInput.addEventListener('change', () => ejecutarFiltro(1));
-
-        let timeoutId;
-        socioInput.addEventListener('input', function () {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => ejecutarFiltro(1), 100);
+        $.ajax({
+            url: filterUrl,
+            type: 'GET',
+            data: params,
+            success: function (response) {
+                $('#resultados-expedientes').html(response);
+            },
+            error: function (xhr, status, error) {
+                console.error("Error AJAX:", error);
+            }
         });
+    }
 
-        if (botonReset) botonReset.addEventListener('click', resetearFiltros);
+    function resetearFiltros() {
+        estatusSelect.value = "0";
+        usuariosSelect.value = "0";
+        if (usuariosNegociosSelect) usuariosNegociosSelect.value = "0";
+        usuariosCreditoSelect.value = "0";
+        socioInput.value = "";
+        fechaInicioInput.value = "";
+        fechaFinInput.value = "";
 
-        // Paginar desde botones dinámicos
-        $(document).on('click', '.paginar', function () {
-            const page = $(this).data('page');
-            ejecutarFiltro(page);
-        });
+        // Resetear estados de botones
+        atrasadosActivo = false;
+        contempladosActivo = false;
+        actualizarEstiloBoton(botonAtrasados, false);
+        actualizarEstiloBoton(botonAnalizar, false);
 
-        // Carga inicial con page=1
         ejecutarFiltro(1);
+    }
+
+    // Toggle Botón Atrasados
+    if (botonAtrasados) {
+        botonAtrasados.addEventListener('click', function (e) {
+            e.preventDefault();
+            atrasadosActivo = !atrasadosActivo;
+            actualizarEstiloBoton(botonAtrasados, atrasadosActivo);
+            ejecutarFiltro(1);
+        });
+    }
+
+    // Toggle Botón A analizar (Contemplados)
+    if (botonAnalizar) {
+        botonAnalizar.addEventListener('click', function (e) {
+            e.preventDefault();
+            contempladosActivo = !contempladosActivo;
+            actualizarEstiloBoton(botonAnalizar, contempladosActivo);
+            ejecutarFiltro(1);
+        });
+    }
+
+    // Triggers estándar
+    estatusSelect.addEventListener('change', () => ejecutarFiltro(1));
+    usuariosSelect.addEventListener('change', () => ejecutarFiltro(1));
+    if (usuariosNegociosSelect) usuariosNegociosSelect.addEventListener('change', () => ejecutarFiltro(1));
+    usuariosCreditoSelect.addEventListener('change', () => ejecutarFiltro(1));
+    fechaInicioInput.addEventListener('change', () => ejecutarFiltro(1));
+    fechaFinInput.addEventListener('change', () => ejecutarFiltro(1));
+
+    let timeoutId;
+    socioInput.addEventListener('input', function () {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => ejecutarFiltro(1), 300);
     });
+
+    if (botonReset) botonReset.addEventListener('click', resetearFiltros);
+
+    // Paginar desde botones dinámicos
+    $(document).on('click', '.paginar', function (e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        ejecutarFiltro(page);
+    });
+
+    // Carga inicial
+    ejecutarFiltro(1);
+});
 </script>

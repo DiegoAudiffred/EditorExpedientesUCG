@@ -536,10 +536,8 @@
                     <div>
                         <span class="text-secondary small d-block">Nombre</span>
                         <span class="fw-bold h6 mb-0">{{ linea.nombre }}</span>
-
-                        {% if request.user.roles == 'Administrador' %}
+<!-- Se elimino que solo el admin pueda -->
                         <a href="{% url 'Index:eliminarRepresentante' linea.id expediente.id %}" class="btn btn-primary mx-2">Eliminar Representante del Expediente</a>
-                        {% endif %}
                     </div>
 
 

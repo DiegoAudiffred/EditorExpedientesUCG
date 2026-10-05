@@ -1,11 +1,12 @@
 <table class="table">
-    <thead class="bg-tercero text-quinto">
+    <thead class="bg-tercero text-white fw-bold">
         <tr>
                    {% if request.user.roles == 'Administrador' %}
                 <th style="width: 15px;">Exp</th>
             {% endif %}
             <th>ID</th>
             <th>Socio</th>
+            <th> </th>
             <th>Número</th>
             <th>Estatus</th>
             <th>Ejecutivo de Servicio</th>
@@ -19,11 +20,37 @@
         {% for expediente in expedientes %}
         <tr style="background-color: {{expediente.estatus.color}};" class="">
                  {% if request.user.roles == 'Administrador' %}
-                <th>{{ expediente.id }}</th>
+                <th>{{ expediente.id }}</th> 
             {% endif %}
             <td>{{ expediente.socio.id }}</td>
 
-            <td>{{ expediente.socio.nombre }}</td>
+<td>
+  {{ expediente.socio.nombre }}
+  
+</td>
+<td>
+    {% if expediente.expedienteResagado %}
+    &emsp;
+    <a href="" class="text-decoration-none">    <i class="fa fa-hourglass" aria-hidden="true" style="color: #e67e22;"></i>
+</a>
+    {% else %}
+          &emsp;
+<a href="" class="text-decoration-none">        <i class="fa fa-hourglass" aria-hidden="true" ></i>
+</a>
+    {% endif %}
+
+    {% if expediente.contemplado %}
+      &emsp;
+      <a href="" class="text-decoration-none">      <i class="fa fa-bar-chart" aria-hidden="true" style="color: #27ae60;"></i>
+</a>
+      {% else %}
+            &emsp;
+<a href="" class="text-decoration-none">            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+</a>
+
+  {% endif %}
+</td>
+
             {% if expediente.socio.numeroKepler %}
             <td>{{ expediente.socio.numeroKepler }}</td>
             {% else %}

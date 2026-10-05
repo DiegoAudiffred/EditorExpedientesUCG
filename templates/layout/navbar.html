@@ -83,9 +83,7 @@
                 <li class="nav-item active">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="/">Inicio</a>
                 </li>
-                <li class="nav-item active">
-                    <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:preguntasIndex'%}">Preguntas</a>
-                </li>
+           
 
                 <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero"
@@ -96,11 +94,10 @@
                     <a class="nav-link fnSuperiorRegular text-tercero"
                         href="{% url 'Index:lineasLayout'%}">Lineas</a>
                 </li>
-                {% if request.user.roles == "Administrador" or request.user.roles == "Gerente Centro de Negocios" or request.user.roles == "Gerente de Credito" %}
                       <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:avances'%}">Avances</a>
                 </li>
-                {% endif %}
+                
                 
                          <li class="nav-item">
                     <a class="nav-link fnSuperiorRegular text-tercero" href="{% url 'Index:juntasIndex'%}">Juntas</a>
