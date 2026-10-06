@@ -9,12 +9,13 @@ class UserAdminForm(UserChangeForm):
     class Meta:
         model = User
         # Define los campos que el administrador PUEDE modificar
-        fields = ('username', 'roles', 'is_active')
+        fields = ('username', 'roles', 'is_active','email')
         
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'roles': forms.Select(attrs={'class': 'form-control border border-3 border-primary my-2'}), 
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input border border-3 border-primary m-2'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control border border-3 border-primary m-2'}),
 
         }
         def __init__(self, *args, **kwargs):

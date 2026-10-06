@@ -5,7 +5,7 @@
                 <th style="width: 15px;">Exp</th>
             {% endif %}
             <th>ID</th>
-            <th>Socio</th>
+            <th style="width: 400px;">Socio</th>
             <th> </th>
             <th>Número</th>
             <th>Estatus</th>
@@ -29,26 +29,20 @@
   
 </td>
 <td>
-    {% if expediente.expedienteResagado %}
     &emsp;
-    <a href="" class="text-decoration-none">    <i class="fa fa-hourglass" aria-hidden="true" style="color: #e67e22;"></i>
-</a>
-    {% else %}
-          &emsp;
-<a href="" class="text-decoration-none">        <i class="fa fa-hourglass" aria-hidden="true" ></i>
-</a>
-    {% endif %}
+    <button type="button" 
+            value="{% url 'Index:cambiarAtrasado' expediente.id %}" 
+            class="btn text-decoration-none btn-resagado">
+        <i class="fa fa-hourglass" aria-hidden="true" style="{% if expediente.expedienteResagado %}color: #e67e22;{% endif %}"></i>
+    </button>
 
-    {% if expediente.contemplado %}
-      &emsp;
-      <a href="" class="text-decoration-none">      <i class="fa fa-bar-chart" aria-hidden="true" style="color: #27ae60;"></i>
-</a>
-      {% else %}
-            &emsp;
-<a href="" class="text-decoration-none">            <i class="fa fa-bar-chart" aria-hidden="true"></i>
-</a>
+    &emsp;
 
-  {% endif %}
+    <button type="button" 
+            value="{% url 'Index:cambiarAnalizar' expediente.id %}" 
+            class="btn text-decoration-none btn-contemplado">
+        <i class="fa fa-bar-chart" aria-hidden="true" style="{% if expediente.contemplado %}color: #27ae60;{% endif %}"></i>
+    </button>
 </td>
 
             {% if expediente.socio.numeroKepler %}

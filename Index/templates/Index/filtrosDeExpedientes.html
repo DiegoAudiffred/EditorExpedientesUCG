@@ -65,16 +65,19 @@
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle3 text-black"> Atrasados</div>
+                <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
+
         <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-atrasados-datos">
-            <i class="fa fa-hourglass" aria-hidden="true" style="color: #e67e22;"></i> Expedientes atrasados
+            
+            <i class="fa fa-hourglass" aria-hidden="true" style="color: #e67e22;"></i> Atrasados
         </button>
     </div>
 
     <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle3 text-black"> A analizar</div>
+                <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
+
         <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-analizar-datos">
-            <i class="fa fa-bar-chart" aria-hidden="true" style="color: #27ae60;"></i> Expedientes a analizar
+            <i class="fa fa-bar-chart" aria-hidden="true" style="color: #27ae60;"></i> A Analizar
         </button>
     </div>
 
@@ -109,10 +112,8 @@
     function actualizarEstiloBoton(boton, activo) {
         if (activo) {
             boton.classList.add('bg-primary', 'text-white');
-            boton.classList.remove('');
         } else {
             boton.classList.remove('bg-primary', 'text-white');
-            boton.classList.add('');
         }
     }
 

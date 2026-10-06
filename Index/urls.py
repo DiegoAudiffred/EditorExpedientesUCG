@@ -47,6 +47,9 @@ urlpatterns = [
     path('editar/', views.editar_layout, name='editar_layout'),
     path('expediente/desasociarCitaExistente/<int:expedienteId>/<int:citaId>/', views.desasociarCitaExistente, name='desasociarCitaExistente'),
     path('expediente/archivarExpediente/<int:id>/<str:porcentajeLlenado>', views.archivarExpediente, name='archivarExpediente'),
+    path('expediente/cambiarAtrasado/<int:id>/', views.cambiarAtrasado, name='cambiarAtrasado'),
+    path('expediente/cambiarAnalizar/<int:id>/', views.cambiarAnalizar, name='cambiarAnalizar'),
+
 
 
 

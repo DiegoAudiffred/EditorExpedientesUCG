@@ -20,5 +20,72 @@
         {% include 'Index/tablaExpedientex.html' %}
     </div>
 </div>
+<script>document.addEventListener('DOMContentLoaded', () => {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
 
+    const contenedorResultados = document.getElementById('resultados-expedientes');
+
+    if (contenedorResultados) {
+        contenedorResultados.addEventListener('click', function(e) {
+            const btnResagado = e.target.closest('.btn-resagado');
+            const btnContemplado = e.target.closest('.btn-contemplado');
+
+            if (btnResagado) {
+                e.preventDefault();
+                const url = btnResagado.value;
+                const icon = btnResagado.querySelector('i');
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        icon.style.color = data.expedienteResagado ? '#e67e22' : '';
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+            if (btnContemplado) {
+                e.preventDefault();
+                const url = btnContemplado.value;
+                const icon = btnContemplado.querySelector('i');
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        icon.style.color = data.contemplado ? '#27ae60' : '';
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+    }
+});</script>
 {% endblock %}

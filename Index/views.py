@@ -97,12 +97,11 @@ def filtrar_expedientes_ajax(request):
 
     if usuario_id != '0':
         expedientes = expedientes.filter(usuario_id=usuario_id)
-
     if usuarioNegocios_id != '0':
-        expedientes = expedientes.filter(usuario_id=usuarioNegocios_id)
+        expedientes = expedientes.filter(usuarioNegocios_id=usuarioNegocios_id)
 
     if usuarioCredito_id != '0':
-        expedientes = expedientes.filter(usuario_id=usuarioCredito_id)
+        expedientes = expedientes.filter(usuarioCredito_id=usuarioCredito_id)
 
     # Filtro por Atrasados (Resagados)
     if expediente_resagado == '1':
@@ -207,10 +206,16 @@ def agregarObligados(request, id):
                     id_rep = ""
                     nombre_rep_input = ""
 
+                representante = None
+
                 if id_existente:
                     obligado = ObligadoSolidario.objects.get(id=id_existente)
                     obligado.expedientes.add(expediente)
-                    tipo_persona = obligado.tipoPersona if hasattr(obligado, 'tipoPersona') else tipo_persona
+                    tipo_persona = getattr(obligado, 'tipoPersona', tipo_persona)
+                    nombre = obligado.nombre
+                    
+                    if tipo_persona == 'M' and getattr(obligado, 'representante', None):
+                        representante = obligado.representante
                 else:
                     obligado, created_obl = ObligadoSolidario.objects.get_or_create(
                         nombre=nombre,
@@ -227,26 +232,30 @@ def agregarObligados(request, id):
                 if created_sec:
                     _generar_con_debug_extremo(nueva, area_socio)
 
-                if tipo_persona == 'M' and nombre_rep_input:
-                    if id_rep:
-                        representante = RepresentanteLegal.objects.get(id=id_rep)
-                    else:
-                        representante, created_rep = RepresentanteLegal.objects.get_or_create(
-                            nombre=nombre_rep_input
-                        )
-                    
-                    representante.expedientes.add(expediente)
-                    obligado.representante = representante
-                    obligado.save()
+                if tipo_persona == 'M':
+                    if not representante:
+                        if id_rep:
+                            representante = RepresentanteLegal.objects.get(id=id_rep)
+                        elif nombre_rep_input:
+                            representante, created_rep = RepresentanteLegal.objects.get_or_create(
+                                nombre=nombre_rep_input
+                            )
 
-                    nueva_sec_rep, created_sec_rep = SeccionesExpediente.objects.get_or_create(
-                        expediente=expediente,
-                        tipoDeSeccion='B',
-                        tituloSeccion=f"Representante legal - {nombre_rep_input}"
-                    )
-                    
-                    if created_sec_rep:
-                        _generar_con_debug_extremo(nueva_sec_rep, area_socio)
+                    if representante:
+                        representante.expedientes.add(expediente)
+                        obligado.representante = representante
+                        obligado.save()
+
+                        nombre_rep = representante.nombre if hasattr(representante, 'nombre') else nombre_rep_input
+                        
+                        nueva_sec_rep, created_sec_rep = SeccionesExpediente.objects.get_or_create(
+                            expediente=expediente,
+                            tipoDeSeccion='B',
+                            tituloSeccion=f"Representante legal - {nombre_rep}"
+                        )
+                        
+                        if created_sec_rep:
+                            _generar_con_debug_extremo(nueva_sec_rep, area_socio)
                 
             return JsonResponse({'status': 'ok'})
         except Exception as e:
@@ -254,7 +263,6 @@ def agregarObligados(request, id):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
     return JsonResponse({'status': 'error'}, status=400)
-
     
 @login_required(login_url='/login/')
 def editarExpediente(request, id):
@@ -3488,8 +3496,18 @@ def generarLista(request):
     response.writelines(lineas)
     return response
 
+def cambiarAtrasado(request, id):
+    exp = get_object_or_404(Expediente, id=id)
+    exp.expedienteResagado = not exp.expedienteResagado
+    exp.save()
+    return JsonResponse({'status': 'ok', 'expedienteResagado': exp.expedienteResagado})
 
-
+def cambiarAnalizar(request, id):
+    exp = get_object_or_404(Expediente, id=id)
+    exp.contemplado = not exp.contemplado
+    exp.save()
+    return JsonResponse({'status': 'ok', 'contemplado': exp.contemplado})
+    
 """Temas a considerar:
 
 

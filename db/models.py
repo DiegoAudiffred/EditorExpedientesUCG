@@ -147,7 +147,7 @@ class RepresentanteLegal(models.Model):
         return self.nombre
 class ObligadoSolidario(models.Model):
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados")
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados",null=True, blank=True)
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
     representante = models.ForeignKey(RepresentanteLegal, on_delete=models.CASCADE, null=True, blank=True)
 

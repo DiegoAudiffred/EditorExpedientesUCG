@@ -206,63 +206,60 @@
         }
     }
 
-    function agregarObl() {
-        const select = document.querySelector('.selector-obligado-principal select') || document.querySelector('[name*="obligado_selector"]');
-        if (!select) return;
+   function agregarObl() {
+    const select = document.querySelector('.selector-obligado-principal select') || document.querySelector('[name*="obligado_selector"]');
+    if (!select) return;
 
-        let nuevoObligado = {};
+    let nuevoObligado = {};
 
-        if (select.value === "") {
-            const inputNombre = document.querySelector('#campos-nuevo-obligado [name*="nombre"]');
-            const selectTipo = document.querySelector('[name*="tipoPersona"]');
-            const selectRep = document.getElementById("id_obl_representante_selector") || document.querySelector('[id*="representante_selector"]');
-            const inputRepNuevo = document.getElementById("id_obl_representante_nombre_nuevo") || document.querySelector('[id*="representante_nombre_nuevo"]');
+    const selectTipo = document.querySelector('[name*="tipoPersona"]');
+    const selectRep = document.getElementById("id_obl_representante_selector") || document.querySelector('[id*="representante_selector"]');
+    const inputRepNuevo = document.getElementById("id_obl_representante_nombre_nuevo") || document.querySelector('[id*="representante_nombre_nuevo"]');
 
-            if (!inputNombre || !inputNombre.value.trim()) return;
+    let repId = "";
+    let repTexto = "";
 
-            let repId = "";
-            let repTexto = "";
-
-            if (selectTipo && selectTipo.value === "M") {
-                if (selectRep && selectRep.value === "") {
-                    if (inputRepNuevo && inputRepNuevo.value.trim()) {
-                        repTexto = inputRepNuevo.value.trim();
-                    }
-                } else if (selectRep && selectRep.value !== "") {
-                    repId = selectRep.value;
-                    repTexto = selectRep.options[selectRep.selectedIndex].text;
-                }
-            }
-
-            nuevoObligado = {
-                id: "",
-                nombre: inputNombre.value,
-                tipo_persona: selectTipo ? selectTipo.value : "",
-                tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
-                representante: repId,
-                representante_texto: repTexto
-            };
-
-            if (inputNombre) inputNombre.value = "";
-            if (selectTipo) selectTipo.value = "";
-            if (selectRep) selectRep.value = "";
-            if (inputRepNuevo) inputRepNuevo.value = "";
-        } else {
-            nuevoObligado = {
-                id: select.value,
-                nombre: select.options[select.selectedIndex].text,
-                tipo_persona: "",
-                tipo_persona_texto: "Existente",
-                representante: "",
-                representante_texto: ""
-            };
-        }
-
-        obls.push(nuevoObligado);
-        render();
-        select.value = "";
-        conmutarCamposObligado();
+    if (selectRep && selectRep.value !== "") {
+        repId = selectRep.value;
+        repTexto = selectRep.options[selectRep.selectedIndex].text;
+    } else if (inputRepNuevo && inputRepNuevo.value.trim()) {
+        repTexto = inputRepNuevo.value.trim();
     }
+
+    if (select.value === "") {
+        const inputNombre = document.querySelector('#campos-nuevo-obligado [name*="nombre"]');
+        if (!inputNombre || !inputNombre.value.trim()) return;
+
+        nuevoObligado = {
+            id: "",
+            nombre: inputNombre.value.trim(),
+            tipo_persona: selectTipo ? selectTipo.value : "",
+            tipo_persona_texto: (selectTipo && selectTipo.value) ? selectTipo.options[selectTipo.selectedIndex].text : "",
+            representante: repId,
+            representante_texto: repTexto
+        };
+
+        inputNombre.value = "";
+    } else {
+        nuevoObligado = {
+            id: select.value,
+            nombre: select.options[select.selectedIndex].text,
+            tipo_persona: selectTipo ? selectTipo.value : "",
+            tipo_persona_texto: "Existente",
+            representante: repId,
+            representante_texto: repTexto
+        };
+    }
+
+    if (selectTipo) selectTipo.value = "";
+    if (selectRep) selectRep.value = "";
+    if (inputRepNuevo) inputRepNuevo.value = "";
+
+    obls.push(nuevoObligado);
+    render();
+    select.value = "";
+    conmutarCamposObligado();
+}
 
     async function enviarRepresentantes() {
         const url = "{% url 'Index:agregarRepresentantes' expediente.id %}";
