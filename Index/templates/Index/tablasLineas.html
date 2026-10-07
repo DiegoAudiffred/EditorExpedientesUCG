@@ -19,8 +19,10 @@
             <td>{{ linea.expediente.id }}</td>
             <td>{{ linea.tipoLinea }}</td>
             <td>{{ linea.monto }}</td>
+            {% if request.user.roles == 'Administrador' %}
             <td><a href="{% url 'Index:editarLinea' linea.id %}"
                     class="btn  rounded rounded-4 bg-tercero text-white"> Editar linea</a></td>
+            {% endif %}
 
         </tr>
         {% empty %}
