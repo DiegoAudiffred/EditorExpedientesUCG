@@ -184,7 +184,7 @@ class Linea(models.Model):
     
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE, null=False, blank=False)
     numero = models.CharField("Numero", max_length=10, blank=False, null=False)
-    monto = models.IntegerField(default=0, blank=False, null=False)  
+    monto = models.DecimalField(default=0.0, blank=False, null=False,max_digits=12, decimal_places=2)  
     vigente = models.BooleanField(default=True)
     tipoLinea = models.CharField(choices=tipoLinea, blank=False, default="Cuenta Corriente", max_length=50)
     tipoGarantia = models.ManyToManyField(Garantia, blank=True, related_name="lineas")

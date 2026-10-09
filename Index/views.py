@@ -469,26 +469,37 @@ def editarExpediente(request, id):
 
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
+    print(f"[DEBUG] Inicio de lineaCrear. Request method: {request.method}, ID expediente: {id}")
     expedienteInstance = get_object_or_404(Expediente, pk=id)
+    print(f"[DEBUG] Expediente encontrado: {expedienteInstance}")
     
     if request.method == "POST":
         lineasData = request.POST.get('lineas', '')
+        print(f"[DEBUG] lineasData recibida: '{lineasData}'")
         
         if lineasData:
             listaSegmentada = lineasData.split('||')
+            print(f"[DEBUG] Bloques segmentados ({len(listaSegmentada)}): {listaSegmentada}")
+            
             tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
-            area_socio = tipo_persona_map.get(expedienteInstance.socio.tipoPersona)
+            tipo_persona_raw = getattr(expedienteInstance.socio, 'tipoPersona', None)
+            area_socio = tipo_persona_map.get(tipo_persona_raw)
+            print(f"[DEBUG] Tipo persona socio raw: '{tipo_persona_raw}', area_socio mapeada: '{area_socio}'")
             
             secciones_restantes = ['III', 'IV', 'V', 'VI','VII']
             
             try:
                 with transaction.atomic():
-                    for bloque in listaSegmentada:
+                    for idx, bloque in enumerate(listaSegmentada):
+                        print(f"[DEBUG] --- Procesando bloque [{idx}]: '{bloque}' ---")
                         if not bloque.strip():
+                            print(f"[DEBUG] Bloque [{idx}] vacio, omitiendo.")
                             continue
                         
                         partes = bloque.split('::')
+                        print(f"[DEBUG] Partes en bloque [{idx}] ({len(partes)}): {partes}")
                         if len(partes) < 4:
+                            print(f"[DEBUG] Bloque [{idx}] invalido (menos de 4 partes), omitiendo.")
                             continue
                             
                         numero = partes[0].strip()
@@ -496,6 +507,7 @@ def lineaCrear(request, id):
                         tipoLineaId = partes[2].strip()
                         vigente = partes[3] == 'true'
                         
+                        print(f"[DEBUG] Creando Linea con: numero='{numero}', monto='{monto}', tipoLinea='{tipoLineaId}', vigente={vigente}")
                         nueva_linea = Linea.objects.create(
                             expediente=expedienteInstance,
                             numero=numero,
@@ -503,25 +515,34 @@ def lineaCrear(request, id):
                             tipoLinea=tipoLineaId,
                             vigente=True
                         )
+                        print(f"[DEBUG] Linea creada con exito ID: {nueva_linea.pk}")
                         
                         for tipo_sec in secciones_restantes:
+                            print(f"[DEBUG] Creando seccion '{tipo_sec}' para linea ID: {nueva_linea.pk}")
                             nueva_seccion = SeccionesExpediente.objects.create(
                                 expediente=expedienteInstance,
                                 linea=nueva_linea,
                                 tipoDeSeccion=tipo_sec
                             )
+                            print(f"[DEBUG] Seccion creada ID: {nueva_seccion.pk}. Ejecutando _generar_con_debug_extremo...")
                             
                             _generar_con_debug_extremo(nueva_seccion, area_socio)
+                            print(f"[DEBUG] _generar_con_debug_extremo finalizado para seccion ID: {nueva_seccion.pk}")
                             
+                print("[DEBUG] Proceso completado exitosamente.")
                 return JsonResponse({'status': 'success'}, status=200)
                 
             except Exception as e:
+                print(f"[ERROR EXCEPCION] Error en la transaccion: {str(e)}")
+                import traceback
+                print(f"[ERROR TRACEBACK]\n{traceback.format_exc()}")
                 return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             
+        print("[WARNING] lineasData estaba vacio o no venia en request.POST.")
         return JsonResponse({'status': 'error', 'message': 'No data'}, status=400)
         
+    print(f"[WARNING] Metodo de peticion no permitido: {request.method}")
     return JsonResponse({'status': 'error'}, status=405)
-
 @login_required(login_url='/login/')
 def servirArchivo(request):
     ruta_archivo = request.GET.get('ruta')
