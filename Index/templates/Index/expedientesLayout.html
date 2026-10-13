@@ -15,12 +15,13 @@
     </div>
     {% include 'Index/filtrosDeExpedientes.html' %}
 
-
     <div class="row " id="resultados-expedientes">
         {% include 'Index/tablaExpedientex.html' %}
     </div>
 </div>
-<script>document.addEventListener('DOMContentLoaded', () => {
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -36,7 +37,6 @@
         return cookieValue;
     }
     const csrftoken = getCookie('csrftoken');
-
     const contenedorResultados = document.getElementById('resultados-expedientes');
 
     if (contenedorResultados) {
@@ -87,5 +87,6 @@
             }
         });
     }
-});</script>
+});
+</script>
 {% endblock %}

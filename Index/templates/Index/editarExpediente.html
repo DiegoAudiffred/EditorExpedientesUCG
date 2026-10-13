@@ -137,15 +137,48 @@
             </div>
         {% endif %}
 
-    {% elif expediente.estatus.nombre == 'En revisión' %}
-        {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
-            <div class="col-4 my-2">
-                <a href="{% url 'Index:archivarExpediente' expediente.id porcentajeLlenado %}" class="btn btn-primary fw-bold w-100">Archivar Expediente</a>
+{% elif expediente.estatus.nombre == 'En revisión' or expediente.estatus.nombre == 'En revisión con observaciones' %}
+    {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}
+        <div class="col-4 my-2">
+            <button type="button" class="btn btn-primary fw-bold w-100" data-bs-toggle="modal" data-bs-target="#modalArchivar">
+                Archivar Expediente
+            </button>
+        </div>
+        <!-- Modal de Confirmación para Archivar -->
+<div class="modal fade" id="modalArchivar" tabindex="-1" aria-labelledby="modalArchivarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalArchivarLabel">Confirmación de Archivo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-           <!--  <div class="col-4 my-2">
-                <a href="{% url 'Index:enviarExpediente' expediente.id False %}" class="btn btn-primary fw-bold w-100">Rechazar Expediente</a>
-            </div> -->
-        {% endif %}
+            <div class="modal-content-body modal-body">
+                <p class="fs-6">Está a punto de archivar el expediente. A continuación se muestran los puntos con comentarios/observaciones que se incluirán en el reporte y notificación:</p>
+                
+                {% if registrosConComentarios %}
+                    <div class="alert alert-warning" role="alert">
+                        <ul class="mb-0 ps-3">
+                            {% for item in registrosConComentarios %}
+                                <li class="mb-2">
+                                    <strong>{{ item.nombreSeccion }} (Clave: {{ item.claveApartado }}):</strong> {{ item.comentarioCredito }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <p class="text-muted fst-italic">No hay registros con comentarios pendientes en este momento.</p>
+                {% endif %}
+                
+                <p class="fw-bold text-center mt-3">¿Desea continuar con el archivo del expediente?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <a href="{% url 'Index:archivarExpediente' expediente.id porcentajeLlenado %}" class="btn btn-primary fw-bold">Sí, Archivar Expediente</a>
+            </div>
+        </div>
+    </div>
+</div>
+    {% endif %}
 
     {% elif expediente.estatus.nombre == 'Rechazado' %}
         <div class="col-4 my-2">
@@ -686,7 +719,7 @@
                                 <tbody>
                                     {% for fila in item.filas %}
                                     {% with apartado=fila.apartado registro=fila.registro %}
-                                    <tr class="{% if registro.estatus == 'rechazado' %} bg-yellow {% endif %} ">
+                                    <tr class="{% if registro.estatus == 'rechazado' %} bg-yellow {% endif %} {% if registro.estatus == 'pendiente' %} bg-corporateOrange500 {% endif %} ">
 {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
 
 <th class="align-middle">

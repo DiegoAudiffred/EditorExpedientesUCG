@@ -63,7 +63,12 @@
         <input type="date" id="fecha-fin-input" name="fecha_fin"
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
-
+ <div class="col-lg-2 col-6">
+    <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
+    <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-archivado-datos-faltantes">
+        <i class="fa fa-file-text px-2 my-auto" style="color: #FF0000;"></i> Faltantes
+    </button>
+</div>
     <div class="col-lg-2 col-6">
                 <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
 
@@ -87,8 +92,10 @@
         </button>
     </div>
 </div>
+
+
 <script>
-    $(document).ready(function () {
+$(document).ready(function () {
     const filtrosContainer = document.getElementById('filtros-expedientes');
     if (!filtrosContainer) return;
 
@@ -104,10 +111,11 @@
     const botonReset = document.getElementById('boton-reset-datos');
     const botonAtrasados = document.getElementById('boton-atrasados-datos');
     const botonAnalizar = document.getElementById('boton-analizar-datos');
+    const botonFaltantes = document.getElementById('boton-archivado-datos-faltantes');
 
-    // Estado de los botones de filtro
     let atrasadosActivo = false;
     let contempladosActivo = false;
+    let faltantesActivo = false;
 
     function actualizarEstiloBoton(boton, activo) {
         if (activo) {
@@ -128,7 +136,8 @@
             'fecha_fin': fechaFinInput.value,
             'page': page,
             'expedienteResagado': atrasadosActivo ? '1' : '0',
-            'contemplado': contempladosActivo ? '1' : '0'
+            'contemplado': contempladosActivo ? '1' : '0',
+            'archivadoFaltantes': faltantesActivo ? '1' : '0'
         };
 
         $.ajax({
@@ -153,16 +162,16 @@
         fechaInicioInput.value = "";
         fechaFinInput.value = "";
 
-        // Resetear estados de botones
         atrasadosActivo = false;
         contempladosActivo = false;
+        faltantesActivo = false;
         actualizarEstiloBoton(botonAtrasados, false);
         actualizarEstiloBoton(botonAnalizar, false);
+        if (botonFaltantes) actualizarEstiloBoton(botonFaltantes, false);
 
         ejecutarFiltro(1);
     }
 
-    // Toggle Botón Atrasados
     if (botonAtrasados) {
         botonAtrasados.addEventListener('click', function (e) {
             e.preventDefault();
@@ -172,7 +181,6 @@
         });
     }
 
-    // Toggle Botón A analizar (Contemplados)
     if (botonAnalizar) {
         botonAnalizar.addEventListener('click', function (e) {
             e.preventDefault();
@@ -182,7 +190,15 @@
         });
     }
 
-    // Triggers estándar
+    if (botonFaltantes) {
+        botonFaltantes.addEventListener('click', function (e) {
+            e.preventDefault();
+            faltantesActivo = !faltantesActivo;
+            actualizarEstiloBoton(botonFaltantes, faltantesActivo);
+            ejecutarFiltro(1);
+        });
+    }
+
     estatusSelect.addEventListener('change', () => ejecutarFiltro(1));
     usuariosSelect.addEventListener('change', () => ejecutarFiltro(1));
     if (usuariosNegociosSelect) usuariosNegociosSelect.addEventListener('change', () => ejecutarFiltro(1));
@@ -198,14 +214,12 @@
 
     if (botonReset) botonReset.addEventListener('click', resetearFiltros);
 
-    // Paginar desde botones dinámicos
     $(document).on('click', '.paginar', function (e) {
         e.preventDefault();
         const page = $(this).data('page');
         ejecutarFiltro(page);
     });
 
-    // Carga inicial
     ejecutarFiltro(1);
 });
 </script>

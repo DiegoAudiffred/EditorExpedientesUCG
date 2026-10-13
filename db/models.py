@@ -121,7 +121,11 @@ class Expediente(models.Model):
 
     def __str__(self):
         return f"{self.socio}"
-    
+    def tiene_registros_pendientes(self):   
+        return RegistroSeccion.objects.filter(
+        seccion__expediente=self, 
+        estatus='pendiente'
+    ).exists()
 class EstadosFechas(models.Model):
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)

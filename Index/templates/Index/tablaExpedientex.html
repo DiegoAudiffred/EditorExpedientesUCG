@@ -29,6 +29,13 @@
   
 </td>
 <td>
+   
+{% if expediente.estatus.nombre == 'Archivado' and expediente.tiene_registros_pendientes %}
+    <i class="fa fa-file-text px-2 my-auto" style="color: #FF0000;" title="Contiene registros pendientes"></i>
+    {% else %}
+        <i class="fa fa-file-text px-2 my-auto" style="color: #289706;" title="Contiene registros pendientes"></i>
+
+{% endif %}
     &emsp;
     <button type="button" 
             value="{% url 'Index:cambiarAtrasado' expediente.id %}" 

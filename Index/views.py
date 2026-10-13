@@ -54,7 +54,7 @@ def preguntasIndex(request):
     }
     return render(request, 'Index/preguntasIndex.html',context)
 
-@login_required(login_url='/login/')    
+@login_required(login_url='/login/')
 def expedientesLayout(request):
     expedientes = Expediente.objects.all().order_by('-id').filter(eliminado = False)
     estatus = Estado.objects.all()
@@ -67,8 +67,6 @@ def expedientesLayout(request):
             'usuarios': usuarios,
             'usuariosCredito': usuariosCredito,
             'usuariosNegocios':usuariosNegocios,
-            #'expedienteResagado':
-            #'contemplado':
         }
     return render(request, 'Index/expedientesLayout.html',contexto)
 
@@ -83,15 +81,14 @@ def filtrar_expedientes_ajax(request):
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
-    # Parámetros para Atrasados y Contemplados ('1' o '0')
     expediente_resagado = request.GET.get('expedienteResagado', '0')
     contemplado = request.GET.get('contemplado', '0')
+    archivado_faltantes = request.GET.get('archivadoFaltantes', '0')
 
     page_number = request.GET.get('page', 1)
 
     expedientes = Expediente.objects.all()
 
-    # Filtros estándar
     if estatus_id != '0':
         expedientes = expedientes.filter(estatus_id=estatus_id)
 
@@ -103,22 +100,24 @@ def filtrar_expedientes_ajax(request):
     if usuarioCredito_id != '0':
         expedientes = expedientes.filter(usuarioCredito_id=usuarioCredito_id)
 
-    # Filtro por Atrasados (Resagados)
     if expediente_resagado == '1':
         expedientes = expedientes.filter(expedienteResagado=True)
 
-    # Filtro por Contemplados (A analizar)
     if contemplado == '1':
         expedientes = expedientes.filter(contemplado=True)
 
-    # Búsqueda por socio
+    if archivado_faltantes == '1':
+        expedientes = expedientes.filter(
+            estatus__nombre='Archivado',
+            seccionesexpediente__registroseccion__estatus='pendiente'
+        ).distinct()
+
     if socio_query:
         expedientes = expedientes.filter(
             Q(socio__nombre__icontains=socio_query) |
             Q(socio__id__icontains=socio_query)
         ).distinct()
 
-    # Filtro por fechas
     if fecha_inicio and fecha_fin:
         expedientes = expedientes.filter(fechaCreacion__range=[fecha_inicio, fecha_fin])
     elif fecha_inicio:
@@ -384,6 +383,19 @@ def editarExpediente(request, id):
 
     archivos_encontrados = checarRuta(stringSocio, secciones)    
     print(stringSocio)
+
+    registrosConComentarios = []
+    for seccion in secciones:
+        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        for apartado in apartados:
+            reg = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            if reg is not None and reg.comentarioCredito:
+                registrosConComentarios.append({
+                    'nombreSeccion': str(seccion.tituloSeccion),
+                    'claveApartado': str(apartado.clave),
+                    'comentarioCredito': str(reg.comentarioCredito)
+                })
+
     context = {
         'estados': estados,
         'usuarios': usuarios,
@@ -394,6 +406,7 @@ def editarExpediente(request, id):
         'citaAsignada': citaAsignada,
         'usuariosCreditos': usuariosCreditos,
         'usuariosNegocios': usuariosNegocios,
+        'registrosConComentarios': registrosConComentarios,
     }
    
     totalRegistros = 0
@@ -415,6 +428,7 @@ def editarExpediente(request, id):
             elif registro.numero or registro.fecha:
                 totalRegistrosLlenos += 1
             else:
+                #print(registro)
                 totalRegistrosVacios += 1
 
             fecha_html = ""
@@ -442,11 +456,13 @@ def editarExpediente(request, id):
     if totalRegistros != (totalRegistrosLlenos + totalRegistrosVacios + totalRegistrosNA):
         context['mensajeInfo'] = "Los registros no coinciden con los status"
 
-
     context['totalRegistros'] = totalRegistros
     context['totalRegistrosLlenos'] = totalRegistrosLlenos
     context['totalRegistrosNA'] = totalRegistrosNA
     context['totalRegistrosVacios'] = totalRegistrosVacios
+
+
+
     total_util = totalRegistrosLlenos + totalRegistrosVacios
     
     if total_util > 0:
@@ -466,28 +482,27 @@ def editarExpediente(request, id):
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
 
-
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
     print(f"[DEBUG] Inicio de lineaCrear. Request method: {request.method}, ID expediente: {id}")
     expedienteInstance = get_object_or_404(Expediente, pk=id)
     print(f"[DEBUG] Expediente encontrado: {expedienteInstance}")
-    
+
     if request.method == "POST":
         lineasData = request.POST.get('lineas', '')
         print(f"[DEBUG] lineasData recibida: '{lineasData}'")
-        
+
         if lineasData:
             listaSegmentada = lineasData.split('||')
             print(f"[DEBUG] Bloques segmentados ({len(listaSegmentada)}): {listaSegmentada}")
-            
+
             tipo_persona_map = {'F': 'Fisicas', 'M': 'Morales'}
             tipo_persona_raw = getattr(expedienteInstance.socio, 'tipoPersona', None)
             area_socio = tipo_persona_map.get(tipo_persona_raw)
             print(f"[DEBUG] Tipo persona socio raw: '{tipo_persona_raw}', area_socio mapeada: '{area_socio}'")
-            
+
             secciones_restantes = ['III', 'IV', 'V', 'VI','VII']
-            
+
             try:
                 with transaction.atomic():
                     for idx, bloque in enumerate(listaSegmentada):
@@ -501,12 +516,12 @@ def lineaCrear(request, id):
                         if len(partes) < 4:
                             print(f"[DEBUG] Bloque [{idx}] invalido (menos de 4 partes), omitiendo.")
                             continue
-                            
+
                         numero = partes[0].strip()
                         monto = partes[1].strip()
                         tipoLineaId = partes[2].strip()
                         vigente = partes[3] == 'true'
-                        
+
                         print(f"[DEBUG] Creando Linea con: numero='{numero}', monto='{monto}', tipoLinea='{tipoLineaId}', vigente={vigente}")
                         nueva_linea = Linea.objects.create(
                             expediente=expedienteInstance,
@@ -516,7 +531,7 @@ def lineaCrear(request, id):
                             vigente=True
                         )
                         print(f"[DEBUG] Linea creada con exito ID: {nueva_linea.pk}")
-                        
+
                         for tipo_sec in secciones_restantes:
                             print(f"[DEBUG] Creando seccion '{tipo_sec}' para linea ID: {nueva_linea.pk}")
                             nueva_seccion = SeccionesExpediente.objects.create(
@@ -525,22 +540,22 @@ def lineaCrear(request, id):
                                 tipoDeSeccion=tipo_sec
                             )
                             print(f"[DEBUG] Seccion creada ID: {nueva_seccion.pk}. Ejecutando _generar_con_debug_extremo...")
-                            
+
                             _generar_con_debug_extremo(nueva_seccion, area_socio)
                             print(f"[DEBUG] _generar_con_debug_extremo finalizado para seccion ID: {nueva_seccion.pk}")
-                            
+
                 print("[DEBUG] Proceso completado exitosamente.")
                 return JsonResponse({'status': 'success'}, status=200)
-                
+
             except Exception as e:
                 print(f"[ERROR EXCEPCION] Error en la transaccion: {str(e)}")
                 import traceback
                 print(f"[ERROR TRACEBACK]\n{traceback.format_exc()}")
                 return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-            
+
         print("[WARNING] lineasData estaba vacio o no venia en request.POST.")
         return JsonResponse({'status': 'error', 'message': 'No data'}, status=400)
-        
+
     print(f"[WARNING] Metodo de peticion no permitido: {request.method}")
     return JsonResponse({'status': 'error'}, status=405)
 @login_required(login_url='/login/')
@@ -2321,6 +2336,7 @@ def aceptarCita(request, id):
         'cita': cita,
     }
     return render(request, 'Index/citaAceptada.html', context)
+
 def enviarCorreoCitaAceptada(cita, expediente):
     asunto = f"Cita Confirmada : {cita.dia} a las {cita.hora} hrs"
     
@@ -2612,7 +2628,6 @@ def lineaEliminar(request, expediente_id, linea_id):
     return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
 
 
-
 def eliminarRepresentante(request,rep,exp):
     try:
         expediente = Expediente.objects.get(id=exp)
@@ -2634,9 +2649,6 @@ def eliminarRepresentante(request,rep,exp):
         raise Http404
 
     return redirect(reverse('Index:editarExpediente', args=[expediente.id]))
-
-
-
 
 def eliminarObligado(request, obl, exp):
     try:
@@ -3068,7 +3080,6 @@ def procesarArchivos(request, id):
     })
 
 
-
 def _to_unc(ruta):
     """Convierte una ruta \\\\servidor\\... a formato largo \\\\?\\UNC\\servidor\\...
     (necesario en Windows para rutas largas)."""
@@ -3243,11 +3254,13 @@ def checarRuta(identificador_socio, secciones):
                 print(f"  [3] \u2718 Prefijo '{prefijo}' no está en mapeo_secciones -> se omite registro")
                 continue
 
-            ruta_final_busqueda = ruta_base_seccion
             print(f"  [4] Ruta base de la sección: {ruta_base_seccion}")
 
-            # ---- Enrutamiento por línea de crédito para secciones III-VII ----
+            # ---- Construir TODAS las rutas candidatas (una por cada línea del expediente) ----
+            rutas_candidatas = [ruta_base_seccion]
+
             if prefijo in ["3", "4", "5", "6", "7"]:
+                rutas_candidatas = []
                 try:
                     expediente_actual = registro.seccion.expediente
                     lineas_asociadas = Linea.objects.filter(expediente=expediente_actual)
@@ -3256,130 +3269,126 @@ def checarRuta(identificador_socio, secciones):
                     chk_operativa = _to_unc(rutaOperativa)
                     if os.path.exists(chk_operativa):
                         subdirs_operativa = os.listdir(chk_operativa)
-                        enrutado_exitoso = False
+                        nombre_carpeta_seccion = os.path.basename(ruta_base_seccion)
 
                         for linea in lineas_asociadas:
-                            num_linea = str(linea.numero).strip()
-                            prefijo_linea_solo = f"{num_linea} "
-
+                            prefijo_linea_solo = f"{str(linea.numero).strip()} "
                             for subdir in subdirs_operativa:
                                 if subdir.strip().startswith(prefijo_linea_solo):
-                                    ruta_subdir_completa = os.path.join(rutaOperativa, subdir)
-                                    nombre_carpeta_seccion = os.path.basename(ruta_base_seccion)
-                                    posible_ruta = os.path.join(ruta_subdir_completa, nombre_carpeta_seccion)
-                                    print(f"  [4] \u2714 Línea '{num_linea}' -> carpeta '{subdir}' -> "
-                                          f"ruta final: {posible_ruta}")
-                                    ruta_final_busqueda = posible_ruta
-                                    enrutado_exitoso = True
-                                    break
-                            if enrutado_exitoso:
-                                break
-
-                        if not enrutado_exitoso:
-                            print(f"  [4] \u2718 Ninguna carpeta en Operativa coincide con las líneas del expediente; "
-                                  f"se usará la ruta base de la sección")
+                                    posible_ruta = os.path.join(rutaOperativa, subdir, nombre_carpeta_seccion)
+                                    if posible_ruta not in rutas_candidatas:
+                                        rutas_candidatas.append(posible_ruta)
+                                        print(f"  [4] \u2714 Línea '{linea.numero}' -> carpeta '{subdir}' -> "
+                                              f"candidata: {posible_ruta}")
                     else:
                         print(f"  [4] \u2718 Ruta Operativa no existe en disco: {chk_operativa}")
+
+                    if not rutas_candidatas:
+                        print(f"  [4] \u2718 Ninguna carpeta de línea coincide; se usará la ruta base de la sección")
+                        rutas_candidatas = [ruta_base_seccion]
                 except Exception as e_enrutamiento:
                     print(f"  [4] \u2718 EXCEPCIÓN durante enrutamiento por línea: {e_enrutamiento}")
-
-            chk_busqueda = _to_unc(ruta_final_busqueda)
-            print(f"  [5] Ruta final a escanear: {chk_busqueda}")
-
-            if not os.path.exists(chk_busqueda):
-                print(f"  [5] \u2718 La ruta no existe en disco -> se omite registro")
-                continue
+                    rutas_candidatas = [ruta_base_seccion]
 
             archivo_mas_reciente = None
             mtime_maximo = 0
+            clave_normalizada = clave_busqueda.lower()
 
-            try:
-                items_directorio = os.listdir(chk_busqueda)
-                clave_normalizada = clave_busqueda.lower()
-                print(f"  [6] {len(items_directorio)} elemento(s) en el directorio")
+            # ---- Escanear cada ruta candidata y quedarse con el archivo más reciente ----
+            for ruta_final_busqueda in rutas_candidatas:
+                chk_busqueda = _to_unc(ruta_final_busqueda)
+                print(f"  [5] Ruta a escanear: {chk_busqueda}")
 
-                # ¿Existe una subcarpeta que empiece con la clave? (ej. "1.01 ...")
-                for item in items_directorio:
-                    if item.lower().strip().startswith(clave_normalizada):
-                        posible_sub_carpeta = os.path.join(ruta_final_busqueda, item)
-                        chk_sub_carpeta = _to_unc(posible_sub_carpeta)
-                        if os.path.isdir(chk_sub_carpeta):
-                            print(f"  [6] La clave corresponde a una subcarpeta: {item} -> se entra a ella")
-                            ruta_final_busqueda = posible_sub_carpeta
-                            chk_busqueda = chk_sub_carpeta
-                            items_directorio = os.listdir(chk_busqueda)
-                            break
+                if not os.path.exists(chk_busqueda):
+                    print(f"  [5] \u2718 La ruta no existe en disco -> se omite esta candidata")
+                    continue
 
-                for nombre_item in items_directorio:
-                    ruta_item = os.path.join(ruta_final_busqueda, nombre_item)
-                    nombre_item_clean = nombre_item.strip()
-                    item_normalizado = re.sub(r'\s+', ' ', nombre_item_clean).lower()
+                try:
+                    items_directorio = os.listdir(chk_busqueda)
+                    print(f"  [6] {len(items_directorio)} elemento(s) en el directorio")
 
-                    if not item_normalizado.startswith(clave_normalizada):
-                        continue
+                    # ¿Existe una subcarpeta que empiece con la clave? (ej. "3.02 Cat res")
+                    for item in items_directorio:
+                        if item.lower().strip().startswith(clave_normalizada):
+                            posible_sub_carpeta = os.path.join(ruta_final_busqueda, item)
+                            chk_sub_carpeta = _to_unc(posible_sub_carpeta)
+                            if os.path.isdir(chk_sub_carpeta):
+                                print(f"  [6] La clave corresponde a una subcarpeta: {item} -> se entra a ella")
+                                ruta_final_busqueda = posible_sub_carpeta
+                                chk_busqueda = chk_sub_carpeta
+                                items_directorio = os.listdir(chk_busqueda)
+                                break
 
-                    print(f"  [7] Elemento con la clave correcta: '{nombre_item}'")
+                    for nombre_item in items_directorio:
+                        ruta_item = os.path.join(ruta_final_busqueda, nombre_item)
+                        nombre_item_clean = nombre_item.strip()
+                        item_normalizado = re.sub(r'\s+', ' ', nombre_item_clean).lower()
 
-                    archivos_a_evaluar = []
-                    chk_item = _to_unc(ruta_item)
-
-                    if os.path.isdir(chk_item):
-                        try:
-                            sub_items = os.listdir(chk_item)
-                            for sub_item in sub_items:
-                                archivos_a_evaluar.append((sub_item, os.path.join(ruta_item, sub_item)))
-                            print(f"  [7] Es carpeta, contiene {len(sub_items)} archivo(s) a evaluar")
-                        except Exception as e:
-                            print(f"  [7] \u2718 No se pudo listar subcarpeta: {e}")
-                    else:
-                        archivos_a_evaluar.append((nombre_item, ruta_item))
-
-                    for nombre_arch, ruta_arch in archivos_a_evaluar:
-                        arch_norm = re.sub(r'\s+', ' ', nombre_arch.strip()).lower()
-
-                        if not arch_norm.startswith(clave_normalizada):
+                        if not item_normalizado.startswith(clave_normalizada):
                             continue
 
-                        print(f"    -> Evaluando archivo: '{nombre_arch}'")
+                        print(f"  [7] Elemento con la clave correcta: '{nombre_item}'")
 
-                        # --- REGLA ESTRICTA: solo fecha O solo identificador, según es_fecha ---
-                        if registro.es_fecha:
-                            coincide = _match_fecha(registro, arch_norm, meses_es)
+                        archivos_a_evaluar = []
+                        chk_item = _to_unc(ruta_item)
+
+                        if os.path.isdir(chk_item):
+                            try:
+                                sub_items = os.listdir(chk_item)
+                                for sub_item in sub_items:
+                                    archivos_a_evaluar.append((sub_item, os.path.join(ruta_item, sub_item)))
+                                print(f"  [7] Es carpeta, contiene {len(sub_items)} archivo(s) a evaluar")
+                            except Exception as e:
+                                print(f"  [7] \u2718 No se pudo listar subcarpeta: {e}")
                         else:
-                            coincide = _match_identificador(registro, arch_norm)
+                            archivos_a_evaluar.append((nombre_item, ruta_item))
 
-                        if not coincide:
-                            print(f"    -> \u2718 Archivo descartado (sin fecha/identificador válido)")
-                            continue
+                        for nombre_arch, ruta_arch in archivos_a_evaluar:
+                            arch_norm = re.sub(r'\s+', ' ', nombre_arch.strip()).lower()
 
-                        try:
-                            chk_arch = _to_unc(ruta_arch)
-                            mtime = os.path.getmtime(chk_arch)
-                            print(f"    -> \u2714 Archivo válido, mtime={datetime.fromtimestamp(mtime)}")
-                            if mtime > mtime_maximo:
-                                mtime_maximo = mtime
-                                archivo_mas_reciente = ruta_arch
-                        except Exception as e:
-                            print(f"    -> \u2718 No se pudo obtener mtime: {e}")
+                            if not arch_norm.startswith(clave_normalizada):
+                                continue
 
-                if archivo_mas_reciente:
-                    print(f"  [8] \u2714 RESULTADO: archivo más reciente = {archivo_mas_reciente}")
-                    resultados[registro.id] = {
-                        'clave': clave,
-                        'ruta': archivo_mas_reciente,
-                        'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
-                    }
-                else:
-                    print(f"  [8] \u2718 RESULTADO: ningún archivo cumplió fecha/identificador estricto "
-                          f"-> registro {registro.id} sin ruta")
-            except Exception as e:
-                print(f"  [6] \u2718 EXCEPCIÓN escaneando directorio: {e}")
-                continue
+                            print(f"    -> Evaluando archivo: '{nombre_arch}'")
+
+                            # --- REGLA ESTRICTA: solo fecha O solo identificador, según es_fecha ---
+                            if registro.es_fecha:
+                                coincide = _match_fecha(registro, arch_norm, meses_es)
+                            else:
+                                coincide = _match_identificador(registro, arch_norm)
+
+                            if not coincide:
+                                print(f"    -> \u2718 Archivo descartado (sin fecha/identificador válido)")
+                                continue
+
+                            try:
+                                chk_arch = _to_unc(ruta_arch)
+                                mtime = os.path.getmtime(chk_arch)
+                                print(f"    -> \u2714 Archivo válido, mtime={datetime.fromtimestamp(mtime)}")
+                                if mtime > mtime_maximo:
+                                    mtime_maximo = mtime
+                                    archivo_mas_reciente = ruta_arch
+                            except Exception as e:
+                                print(f"    -> \u2718 No se pudo obtener mtime: {e}")
+
+                except Exception as e:
+                    print(f"  [6] \u2718 EXCEPCIÓN escaneando {chk_busqueda}: {e}")
+                    continue
+
+            if archivo_mas_reciente:
+                print(f"  [8] \u2714 RESULTADO: archivo más reciente = {archivo_mas_reciente}")
+                resultados[registro.id] = {
+                    'clave': clave,
+                    'ruta': archivo_mas_reciente,
+                    'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
+                }
+            else:
+                print(f"  [8] \u2718 RESULTADO: ningún archivo cumplió fecha/identificador estricto "
+                      f"-> registro {registro.id} sin ruta")
 
     print(f"\n[FIN] Total de registros con archivo encontrado: {len(resultados)} de "
           f"{sum(RegistroSeccion.objects.filter(seccion=s).count() for s in secciones)}")
     return resultados
-
 
 
 @login_required(login_url='/login/')
@@ -3408,29 +3417,74 @@ def avancesMovimientos(request):
     return render(request, 'Index/avancesMovimientos.html', context)
 
 def correoArchivado(expediente, porcentajeLlenado):
-    
-    if float(porcentajeLlenado) < 50:
+    porcentajeLlenado = float(porcentajeLlenado)
+
+    if porcentajeLlenado < 50:
         color_porcentaje = "#dc3545"
     elif porcentajeLlenado < 100:
         color_porcentaje = "#ffc107"
     else:
         color_porcentaje = "#198754"
+    seccionesConComentarios = []
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+        
+    for seccion in secciones:
+            apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+            for apartado in apartados:
+                registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+                
+                if registro is not None:
+                    if registro.comentarioCredito:
+                        registro.estatus = 'pendiente'
+                        registro.save()
+                        seccionesConComentarios.append({
+                                'nombreSeccion': str(seccion.tituloSeccion),
+                                'claveApartado': str(apartado.clave),
+                                'comentarioCredito' : str(registro.comentarioCredito),
+                        })
+    
+    tiene_pendientes = len(seccionesConComentarios) > 0
+    
+    comentarios_html = ""
+    if tiene_pendientes:
+        for item in seccionesConComentarios:
+            comentarios_html += f"""
+                            <li style="margin-bottom: 10px;">
+                                <strong>{item['nombreSeccion']} (Clave: {item['claveApartado']}):</strong> {item['comentarioCredito']}
+                            </li>
+            """
 
     destinatario = {
         email for email in [
             "bvillanueva@ucg.com.mx",
             expediente.usuario.email,
             expediente.usuarioNegocios.email,
-            "pOrtiz@ucg.com.mx"
-            #"dAudiffred@ucg.com.mx"
+            "pOrtiz@ucg.com.mx",
+            "dCorrea@ucg.com.mx",
+            "mRubio@ucg.com.mx",
+            "dAudiffred@ucg.com.mx"
         ] if email
     }
     dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
     urlFinal = f"{dominio}{expediente.id}/"
     
     usuarioNombre = expediente.usuarioCredito.username 
+    if tiene_pendientes:
+        asunto = "Expediente Archivado con Observaciones"
+    else:
+        asunto = "Expediente Archivado"
+    
+    bloque_pendientes = ""
+    if tiene_pendientes:
+        bloque_pendientes = f"""
+                <div style="margin: 20px 0; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px;">
+                    <h3 style="color: #856404; margin-top: 0;">Registros Pendientes / Informativos:</h3>
+                    <ul style="padding-left: 20px; color: #856404;">
+                        {comentarios_html}
+                    </ul>
+                </div>
+        """
 
-    asunto = "Expediente archivado para revisión"
     cuerpoHtml = f"""
     <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
@@ -3443,6 +3497,8 @@ def correoArchivado(expediente, porcentajeLlenado):
                     <span style="font-size: 0.9em; color: #6c757d; font-weight: bold; display: block;">PORCENTAJE DE COMPLETADO</span>
                     <span style="font-size: 1.8em; font-weight: bold; color: {color_porcentaje};">{porcentajeLlenado}%</span>
                 </div>
+
+                {bloque_pendientes}
 
                 <div style="margin: 30px 0; text-align: center;">
                     <a href="{urlFinal}" 
@@ -3484,7 +3540,6 @@ def correoArchivado(expediente, porcentajeLlenado):
     except Exception as e:
         print("Error al enviar correo:", e)
 
-
 def archivarExpediente(request, id,porcentajeLlenado):
     expediente = get_object_or_404(Expediente, pk=id)
     correoArchivado(expediente,porcentajeLlenado)
@@ -3497,6 +3552,7 @@ def archivarExpediente(request, id,porcentajeLlenado):
     darAlta(expediente, getEstado.nombre, request.user)
 
     return redirect('Index:editarExpediente', expediente.id)
+
 def generarLista(request):
     response = HttpResponse(content_type='text/plain; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="lista_expedientes.txt"'
@@ -3539,7 +3595,6 @@ def cambiarAnalizar(request, id):
 
 
 """
-
 
 
 
