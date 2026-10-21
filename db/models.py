@@ -267,6 +267,8 @@ class RegistroSeccion(models.Model):
     es_fecha = models.BooleanField(default=True)
     secuencial = models.IntegerField(null=True, blank=True, default=1)
     enviar = models.BooleanField(default=False)
+    obligado = models.ForeignKey('ObligadoSolidario', on_delete=models.SET_NULL,
+                             null=True, blank=True, related_name='registros')
     class Meta:
         unique_together = ('seccion', 'apartado', 'secuencial')
 

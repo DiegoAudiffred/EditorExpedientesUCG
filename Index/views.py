@@ -7,7 +7,7 @@ import os
 from pyexpat.errors import messages
 from urllib import request
 from django.conf import settings
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from openpyxl import load_workbook
@@ -31,6 +31,11 @@ from icalendar import Calendar, Event
 from datetime import date, datetime, time, timedelta
 from django.db.models import FloatField
 import re
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
     return user.roles == 'Administrador'
@@ -1360,7 +1365,7 @@ def exportarPDF(request, id):
 
 
 
-@login_required(login_url='/login/')    
+@login_required(login_url='/login/')
 def avances(request):
     fecha_actual = datetime.now()
     mes_actual = fecha_actual.month
@@ -1371,6 +1376,7 @@ def avances(request):
     ano_seleccionado = int(request.GET.get('ano', ano_actual))
     semana_seleccionada = request.GET.get('semana', '')
     tipo_reporte = request.GET.get('tipo_reporte', 'actual')
+    filtro_contemplado = request.GET.get('filtro_contemplado', 'solamente')
 
     fecha_inicio_semana = None
     fecha_fin_semana = None
@@ -1404,21 +1410,25 @@ def avances(request):
         rol_limpio = request.user.roles
         es_credito = rol_limpio in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']
 
+        filtros_base = {'eliminado': False}
+        if filtro_contemplado == 'solamente':
+            filtros_base['contemplado'] = True
+
         if us is None:
             username_key = "Sin Asignar"
             grafica_barras = es_credito
             if es_credito:
-                expedientes_totales = Expediente.objects.filter(usuarioCredito__isnull=True, eliminado=False)
+                expedientes_totales = Expediente.objects.filter(usuarioCredito__isnull=True, **filtros_base)
             else:
-                expedientes_totales = Expediente.objects.filter(usuario__isnull=True, eliminado=False)
+                expedientes_totales = Expediente.objects.filter(usuario__isnull=True, **filtros_base)
         else:
             username_key = us.username
             rol_usuario = us.roles.strip() if us.roles else ""
             grafica_barras = rol_usuario in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito', 'Ejecutivo de Servicios', 'Gerente Centro de Negocios']
             if rol_usuario in ['Credito', 'Crédito', 'Gerente de Credito', 'Gerente de Crédito']:
-                expedientes_totales = Expediente.objects.filter(usuarioCredito=us, eliminado=False)
+                expedientes_totales = Expediente.objects.filter(usuarioCredito=us, **filtros_base)
             else:
-                expedientes_totales = Expediente.objects.filter(usuario=us, eliminado=False)
+                expedientes_totales = Expediente.objects.filter(usuario=us, **filtros_base)
 
         numExpedientes = expedientes_totales.count()
 
@@ -1522,8 +1532,12 @@ def avances(request):
                 'estado_cierre_mes': estado_cierre_mes
             }
 
+    filtros_negocios_base = {'eliminado': False}
+    if filtro_contemplado == 'solamente':
+        filtros_negocios_base['contemplado'] = True
+
     if tipo_reporte == 'actual':
-        expedientes_negocios_qs = Expediente.objects.filter(eliminado=False)
+        expedientes_negocios_qs = Expediente.objects.filter(**filtros_negocios_base)
     else:
         filtros_negocios_fechas = {}
         if semana_seleccionada and fecha_inicio_semana and fecha_fin_semana:
@@ -1533,7 +1547,7 @@ def avances(request):
             filtros_negocios_fechas['fecha__year'] = ano_seleccionado
 
         ids_periodo = EstadosFechas.objects.filter(**filtros_negocios_fechas).values_list('expediente_id', flat=True).distinct()
-        expedientes_negocios_qs = Expediente.objects.filter(id__in=ids_periodo, eliminado=False)
+        expedientes_negocios_qs = Expediente.objects.filter(id__in=ids_periodo, **filtros_negocios_base)
 
     agrupado_negocios = (
         expedientes_negocios_qs
@@ -1557,7 +1571,7 @@ def avances(request):
         try:
             inicio = datetime.strptime(f'{ano_seleccionado}-W{num_semana}-1', "%Y-W%W-%w").date()
             fin = inicio + timedelta(days=6)
-            etiqueta = f"Semana {num_semana} - {inicio.strftime('%d/%m/%Y')} al {fin.strftime('%d/%m/%Y')}"
+            etiqueta = f"Semana {num_semana} {inicio.strftime('%d/%m/%Y')} al {fin.strftime('%d/%m/%Y')}"
             semanas_rango.append({'numero': num_semana, 'texto': etiqueta})
         except ValueError:
             pass
@@ -1570,6 +1584,7 @@ def avances(request):
         'semana_seleccionada': semana_seleccionada,
         'rango_semana_texto': rango_semana_texto,
         'tipo_reporte': tipo_reporte,
+        'filtro_contemplado': filtro_contemplado,
         'meses_rango': range(1, 13),
         'semanas_rango': semanas_rango,
         'anos_rango': range(datetime.now().year - 3, datetime.now().year + 1),
@@ -1579,7 +1594,166 @@ def avances(request):
 
     return render(request, 'Index/avancesLayout.html', context)
 
-login_required(login_url='/login/')
+@login_required(login_url='/login/')
+def exportarEjecutivos(request):
+    wb = openpyxl.Workbook()
+    
+    headers = [
+        "FECHA DE ELABORACION DEL ESTUDIO",
+        "NUMERO DE SOCIO",
+        "SOCIO",
+        "FECHA ENTREGA",
+        "EJECUTIVO SERVICIOS",
+        "TIPO DE CREDITO",
+        "MONTO",
+        "STATUS DEL CREDITO",
+        "STATUS VIGENTE/VENCIDO",
+        "DOCUMENTACIÓN REQUERIDA",
+        "COMENTARIOS",
+        "EJECUTIVO",
+        "OBSERVACIONES EN CREDITO",
+        "ESTATUS DEL EXPEDIENTE"
+    ]
+
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    data_font = Font(name="Calibri", size=10)
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    right_align = Alignment(horizontal="right", vertical="center")
+    
+    thin_border = Border(
+        left=Side(style='thin', color='D9D9D9'),
+        right=Side(style='thin', color='D9D9D9'),
+        top=Side(style='thin', color='D9D9D9'),
+        bottom=Side(style='thin', color='D9D9D9')
+    )
+
+    ws_total = wb.active
+    ws_total.title = "Total"
+    ws_total.append(headers)
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws_total.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+
+    expedientes = Expediente.objects.filter(
+        contemplado=True, 
+        eliminado=False
+    ).select_related(
+        'socio', 'estatus', 'usuario', 'usuarioCredito', 'usuarioNegocios'
+    ).prefetch_related('linea_set')
+
+    dict_por_ejecutivo = {}
+
+    for exp in expedientes:
+        ejecutivo_obj = exp.usuarioNegocios
+        if ejecutivo_obj:
+            nombre_ejecutivo = f"{ejecutivo_obj.nombreCompleto}".strip()
+            if not nombre_ejecutivo:
+                nombre_ejecutivo = ejecutivo_obj.username
+        else:
+            nombre_ejecutivo = "Sin Asignar"
+
+        lineas = exp.linea_set.all()
+        if not lineas.exists():
+            lineas = [None]
+
+        ejecutivo_servicios = f"{exp.usuario.nombreCompleto}".strip() if exp.usuario else (exp.usuario.username if exp.usuario else "")
+        ejecutivo_credito = f"{exp.usuarioCredito.nombreCompleto}".strip() if exp.usuarioCredito else (exp.usuarioCredito.username if exp.usuarioCredito else "")
+
+        for lin in lineas:
+            fecha_estudio = lin.fecha.strftime('%d/%m/%Y') if (lin and lin.fecha) else ""
+            num_socio = exp.socio.numeroKepler if exp.socio and exp.socio.numeroKepler else "0000"
+            nombre_socio = exp.socio.nombre if exp.socio else ""
+            fecha_entrega = exp.fechaCreacion.strftime('%d/%m/%Y') if exp.fechaCreacion else ""
+            
+            tipo_credito = lin.tipoLinea if lin else "Sin linea registrada"
+            monto = float(lin.monto) if lin else 0.0
+            
+            status_credito = "Activo"
+            status_vigente = "Vigente" if (lin and lin.vigente) else ("Vencido" if lin else "")
+            
+            doc_requerida = ""
+            comentarios = ""
+            observaciones_credito = ""
+            
+            estatus_expediente = exp.estatus.nombre if exp.estatus else ""
+
+            fila_datos = [
+                fecha_estudio,
+                num_socio,
+                nombre_socio,
+                fecha_entrega,
+                ejecutivo_servicios,
+                tipo_credito,
+                monto,
+                status_credito,
+                status_vigente,
+                doc_requerida,
+                comentarios,
+                ejecutivo_credito,
+                observaciones_credito,
+                estatus_expediente
+            ]
+
+            ws_total.append(fila_datos)
+
+            if nombre_ejecutivo not in dict_por_ejecutivo:
+                dict_por_ejecutivo[nombre_ejecutivo] = []
+            dict_por_ejecutivo[nombre_ejecutivo].append(fila_datos)
+
+    for ejecutivo, filas in dict_por_ejecutivo.items():
+        sheet_title = (ejecutivo[:28] + '..') if len(ejecutivo) > 30 else ejecutivo
+        sheet_title = sheet_title.replace(':', '').replace('*', '').replace('?', '').replace('/', '').replace('\\', '')
+        
+        ws = wb.create_sheet(title=sheet_title)
+        ws.append(headers)
+
+        for col_num in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+
+        for fila in filas:
+            ws.append(fila)
+
+    for ws in wb.worksheets:
+        ws.views.sheetView[0].showGridLines = True
+        
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(headers)):
+            for cell in row:
+                cell.font = data_font
+                cell.border = thin_border
+                
+                if cell.column == 7:  # MONTO
+                    cell.number_format = '$#,##0.00'
+                    cell.alignment = right_align
+                elif cell.column in [1, 2, 4, 8, 9, 14]:  # Fechas, Números y Estatus
+                    cell.alignment = center_align
+                else:
+                    cell.alignment = left_align
+
+        for col in ws.columns:
+            max_len = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                val = str(cell.value or '')
+                if len(val) > max_len:
+                    max_len = len(val)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="Reporte_Expedientes_Ejecutivos.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required(login_url='/login/')
 #@user_passes_test(is_admin)
 def administrador(request):
 
@@ -3595,6 +3769,325 @@ def cambiarAnalizar(request, id):
 
 
 """
+
+
+# Asume que ya tienes en este módulo: Expediente, SeccionesExpediente,
+# RegistroSeccion, Linea y la función _to_unc() que ya definiste.
+
+RUTA_SERVIDOR = r"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
+
+MESES_ES = {
+    "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
+    "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12,
+}
+
+# prefijo -> (carpeta padre, nombre de la carpeta de sección)
+SECCIONES_FS = {
+    "1": ("Maestra", "I. Identificación del Socio"),
+    "2": ("Maestra", "II. Información Financiera"),
+    "3": ("Operativa", "III. Estudio de Crédito"),
+    "4": ("Operativa", "IV. Información de garantias"),
+    "5": ("Operativa", "V. Contratos"),
+    "6": ("Operativa", "VI. Seguimiento"),
+    "7": ("Operativa", "VII. Correspondencia"),
+}
+
+# [opcional número de línea] + clave tipo 1.02 (o 1.025), seguida de espacio, punto o fin
+REGEX_CLAVE = re.compile(r'^\s*(?:(\d+)\s+)?(\d{1,2}\.\d{1,3})(?=[\s.]|$)')
+
+ARCHIVOS_IGNORADOS = {"thumbs.db", "desktop.ini", ".ds_store"}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+import unicodedata
+
+PARTICULAS = {"de", "del", "la", "las", "los", "y", "e"}
+
+
+def _sin_acentos(texto):
+    return ''.join(c for c in unicodedata.normalize('NFD', texto)
+                   if unicodedata.category(c) != 'Mn')
+
+
+def _iniciales_posibles(nombre):
+    """'José Mario Hugo Juárez' -> {'JMHJ'}.
+    Con partículas ('María de la Luz Pérez') acepta MDLP y MLP."""
+    palabras = _sin_acentos(nombre).upper().split()
+    todas = ''.join(p[0] for p in palabras)
+    sin_particulas = ''.join(p[0] for p in palabras if p.lower() not in PARTICULAS)
+    return {todas, sin_particulas}
+
+
+def _cargar_obligados(expediente):
+    """{'JMHJ': [obligado, ...]}: si la lista tiene más de uno, hay ambigüedad."""
+    mapa = {}
+    for ob in ObligadoSolidario.objects.filter(expedientes=expediente):
+        for ini in _iniciales_posibles(ob.nombre):
+            if ini:
+                mapa.setdefault(ini, []).append(ob)
+    return mapa
+def _normalizar_clave(clave):
+    """'1.025' -> '1.02' ; '1.02.' -> '1.02'"""
+    partes = str(clave).strip().rstrip('.').split('.')
+    if len(partes) == 2 and len(partes[1]) >= 3:
+        return f"{partes[0]}.{partes[1][:2]}"
+    return '.'.join(partes)
+
+
+def _parsear_nombre(nombre, es_archivo=True, obligados=None):
+    stem = os.path.splitext(nombre)[0] if es_archivo else nombre
+    stem = re.sub(r'\s+', ' ', stem.strip())
+
+    m = REGEX_CLAVE.match(stem)
+    if not m:
+        return None
+
+    clave = _normalizar_clave(m.group(2))
+    resto = stem[m.end():].strip(' .')
+
+    # --- Detectar obligado por iniciales en cualquier parte del texto ---
+    obligado, ambiguo = None, False
+    if obligados and resto:
+        tokens = resto.split(' ')
+        for i, tok in enumerate(tokens):
+            # No confundir el mes ("may 26") con unas iniciales como MAY
+            es_mes = (tok.lower() in MESES_ES and i + 1 < len(tokens)
+                      and re.fullmatch(r'\d{2}', tokens[i + 1]))
+            if es_mes:
+                continue
+            candidatos = obligados.get(_sin_acentos(tok).upper())
+            if candidatos:
+                if len(candidatos) > 1:
+                    ambiguo = True
+                else:
+                    obligado = candidatos[0]
+                del tokens[i]                 # se quita para no contaminar fecha/número
+                resto = ' '.join(tokens)
+                break
+
+    fecha = None
+    mf = re.search(r'(?:^|\s)([a-z]{3})\s*(\d{2})$', resto.lower())
+    if mf and mf.group(1) in MESES_ES:
+        try:
+            fecha = datetime(int(f"20{mf.group(2)}"), MESES_ES[mf.group(1)], 1).date()
+        except ValueError:
+            fecha = None
+
+    numero = None
+    if not fecha and resto:
+        numero = resto.split(' ')[-1].strip()
+
+    return {'clave': clave, 'fecha': fecha, 'numero': numero,
+            'obligado': obligado, 'ambiguo': ambiguo}
+def _ya_registrado(registros, fecha, numero, obligado_id=None):
+    esperado = (numero or '').strip().lower()
+    for r in registros:
+        if not r.estatus:
+            continue
+       
+        if fecha:
+            if r.es_fecha and hasattr(r.fecha, 'year') and \
+                    (r.fecha.year, r.fecha.month) == (fecha.year, fecha.month):
+                return True
+        else:
+            actual = re.sub(r'\s+', ' ', str(r.numero or '').strip()).lower()
+            if not r.es_fecha and actual == esperado:
+                return True
+    return False
+
+def _buscar_carpeta_socio(expediente):
+    kepler = str(expediente.socio.numeroKepler).strip() if expediente.socio.numeroKepler else "0000"
+    nombre_socio = str(expediente.socio.nombre).strip().upper()
+
+    for nombre_dir in os.listdir(_to_unc(RUTA_SERVIDOR)):
+        if kepler != "0000" and kepler in nombre_dir:
+            return os.path.join(RUTA_SERVIDOR, nombre_dir)
+        if kepler == "0000" and nombre_socio in nombre_dir.upper():
+            return os.path.join(RUTA_SERVIDOR, nombre_dir)
+    return None
+
+
+def _es_dir(ruta):
+    return os.path.isdir(_to_unc(ruta))
+
+
+def _es_archivo(ruta):
+    return os.path.isfile(_to_unc(ruta))
+
+
+def _recolectar_items(carpeta_socio, expediente, obligados=None):   # <-- nuevo parámetro
+    """
+    Recorre el servidor y devuelve la lista de elementos a evaluar:
+    {'nombre', 'ruta', 'info' (dict o None), 'omitir' (motivo o None)}
+    """
+    ruta_maestra = os.path.join(carpeta_socio, "Maestra")
+    ruta_operativa = os.path.join(carpeta_socio, "Operativa")
+
+    # (prefijo, ruta de la carpeta de sección)
+    secciones_ruta = []
+    for prefijo in ("1", "2"):
+        secciones_ruta.append((prefijo, os.path.join(ruta_maestra, SECCIONES_FS[prefijo][1]), None))
+    if _es_dir(ruta_operativa):
+        subdirs_op = os.listdir(_to_unc(ruta_operativa))
+        lineas = Linea.objects.filter(expediente=expediente)
+        carpetas_linea = []   # lista de (ruta, linea)
+        for linea in lineas:
+            pref = f"{str(linea.numero).strip()} "
+            for sd in subdirs_op:
+                ruta_sd = os.path.join(ruta_operativa, sd)
+                if sd.strip().startswith(pref) and _es_dir(ruta_sd) \
+                        and all(ruta_sd != r for r, _ in carpetas_linea):
+                    carpetas_linea.append((ruta_sd, linea))
+
+        for ruta_linea, linea in carpetas_linea:
+            for prefijo in ("3", "4", "5", "6", "7"):
+                secciones_ruta.append((prefijo, os.path.join(ruta_linea, SECCIONES_FS[prefijo][1]), linea.id))
+
+    items = []
+
+    def agregar_archivo(nombre, ruta, prefijo, linea_id):
+        if nombre.lower() in ARCHIVOS_IGNORADOS or nombre.startswith("~$"):
+            return
+        info = _parsear_nombre(nombre, es_archivo=True, obligados=obligados)   # <-- nuevo
+        if not info:
+            items.append({'nombre': nombre, 'ruta': ruta, 'info': None,
+                          'omitir': 'Sin clave en el nombre, no aplica'})
+        elif info['clave'].split('.')[0] != prefijo:
+            items.append({'nombre': nombre, 'ruta': ruta, 'info': None,
+                          'omitir': f"La clave {info['clave']} no corresponde a esta sección"})
+        else:
+            items.append({'nombre': nombre, 'ruta': ruta, 'info': info,
+                      'omitir': None, 'linea_id': linea_id})
+
+    for prefijo, ruta_seccion, linea_id in secciones_ruta:
+        if not _es_dir(ruta_seccion):
+            continue
+        for item in sorted(os.listdir(_to_unc(ruta_seccion))):
+            ruta_item = os.path.join(ruta_seccion, item)
+
+            if _es_archivo(ruta_item):
+                agregar_archivo(item, ruta_item, prefijo, linea_id)
+
+            elif _es_dir(ruta_item):
+                # Solo entramos a carpetas que empiecen con clave (ej. "1.02 Identificación Vigente")
+                if _parsear_nombre(item, es_archivo=False):
+                    for sub in sorted(os.listdir(_to_unc(ruta_item))):
+                        ruta_sub = os.path.join(ruta_item, sub)
+                        if _es_archivo(ruta_sub):
+                            agregar_archivo(sub, ruta_sub, prefijo, linea_id)
+                else:
+                    items.append({'nombre': item, 'ruta': ruta_item, 'info': None,
+                                  'omitir': 'Carpeta sin clave, no aplica'})
+    return items
+
+
+def _emit(**kw):
+    return json.dumps(kw, ensure_ascii=False, default=str) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Vista principal (streaming NDJSON: una línea JSON por evento)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='/login/')
+def detectarArchivos(request, id):
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    expediente = get_object_or_404(Expediente, pk=id)
+    secciones = SeccionesExpediente.objects.filter(expediente=expediente)
+
+    def generador():
+        resumen = {'creado': 0, 'duplicado': 0, 'omitido': 0, 'error': 0}
+
+        try:
+            yield _emit(tipo='estado', mensaje='Buscando la carpeta del socio en el servidor...')
+            carpeta_socio = _buscar_carpeta_socio(expediente)
+            if not carpeta_socio:
+                yield _emit(tipo='error_fatal', mensaje='No se encontró la carpeta del socio en el servidor.')
+                return
+
+            yield _emit(tipo='estado', mensaje=f'Carpeta encontrada: {os.path.basename(carpeta_socio)}. Escaneando archivos...')
+            obligados = _cargar_obligados(expediente)
+            items = _recolectar_items(carpeta_socio, expediente, obligados)            
+            total = len(items)
+            yield _emit(tipo='inicio', total=total)
+
+            if total == 0:
+                yield _emit(tipo='fin', resumen=resumen, mensaje='No se encontraron archivos.')
+                return
+
+            # Registros existentes agrupados por clave normalizada
+            mapeo = {}
+            for r in RegistroSeccion.objects.filter(seccion__in=secciones).select_related('apartado', 'seccion'):
+                mapeo.setdefault((r.seccion.linea_id, _normalizar_clave(r.apartado.clave)), []).append(r)
+
+            for i, it in enumerate(items, 1):
+                estado, mensaje = 'omitido', it['omitir'] or ''
+                try:
+                    if not it['omitir']:
+                       
+                        info = it['info']
+                        registros = mapeo.get((it['linea_id'], info['clave']))
+                        ob = info['obligado']
+                        ob_id = ob.id if ob else None
+
+                        if info['ambiguo']:
+                            estado, mensaje = 'error', 'Las iniciales coinciden con más de un obligado'
+                        elif not registros:
+                            estado, mensaje = 'omitido', f"No hay renglón en BD para la clave {info['clave']}"
+                        elif _ya_registrado(registros, info['fecha'], info['numero'], ob_id):
+                            estado, mensaje = 'duplicado', 'Ya estaba registrado'
+                        else:
+                            with transaction.atomic():
+                                # Reutiliza un renglón vacío solo si no está ligado a otra persona
+                                vacio = next((r for r in registros if not r.estatus), None)
+                                if vacio:
+                                    reg = vacio
+                                else:
+                                    base = registros[0]
+                                    ultimo = max((r.secuencial or 1) for r in registros)
+                                    reg = RegistroSeccion(
+                                        seccion=base.seccion, apartado=base.apartado,
+                                        secuencial=ultimo + 1, comentario=base.comentario,
+                                        comentarioCredito=base.comentarioCredito, enviar=base.enviar,
+                                    )
+                                    registros.append(reg)
+
+                                if info['fecha']:
+                                    reg.es_fecha, reg.fecha, reg.numero = True, info['fecha'], None
+                                    detalle = f"fecha {info['fecha'].strftime('%m/%Y')}"
+                                else:
+                                    reg.es_fecha, reg.fecha, reg.numero = False, None, info['numero']
+                                    detalle = f"identificador '{info['numero']}'" if info['numero'] else 'sin identificador'
+                                if ob:
+                                    detalle += f" · {ob.nombre}"
+                                reg.estatus = "ok"
+                                reg.save()
+                            estado, mensaje = 'creado', f"Registro creado ({detalle})"
+               
+                except Exception as e:
+                    estado, mensaje = 'error', str(e)
+
+                resumen[estado] += 1
+                yield _emit(tipo='progreso', actual=i, total=total, archivo=it['nombre'],
+                            estado=estado, mensaje=mensaje, resumen=resumen)
+
+            yield _emit(tipo='fin', resumen=resumen, mensaje='Detección finalizada.')
+
+        except Exception as e:
+            yield _emit(tipo='error_fatal', mensaje=f'Error inesperado: {e}')
+
+    respuesta = StreamingHttpResponse(generador(), content_type='application/x-ndjson; charset=utf-8')
+    respuesta['Cache-Control'] = 'no-cache'
+    respuesta['X-Accel-Buffering'] = 'no'  # evita buffering si hay nginx delante
+    return respuesta
+
+
+# urls.py:
+# 
 
 
 

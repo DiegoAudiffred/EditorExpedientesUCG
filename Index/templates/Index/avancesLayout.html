@@ -6,65 +6,77 @@
 
 <div class="container mt-4">
     <h2 class="mb-4">Progreso Detallado de Expedientes por Usuario y Estado</h2>
-    <a href="{% url 'Index:avancesMovimientos' %}">Avances por expedientes</a>
-    
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="GET" action="" class="row g-3 align-items-center">
-                <div class="col-auto">
-                    <label for="tipo_reporte" class="form-label font-weight-bold">Tipo de Vista:</label>
-                    <select name="tipo_reporte" id="tipo_reporte" class="form-select">
-                        <option value="actual" {% if tipo_reporte == 'actual' %}selected{% endif %}>Estado Actual (Al día de hoy)</option>
-                        <option value="historico" {% if tipo_reporte == 'historico' %}selected{% endif %}>Cierre de Periodo (Histórico)</option>
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <label for="semana" class="form-label font-weight-bold">Filtrar por Semana:</label>
-               <select name="semana" class="form-select">
-    <option value="">Seleccione una semana</option>
-    {% for sem in semanas_rango %}
-        <option value="{{ sem.numero }}" {% if semana_seleccionada|add:"0" == sem.numero %}selected{% endif %}>
-            {{ sem.texto }}
-        </option>
-    {% endfor %}
-</select>
-                </div>
-                <div class="col-auto">
-                    <label for="mes" class="form-label font-weight-bold">Filtrar por Mes:</label>
-                    <select name="mes" id="mes" class="form-select">
-                        <option value="1" {% if mes_seleccionado == 1 %}selected{% endif %}>Enero</option>
-                        <option value="2" {% if mes_seleccionado == 2 %}selected{% endif %}>Febrero</option>
-                        <option value="3" {% if mes_seleccionado == 3 %}selected{% endif %}>Marzo</option>
-                        <option value="4" {% if mes_seleccionado == 4 %}selected{% endif %}>Abril</option>
-                        <option value="5" {% if mes_seleccionado == 5 %}selected{% endif %}>Mayo</option>
-                        <option value="6" {% if mes_seleccionado == 6 %}selected{% endif %}>Junio</option>
-                        <option value="7" {% if mes_seleccionado == 7 %}selected{% endif %}>Julio</option>
-                        <option value="8" {% if mes_seleccionado == 8 %}selected{% endif %}>Agosto</option>
-                        <option value="9" {% if mes_seleccionado == 9 %}selected{% endif %}>Septiembre</option>
-                        <option value="10" {% if mes_seleccionado == 10 %}selected{% endif %}>Octubre</option>
-                        <option value="11" {% if mes_seleccionado == 11 %}selected{% endif %}>Noviembre</option>
-                        <option value="12" {% if mes_seleccionado == 12 %}selected{% endif %}>Diciembre</option>
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <label for="ano" class="form-label font-weight-bold">Año:</label>
-                    <select name="ano" id="ano" class="form-select">
-                        {% for ano in anos_rango %}
-                            <option value="{{ ano }}" {% if ano_seleccionado == ano %}selected{% endif %}>{{ ano }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-auto mt-4">
-                    <button type="submit" class="btn btn-primary mt-2">Aplicar Filtros</button>
-                </div>
-            </form>
-            {% if rango_semana_texto %}
-                <div class="alert alert-info py-2 mb-0 mt-3">
-                    <strong>Fechas de la semana filtrada:</strong> {{ rango_semana_texto }}
-                </div>
-            {% endif %}
-        </div>
+    <div class="my-3">
+    <a  class="btn btn-primary" href="{% url 'Index:avancesMovimientos' %}">Avances por expedientes</a>
+    <a href="{% url 'Index:exportarEjecutivos' %}" class="btn btn-secondary text-white">
+  Reporte Excel por Ejecutivo
+</a>    <button class="btn btn-tercero text-white"> Reporte Expedientes Faltantes y Progreso </button>
+
     </div>
+    <div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="" class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label for="tipo_reporte" class="form-label font-weight-bold">Tipo de Vista:</label>
+                <select name="tipo_reporte" id="tipo_reporte" class="form-select">
+                    <option value="actual" {% if tipo_reporte == 'actual' %}selected{% endif %}>Estado Actual (Al día de hoy)</option>
+                    <option value="historico" {% if tipo_reporte == 'historico' %}selected{% endif %}>Cierre de Periodo (Histórico)</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="filtro_contemplado" class="form-label font-weight-bold">Expedientes:</label>
+                <select name="filtro_contemplado" id="filtro_contemplado" class="form-select">
+                    <option value="solamente" {% if filtro_contemplado == 'solamente' %}selected{% endif %}>Solo Contemplados</option>
+                    <option value="todos" {% if filtro_contemplado == 'todos' %}selected{% endif %}>Todos los Expedientes</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="semana" class="form-label font-weight-bold">Filtrar por Semana:</label>
+                <select name="semana" class="form-select">
+                    <option value="">Seleccione una semana</option>
+                    {% for sem in semanas_rango %}
+                        <option value="{{ sem.numero }}" {% if semana_seleccionada|add:"0" == sem.numero %}selected{% endif %}>
+                            {{ sem.texto }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="mes" class="form-label font-weight-bold">Filtrar por Mes:</label>
+                <select name="mes" id="mes" class="form-select">
+                    <option value="1" {% if mes_seleccionado == 1 %}selected{% endif %}>Enero</option>
+                    <option value="2" {% if mes_seleccionado == 2 %}selected{% endif %}>Febrero</option>
+                    <option value="3" {% if mes_seleccionado == 3 %}selected{% endif %}>Marzo</option>
+                    <option value="4" {% if mes_seleccionado == 4 %}selected{% endif %}>Abril</option>
+                    <option value="5" {% if mes_seleccionado == 5 %}selected{% endif %}>Mayo</option>
+                    <option value="6" {% if mes_seleccionado == 6 %}selected{% endif %}>Junio</option>
+                    <option value="7" {% if mes_seleccionado == 7 %}selected{% endif %}>Julio</option>
+                    <option value="8" {% if mes_seleccionado == 8 %}selected{% endif %}>Agosto</option>
+                    <option value="9" {% if mes_seleccionado == 9 %}selected{% endif %}>Septiembre</option>
+                    <option value="10" {% if mes_seleccionado == 10 %}selected{% endif %}>Octubre</option>
+                    <option value="11" {% if mes_seleccionado == 11 %}selected{% endif %}>Noviembre</option>
+                    <option value="12" {% if mes_seleccionado == 12 %}selected{% endif %}>Diciembre</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="ano" class="form-label font-weight-bold">Año:</label>
+                <select name="ano" id="ano" class="form-select">
+                    {% for ano in anos_rango %}
+                        <option value="{{ ano }}" {% if ano_seleccionado == ano %}selected{% endif %}>{{ ano }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto mt-4">
+                <button type="submit" class="btn btn-primary mt-2">Aplicar Filtros</button>
+            </div>
+        </form>
+        {% if rango_semana_texto %}
+            <div class="alert alert-info py-2 mb-0 mt-3">
+                <strong>Fechas de la semana filtrada:</strong> {{ rango_semana_texto }}
+            </div>
+        {% endif %}
+    </div>
+</div>
 
     {% if request.user.roles == "Administrador" or request.user.roles == "Gerente Centro de Negocios" or request.user.roles == "Gerente de Credito" %}
     

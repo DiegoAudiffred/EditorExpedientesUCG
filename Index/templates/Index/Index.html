@@ -226,5 +226,224 @@
     </div>
 
 </div>
+
+{% if request.user.roles == 'Administrador'  %}
+<style>
+  :root { --amarillo: #f2b705; }
+  body { line-height: 1.6; }
+  .contenedor { max-width: 960px; }
+  h2 { border-left: 6px solid var(--amarillo); padding-left: .75rem; margin-top: 2.5rem; font-size: 1.5rem; }
+  .nombre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .95rem; }
+  .pieza { padding: .15rem .5rem; border-radius: .35rem; font-weight: 600; white-space: nowrap; }
+  .p-linea  { background: #e2e3e5; color: #41464b; }
+  .p-clave  { background: #ffe69c; color: #664d03; }
+  .p-texto  { background: #f1f1f1; color: #555; }
+  .p-ini    { background: #cfe2ff; color: #084298; }
+  .p-fecha  { background: #d1e7dd; color: #0a3622; }
+  .p-ident  { background: #f8d7da; color: #58151c; }
+  [data-bs-theme="dark"] .p-linea { background:#343a40; color:#dee2e6; }
+  [data-bs-theme="dark"] .p-clave { background:#664d03; color:#ffe69c; }
+  [data-bs-theme="dark"] .p-texto { background:#2b2f32; color:#ced4da; }
+  [data-bs-theme="dark"] .p-ini   { background:#052c65; color:#9ec5fe; }
+  [data-bs-theme="dark"] .p-fecha { background:#0a3622; color:#a3cfbb; }
+  [data-bs-theme="dark"] .p-ident { background:#58151c; color:#f1aeb5; }
+  pre.arbol { background: var(--bs-tertiary-bg); border-radius: .5rem; padding: 1rem; overflow-x: auto; font-size: .9rem; }
+  .tabla-scroll { overflow-x: auto; }
+</style>
+<script>
+  if (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+</script>
+
+<div class="container contenedor py-4">
+
+  <h1 class="fw-bold">Cómo nombrar los archivos del expediente</h1>
+  <p class="lead">El sistema lee el nombre de cada archivo para saber a qué apartado pertenece, de quién es y de qué fecha o identificador. Si el nombre sigue estas reglas, el registro se crea solo al pulsar <strong>Detectar archivos</strong>.</p>
+
+  <!-- ===== Estructura del nombre ===== -->
+  <h2>1. Estructura del nombre</h2>
+  <div class="card mb-3"><div class="card-body">
+    <p class="mb-2">Orden recomendado:</p>
+    <p class="nombre mb-3">
+      <span class="pieza p-linea">Nº línea</span>
+      <span class="pieza p-clave">CLAVE</span>
+      <span class="pieza p-texto">texto libre</span>
+      <span class="pieza p-ini">INICIALES</span>
+      <span class="pieza p-fecha">mes aa</span> <span class="text-body-secondary">o</span> <span class="pieza p-ident">identificador</span>
+    </p>
+    <div class="row small g-2">
+      <div class="col-sm-6 col-lg-4"><span class="pieza p-linea">Nº línea</span> Opcional. Solo si lo usas para distinguir líneas.</div>
+      <div class="col-sm-6 col-lg-4"><span class="pieza p-clave">CLAVE</span> Obligatoria. Define el apartado.</div>
+      <div class="col-sm-6 col-lg-4"><span class="pieza p-texto">texto libre</span> Descripción; el sistema la ignora.</div>
+      <div class="col-sm-6 col-lg-4"><span class="pieza p-ini">INICIALES</span> Solo si el apartado es de un obligado o representante.</div>
+      <div class="col-sm-6 col-lg-4"><span class="pieza p-fecha">mes aa</span> Para documentos que se identifican por fecha.</div>
+      <div class="col-sm-6 col-lg-4"><span class="pieza p-ident">identificador</span> Para documentos que se identifican por número o código.</div>
+    </div>
+  </div></div>
+  <p>Ejemplo completo: <span class="nombre"><span class="pieza p-clave">1.16</span> <span class="pieza p-texto">Identificación</span> <span class="pieza p-ini">JMHJ</span> <span class="pieza p-fecha">may 26</span>.pdf</span></p>
+
+  <!-- ===== Reglas ===== -->
+  <h2>2. Reglas</h2>
+  <div class="accordion" id="reglas">
+
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#r1">La clave va al inicio</button></h3>
+      <div id="r1" class="accordion-collapse collapse show" data-bs-parent="#reglas"><div class="accordion-body">
+        <ul class="mb-0">
+          <li>Formato <code>x.xx</code>, por ejemplo <code>1.02</code> o <code>3.02</code>, seguida de un espacio.</li>
+          <li>Debe ser lo primero del nombre. Solo puede ir antes un número de línea.</li>
+          <li>Si escribes tres decimales (<code>1.025</code>), el sistema usa los dos primeros (<code>1.02</code>).</li>
+          <li>El primer número de la clave debe coincidir con la carpeta de sección donde está el archivo (1 y 2 en <em>Maestra</em>; 3 a 7 en <em>Operativa</em>). Si no coincide, se omite.</li>
+          <li>Un archivo o carpeta sin clave (por ejemplo <code>validaciones.pdf</code>) no se toca.</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#r2">Fecha: mes en 3 letras y año en 2 dígitos</button></h3>
+      <div id="r2" class="accordion-collapse collapse" data-bs-parent="#reglas"><div class="accordion-body">
+        <ul>
+          <li>Va al final del nombre: <code>may 26</code> o <code>may26</code>. Se guarda como mayo de 2026.</li>
+          <li>Solo cuentan mes y año; el día no se usa.</li>
+          <li>Meses válidos, <strong>en español</strong>:</li>
+        </ul>
+        <p class="nombre ms-4 mb-2">ene · feb · mar · abr · may · jun · jul · ago · sep · oct · nov · dic</p>
+        <div class="alert alert-warning mb-0 py-2">No uses <code>aug</code>, <code>dec</code>, <code>jan</code>, <code>apr</code> ni <code>mayo</code>. El sistema no los reconoce como fecha y los toma como identificador.</div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#r3">Identificador: cuando no hay fecha</button></h3>
+      <div id="r3" class="accordion-collapse collapse" data-bs-parent="#reglas"><div class="accordion-body">
+        <ul class="mb-0">
+          <li>Si el nombre no termina en fecha, el identificador es la <strong>última palabra</strong> del nombre (sin contar las iniciales).</li>
+          <li><code>1.02 Ejemplo1</code> guarda <code>Ejemplo1</code>; <code>1.02 Ejemplo2</code> guarda <code>Ejemplo2</code>. Son dos registros distintos.</li>
+          <li>El identificador debe ser una sola palabra, sin espacios. Si pones <code>Contrato 123 A</code>, solo se guarda <code>A</code>.</li>
+          <li>Mayúsculas y minúsculas no importan: <code>ggpt</code> y <code>GGPT</code> son el mismo.</li>
+          <li>Ponlo siempre al final, después de las iniciales.</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#r4">Iniciales: obligados y representantes legales</button></h3>
+      <div id="r4" class="accordion-collapse collapse" data-bs-parent="#reglas"><div class="accordion-body">
+        <ul>
+          <li>Cuando varias personas comparten la misma clave (por ejemplo <code>1.16</code>), añade en el nombre <strong>la primera letra de cada nombre y apellido</strong>, todo junto y como una palabra separada.</li>
+          <li>Pueden ir en cualquier parte del texto, antes o después de la fecha o el identificador.</li>
+          <li>Mayúsculas, minúsculas y acentos no importan (<code>JMHJ</code> = <code>jmhj</code>).</li>
+          <li>Las partículas <em>de, del, la, las, los, y, e</em> pueden incluirse u omitirse.</li>
+          <li>Deben coincidir con un obligado o representante registrado en el expediente.</li>
+        </ul>
+        <div class="tabla-scroll">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Nombre en el expediente</th><th>Iniciales válidas</th></tr></thead>
+          <tbody>
+            <tr><td>José Mario Hugo Juárez</td><td class="nombre">JMHJ</td></tr>
+            <tr><td>Ana López</td><td class="nombre">AL</td></tr>
+            <tr><td>María de la Luz Pérez</td><td class="nombre">MDLLP o MLP</td></tr>
+          </tbody>
+        </table></div>
+        <div class="alert alert-warning mb-0 py-2">Si dos personas del mismo expediente tienen las mismas iniciales, el archivo no se carga y se marca como error. Agrega una letra extra para distinguirlas (por ejemplo la inicial del segundo nombre completo) y avisa para registrarlas igual.</div>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#r5">Duplicados y varios archivos de la misma clave</button></h3>
+      <div id="r5" class="accordion-collapse collapse" data-bs-parent="#reglas"><div class="accordion-body">
+        <ul class="mb-0">
+          <li>Un archivo se considera ya registrado cuando coinciden clave, persona (si tiene iniciales) y fecha (mes y año) o identificador.</li>
+          <li>Puedes pulsar <em>Detectar archivos</em> las veces que quieras; lo ya registrado se marca como duplicado.</li>
+          <li>Para tener varios archivos de la misma clave, cada uno debe tener un identificador o fecha distintos.</li>
+          <li>Un archivo sin fecha ni identificador solo se registra una vez por clave y persona.</li>
+          <li>Debe existir el renglón de esa clave en el expediente; si no existe, el archivo se omite.</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <div class="accordion-item">
+      <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#r6">Detalles menores</button></h3>
+      <div id="r6" class="accordion-collapse collapse" data-bs-parent="#reglas"><div class="accordion-body">
+        <ul class="mb-0">
+          <li>La extensión (pdf, jpg, etc.) no importa.</li>
+          <li>Los espacios dobles se tratan como uno solo.</li>
+          <li><code>Thumbs.db</code>, <code>desktop.ini</code> y archivos temporales que empiezan con <code>~$</code> se ignoran.</li>
+          <li>Solo se leen archivos; las subcarpetas que no empiezan con clave se omiten.</li>
+        </ul>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ===== Carpetas ===== -->
+  <h2>3. Dónde guardar el archivo</h2>
+  <p>El archivo va en la carpeta de su sección. Puede estar directo ahí o dentro de una carpeta que empiece con su clave.</p>
+<pre class="arbol mb-0">...\652 Digitalización de expedientes de crédito\
+└─ 0000 Socio de Prueba\
+   ├─ Maestra\
+   │  ├─ I. Identificación del Socio\
+   │  │  ├─ 1.02 Identificación Vigente\
+   │  │  │  ├─ 1.02 Ejemplo1.pdf
+   │  │  │  └─ 1.02 Ejemplo2.pdf
+   │  │  └─ 1.16 Identificación JMHJ may 26.pdf
+   │  └─ II. Información Financiera\
+   └─ Operativa\
+      └─ 12345 CS ...\            (carpeta de la línea: empieza con su número)
+         ├─ III. Estudio de Crédito\
+         ├─ IV. Información de garantias\
+         ├─ V. Contratos\
+         ├─ VI. Seguimiento\
+         └─ VII. Correspondencia\</pre>
+
+  <!-- ===== Ejemplos ===== -->
+  <h2>4. Ejemplos correctos</h2>
+  <div class="tabla-scroll">
+  <table class="table table-sm align-middle">
+    <thead><tr><th>Nombre del archivo</th><th>Qué hace el sistema</th></tr></thead>
+    <tbody>
+      <tr><td class="nombre">1.02 Ejemplo1.pdf</td><td>Clave 1.02, identificador <code>Ejemplo1</code>.</td></tr>
+      <tr><td class="nombre">1.02 Ejemplo2.pdf</td><td>Segundo registro de 1.02, identificador <code>Ejemplo2</code>.</td></tr>
+      <tr><td class="nombre">1.01 conoce a tu socio may 26.pdf</td><td>Clave 1.01, fecha mayo 2026.</td></tr>
+      <tr><td class="nombre">1.01 conoce a tu socio may26.pdf</td><td>Igual que el anterior (el espacio es opcional).</td></tr>
+      <tr><td class="nombre">1.16 Archivo JMHJ may 26.pdf</td><td>Clave 1.16, de José Mario Hugo Juárez, fecha mayo 2026.</td></tr>
+      <tr><td class="nombre">1.16 jmhj Identificación ine.pdf</td><td>Clave 1.16, de José Mario Hugo Juárez, identificador <code>ine</code>.</td></tr>
+      <tr><td class="nombre">1.16 Archivo AL ene 26.pdf</td><td>Clave 1.16, de Ana López, fecha enero 2026 (el mismo apartado puede tener un registro por persona).</td></tr>
+      <tr><td class="nombre">12345 3.02 Estudio ene 26.pdf</td><td>Con número de línea antes de la clave; clave 3.02, fecha enero 2026.</td></tr>
+      <tr><td class="nombre">1.025 Comprobante 123.pdf</td><td>La clave se reduce a 1.02; identificador <code>123</code>.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>5. Ejemplos que no funcionan</h2>
+  <div class="tabla-scroll">
+  <table class="table table-sm align-middle">
+    <thead><tr><th>Nombre del archivo</th><th>Resultado</th><th>Cómo corregirlo</th></tr></thead>
+    <tbody>
+      <tr><td class="nombre">validaciones.pdf</td><td><span class="badge text-bg-secondary">Omitido</span> sin clave</td><td>Está bien si no debe cargarse; si debe, anteponer la clave.</td></tr>
+      <tr><td class="nombre">Identificación 1.02.pdf</td><td><span class="badge text-bg-secondary">Omitido</span> la clave no está al inicio</td><td><code>1.02 Identificación.pdf</code></td></tr>
+      <tr><td class="nombre">2.01 Estado de cuenta.pdf<br><small class="text-body-secondary">(dentro de I. Identificación del Socio)</small></td><td><span class="badge text-bg-secondary">Omitido</span> clave de otra sección</td><td>Moverlo a la carpeta <em>II. Información Financiera</em>.</td></tr>
+      <tr><td class="nombre">1.01 doc aug 26.pdf</td><td><span class="badge text-bg-warning">Mal leído</span> se guarda <code>26</code> como identificador</td><td><code>1.01 doc ago 26.pdf</code></td></tr>
+      <tr><td class="nombre">1.01 doc mayo 26.pdf</td><td><span class="badge text-bg-warning">Mal leído</span> se guarda <code>26</code> como identificador</td><td><code>1.01 doc may 26.pdf</code></td></tr>
+      <tr><td class="nombre">1.02 Ejemplo1.pdf<br><small class="text-body-secondary">(cargado por segunda vez)</small></td><td><span class="badge text-bg-secondary">Duplicado</span></td><td>No requiere acción.</td></tr>
+      <tr><td class="nombre">1.16 Archivo JMH may 26.pdf</td><td><span class="badge text-bg-warning">Sin persona</span> JMH no coincide con nadie; se crea sin asignar</td><td>Usar las iniciales completas: <code>JMHJ</code>.</td></tr>
+      <tr><td class="nombre">1.16 Archivo AB may 26.pdf<br><small class="text-body-secondary">(dos personas con AB)</small></td><td><span class="badge text-bg-danger">Error</span> iniciales ambiguas</td><td>Agregar una letra que las distinga, y registrarlas igual.</td></tr>
+      <tr><td class="nombre">1.02 Contrato 123 A.pdf</td><td><span class="badge text-bg-warning">Mal leído</span> solo se guarda <code>A</code></td><td><code>1.02 Contrato 123A.pdf</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ===== Lista rápida ===== -->
+  <h2>6. Lista rápida antes de guardar</h2>
+  <ul class="list-group mb-4">
+    <li class="list-group-item">¿El nombre empieza con la clave (<code>x.xx</code>)?</li>
+    <li class="list-group-item">¿La clave corresponde a la carpeta de sección donde lo guardé?</li>
+    <li class="list-group-item">¿Si es de una persona, incluí sus iniciales como palabra separada?</li>
+    <li class="list-group-item">¿Terminé con el mes en español (3 letras) y año de 2 dígitos, o con un identificador de una sola palabra?</li>
+    <li class="list-group-item">¿Si hay varios archivos de la misma clave (y persona), cada uno tiene un identificador o fecha distintos?</li>
+  </ul>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endif %}
+
+
 {% endblock %}
 

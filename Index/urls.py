@@ -58,7 +58,7 @@ urlpatterns = [
     
     path('avances/', views.avances, name='avances'),
     path('avancesMovimientos/', views.avancesMovimientos, name='avancesMovimientos'),
-
+path('exportarEjecutivos/', views.exportarEjecutivos, name='exportarEjecutivos'),
     path('expediente/<int:expediente_id>/<int:linea_id>', views.lineaEliminar, name='lineaEliminar'),
 path('expediente/<int:seccion>/<int:apartado>/<int:secuencial>/', views.checkBoxChange, name='checkBoxChange'),    #Administrador
     path('expediente/<int:expedienteID>/', views.notificarFaltantes, name='notificarFaltantes'),    #Administrador
@@ -75,7 +75,7 @@ path('expediente/<int:seccion>/<int:apartado>/<int:secuencial>/', views.checkBox
 
     path('servirArchivo/', views.servirArchivo, name='servirArchivo'), 
           path('expediente/expediente_llenar/<int:id>/', views.expediente_llenar, name='expediente_llenar'),
-    
+    path('expediente/<int:id>/detectar-archivos/', views.detectarArchivos, name='detectarArchivos'),
     #Lineas
     path("lineas/",views.lineasLayout,name='lineasLayout'),
     path('lineas/filtrar/', views.filtrar_lineas_ajax, name='filtrar_lineas_ajax'),
