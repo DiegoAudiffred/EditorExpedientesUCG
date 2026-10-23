@@ -802,6 +802,7 @@ def crearExpediente(request):
                     'error': f"Ocurrió un error inesperado: {str(e)}"
                 }, status=500)
         else:
+            print(exp_form.errors.as_data())
             error_msg = f"Errores: {exp_form.errors.as_text()} {rep_form.errors.as_text()} {obl_form.errors.as_text()}"
             return JsonResponse({'success': False, 'error': error_msg}, status=400)
 
@@ -2857,42 +2858,35 @@ def checkBoxChange(request, seccion, apartado, secuencial):
     registro.save()
     return JsonResponse({'success': True, 'enviar': registro.enviar})
 
-def notificarFaltantes(request,expedienteID):
-    from email.message import EmailMessage
+def notificarFaltantes(request, expedienteID):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
 
     seccionesConCheckBox = []
-    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
-    
-    for seccion in secciones:
-        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
-        for apartado in apartados:
-            registro = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
-            
-            if registro is not None:
-                if registro.enviar:
-                    seccionesConCheckBox.append({
-                        'nombreSeccion': str(seccion.tituloSeccion),
-                        'claveApartado': str(apartado.clave),
-                    })
-                    
-    destinatario = [expediente.usuario.email,expediente.usuarioNegocios.email]     
+    registros_marcados = (
+        RegistroSeccion.objects
+        .filter(seccion__expediente=expediente, enviar=True)
+        .select_related('seccion', 'apartado')
+        .order_by('seccion__tipoDeSeccion', 'seccion__pk', 'apartado__clave', 'secuencial')
+    )
+    for registro in registros_marcados:
+        seccionesConCheckBox.append({
+            'nombreSeccion': str(registro.seccion.tituloSeccion),
+            'claveApartado': str(registro.apartado.clave),
+            'secuencial': registro.secuencial,
+            'comentario': registro.comentario or '',
+        })
+    destinatario = [expediente.usuario.email, expediente.usuarioNegocios.email]    
     dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
     url_final = f"{dominio}{expediente.id}/"
-    asunto = f"Documentos faltantes: Expediente {expediente.id} - {expediente.socio.nombre}"
+    asunto = f"Documentos faltantes: Expediente {expediente.socio.numeroKepler} {expediente.socio.nombre}"
     
-    comentarios_texto = ""
-    for item in seccionesConCheckBox:
-        comentarios_texto += f"\n- [{item['nombreSeccion']} - {item['claveApartado']}]: "
-
-
     cuerpo_html = f"""
     <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
             <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
                 <h2 style="color: #2c3e50;">Actualización de estatus del expediente</h2>
                 <p>Estimado usuario,</p>
-                <p>Le informamos que el expediente {expediente.id} del socio {expediente.socio.nombre} - {expediente.socio.numeroKepler} requiere ciertos documentos.</p>
+                <p>Le informamos que el expediente del socio {expediente.socio.nombre} {expediente.socio.numeroKepler} requiere ciertos documentos.</p>
                 <p>Atte {expediente.usuario.username}.</p>
                 <div style="margin: 30px 0; text-align: center;">
                     <a href="{url_final}" 
@@ -2908,14 +2902,14 @@ def notificarFaltantes(request,expedienteID):
     for item in seccionesConCheckBox:
         cuerpo_html += f"""
                         <li style="margin-bottom: 10px;">
-                            <strong>{item['nombreSeccion']} (Clave: {item['claveApartado']}):</strong> 
+                            <strong>{item['nombreSeccion']} (Clave: {item['claveApartado']}):</strong> {item['comentario']}
                         </li>
         """
 
     cuerpo_html += f"""
                     </ul>
                 </div>
-          
+            
                 <hr style="border: 0; border-top: 1px solid #eee;">
                 <p style="font-size: 0.8em; color: #999; text-align: center;">
                     Este es un mensaje automático, por favor no responda a este correo.
@@ -2929,24 +2923,31 @@ def notificarFaltantes(request,expedienteID):
     USUARIO = "informacion@ucg.com.mx"
     CONTRASENA = "UcG911_@!#"
     
-    mensaje = EmailMessage()
+    mensaje = email.message.EmailMessage()
     mensaje["From"] = USUARIO
     mensaje["To"] = ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
     mensaje["Subject"] = asunto
     
-    mensaje.add_alternative(cuerpo_html, subtype="html")
+    mensaje.set_content(cuerpo_html, subtype="html")
+
+    # --- ENVÍO DESHABILITADO MIENTRAS SE DEPURA: solo se imprime en la terminal ---
+    print("=== CORREO (NO ENVIADO) ===")
+    print("Para:", mensaje["To"])
+    print("Asunto:", asunto)
+    print(f"Registros marcados: {len(seccionesConCheckBox)}")
+    for item in seccionesConCheckBox:
+        print(f"  - {item['nombreSeccion']} (clave {item['claveApartado']}, renglón {item['secuencial']}): {item['comentario']}")
 
     try:
-        servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
-        servidor.starttls()
-        servidor.login(USUARIO, CONTRASENA)
-        servidor.send_message(mensaje)
-        servidor.quit()
-        print("Correo enviado correctamente")
+         servidor = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+         servidor.starttls()
+         servidor.login(USUARIO, CONTRASENA)
+         servidor.send_message(mensaje)
+         servidor.quit()
+         print("Correo enviado correctamente")
     except Exception as e:
-        print("Error al enviar correo:", e)
+         print("Error al enviar correo:", e)
     return redirect('Index:editarExpediente', expediente.id)
-
 
 @login_required(login_url='/login/')
 def procesarArchivos(request, id):
@@ -3275,7 +3276,7 @@ def _match_fecha(registro, arch_norm, meses_es, indent="      "):
     "may 26", agrega ese patrón aquí (ver comentario más abajo).
     """
     if not (registro.es_fecha and registro.fecha):
-        print(f"{indent}[FECHA] registro.es_fecha=False o sin fecha asignada -> no aplica")
+        #print(f"{indent}[FECHA] registro.es_fecha=False o sin fecha asignada -> no aplica")
         return False
 
     fecha_obj = registro.fecha
@@ -3289,7 +3290,7 @@ def _match_fecha(registro, arch_norm, meses_es, indent="      "):
             except ValueError:
                 continue
         if not parsed:
-            print(f"{indent}[FECHA] No se pudo parsear '{registro.fecha}' -> no aplica")
+            #print(f"{indent}[FECHA] No se pudo parsear '{registro.fecha}' -> no aplica")
             return False
 
     mes_texto = meses_es.get(fecha_obj.month, "").lower()
@@ -3305,18 +3306,17 @@ def _match_fecha(registro, arch_norm, meses_es, indent="      "):
     anio_completo = fecha_obj.strftime("%Y")
     patron_numerico = rf"{dia}[\/\-\s]{mes_num}[\/\-\s]{anio_completo}"
 
-    print(f"{indent}[FECHA] Buscando '{mes_texto} {anio_dos_digitos}' (regex texto: {patron_texto}) "
-          f"o '{dia}/{mes_num}/{anio_completo}' (regex numérico: {patron_numerico}) en '{arch_norm}'")
+    #print(f"{indent}[FECHA] Buscando '{mes_texto} {anio_dos_digitos}' (regex texto: {patron_texto}) "          f"o '{dia}/{mes_num}/{anio_completo}' (regex numérico: {patron_numerico}) en '{arch_norm}'")
 
     if re.search(patron_texto, arch_norm):
-        print(f"{indent}[FECHA] \u2714 Coincidencia por patrón de texto (mes+año)")
+        #print(f"{indent}[FECHA] \u2714 Coincidencia por patrón de texto (mes+año)")
         return True
 
     if re.search(patron_numerico, arch_norm):
-        print(f"{indent}[FECHA] \u2714 Coincidencia por patrón numérico (dd/mm/aaaa)")
+        #print(f"{indent}[FECHA] \u2714 Coincidencia por patrón numérico (dd/mm/aaaa)")
         return True
 
-    print(f"{indent}[FECHA] \u2718 Sin coincidencia de fecha")
+    #print(f"{indent}[FECHA] \u2718 Sin coincidencia de fecha")
     return False
 
 
@@ -3330,7 +3330,7 @@ def _match_identificador(registro, arch_norm, indent="      "):
     "1.01 conoce a tu socio ggpt".
     """
     if registro.es_fecha:
-        print(f"{indent}[ID] registro.es_fecha=True -> este registro se valida por fecha, no por identificador")
+        #print(f"{indent}[ID] registro.es_fecha=True -> este registro se valida por fecha, no por identificador")
         return False
 
     criterio_val = None
@@ -3340,15 +3340,15 @@ def _match_identificador(registro, arch_norm, indent="      "):
         criterio_val = re.sub(r'\s+', ' ', str(registro.identificador).strip()).lower()
 
     if not criterio_val:
-        print(f"{indent}[ID] Registro sin numero/identificador asignado -> no aplica")
+        #print(f"{indent}[ID] Registro sin numero/identificador asignado -> no aplica")
         return False
 
-    print(f"{indent}[ID] Buscando identificador '{criterio_val}' en '{arch_norm}'")
+    #print(f"{indent}[ID] Buscando identificador '{criterio_val}' en '{arch_norm}'")
     if criterio_val in arch_norm:
-        print(f"{indent}[ID] \u2714 Coincidencia por identificador")
+        #print(f"{indent}[ID] \u2714 Coincidencia por identificador")
         return True
 
-    print(f"{indent}[ID] \u2718 Sin coincidencia de identificador")
+    #print(f"{indent}[ID] \u2718 Sin coincidencia de identificador")
     return False
 
 
@@ -3360,26 +3360,27 @@ def checarRuta(identificador_socio, secciones):
 
     rutaServidor = fr"\\192.168.0.96\intranetucg$$\Evidencias\652 Digitalización de expedientes de crédito"
 
-    print(f"\n{'='*80}\n[INICIO] checarRuta(identificador_socio='{identificador_socio}', secciones={secciones})\n{'='*80}")
+    #print(f"\n{'='*80}\n[INICIO] checarRuta(identificador_socio='{identificador_socio}', secciones={secciones})\n{'='*80}")
 
     carpeta_socio = None
     try:
         ruta_scan = _to_unc(rutaServidor)
-        print(f"[1] Escaneando servidor raíz: {ruta_scan}")
+        #print(f"[1] Escaneando servidor raíz: {ruta_scan}")
         dirs_servidor = os.listdir(ruta_scan)
         for nombre_dir in dirs_servidor:
             if identificador_socio in nombre_dir:
                 carpeta_socio = os.path.join(rutaServidor, nombre_dir)
-                print(f"[1] \u2714 Carpeta de socio encontrada: {carpeta_socio}")
+                #print(f"[1] \u2714 Carpeta de socio encontrada: {carpeta_socio}")
                 break
         if not carpeta_socio:
-            print(f"[1] \u2718 Ningún directorio contiene '{identificador_socio}' en el servidor")
+            #print(f"[1] \u2718 Ningún directorio contiene '{identificador_socio}' en el servidor")
+            pass
     except Exception as e:
-        print(f"[1] \u2718 ERROR al listar el servidor: {e}")
+        #print(f"[1] \u2718 ERROR al listar el servidor: {e}")
         return {}
 
     if not carpeta_socio:
-        print("[FIN] No se encontró carpeta de socio -> se retorna {}")
+        #print("[FIN] No se encontró carpeta de socio -> se retorna {}")
         return {}
 
     rutaMaestra = os.path.join(carpeta_socio, "Maestra")
@@ -3403,15 +3404,14 @@ def checarRuta(identificador_socio, secciones):
     resultados = {}
 
     for seccion in secciones:
-        print(f"\n[2] --- Procesando sección: {seccion} ---")
+        #print(f"\n[2] --- Procesando sección: {seccion} ---")
         registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related(
             'apartado', 'seccion__expediente'
         )
-        print(f"[2] {registros_existentes.count()} registro(s) encontrados en BD para esta sección")
+        #print(f"[2] {registros_existentes.count()} registro(s) encontrados en BD para esta sección")
 
         for registro in registros_existentes:
-            print(f"\n  [3] Registro id={registro.id} | clave={registro.apartado.clave} | "
-                  f"es_fecha={registro.es_fecha} | fecha={registro.fecha} | numero={registro.numero}")
+            #print(f"\n  [3] Registro id={registro.id} | clave={registro.apartado.clave} | "                  f"es_fecha={registro.es_fecha} | fecha={registro.fecha} | numero={registro.numero}")
 
             clave = str(registro.apartado.clave).strip()
             partes_c = clave.split('.')
@@ -3419,16 +3419,16 @@ def checarRuta(identificador_socio, secciones):
                 clave_busqueda = f"{partes_c[0]}.{partes_c[1][:2]}"
             else:
                 clave_busqueda = clave
-            print(f"  [3] clave_busqueda normalizada: '{clave_busqueda}'")
+            #print(f"  [3] clave_busqueda normalizada: '{clave_busqueda}'")
 
             prefijo = clave_busqueda.split('.')[0]
             ruta_base_seccion = mapeo_secciones.get(prefijo)
 
             if not ruta_base_seccion:
-                print(f"  [3] \u2718 Prefijo '{prefijo}' no está en mapeo_secciones -> se omite registro")
+                #print(f"  [3] \u2718 Prefijo '{prefijo}' no está en mapeo_secciones -> se omite registro")
                 continue
 
-            print(f"  [4] Ruta base de la sección: {ruta_base_seccion}")
+            #print(f"  [4] Ruta base de la sección: {ruta_base_seccion}")
 
             # ---- Construir TODAS las rutas candidatas (una por cada línea del expediente) ----
             rutas_candidatas = [ruta_base_seccion]
@@ -3438,7 +3438,7 @@ def checarRuta(identificador_socio, secciones):
                 try:
                     expediente_actual = registro.seccion.expediente
                     lineas_asociadas = Linea.objects.filter(expediente=expediente_actual)
-                    print(f"  [4] Líneas asociadas al expediente: {[l.numero for l in lineas_asociadas]}")
+                    #print(f"  [4] Líneas asociadas al expediente: {[l.numero for l in lineas_asociadas]}")
 
                     chk_operativa = _to_unc(rutaOperativa)
                     if os.path.exists(chk_operativa):
@@ -3452,16 +3452,15 @@ def checarRuta(identificador_socio, secciones):
                                     posible_ruta = os.path.join(rutaOperativa, subdir, nombre_carpeta_seccion)
                                     if posible_ruta not in rutas_candidatas:
                                         rutas_candidatas.append(posible_ruta)
-                                        print(f"  [4] \u2714 Línea '{linea.numero}' -> carpeta '{subdir}' -> "
-                                              f"candidata: {posible_ruta}")
+                                        #print(f"  [4] \u2714 Línea '{linea.numero}' -> carpeta '{subdir}' -> " f"candidata: {posible_ruta}")
                     else:
-                        print(f"  [4] \u2718 Ruta Operativa no existe en disco: {chk_operativa}")
-
+                        #print(f"  [4] \u2718 Ruta Operativa no existe en disco: {chk_operativa}")
+                        pass
                     if not rutas_candidatas:
-                        print(f"  [4] \u2718 Ninguna carpeta de línea coincide; se usará la ruta base de la sección")
+                        #print(f"  [4] \u2718 Ninguna carpeta de línea coincide; se usará la ruta base de la sección")
                         rutas_candidatas = [ruta_base_seccion]
                 except Exception as e_enrutamiento:
-                    print(f"  [4] \u2718 EXCEPCIÓN durante enrutamiento por línea: {e_enrutamiento}")
+                    #print(f"  [4] \u2718 EXCEPCIÓN durante enrutamiento por línea: {e_enrutamiento}")
                     rutas_candidatas = [ruta_base_seccion]
 
             archivo_mas_reciente = None
@@ -3471,15 +3470,15 @@ def checarRuta(identificador_socio, secciones):
             # ---- Escanear cada ruta candidata y quedarse con el archivo más reciente ----
             for ruta_final_busqueda in rutas_candidatas:
                 chk_busqueda = _to_unc(ruta_final_busqueda)
-                print(f"  [5] Ruta a escanear: {chk_busqueda}")
+                #print(f"  [5] Ruta a escanear: {chk_busqueda}")
 
                 if not os.path.exists(chk_busqueda):
-                    print(f"  [5] \u2718 La ruta no existe en disco -> se omite esta candidata")
+                    #print(f"  [5] \u2718 La ruta no existe en disco -> se omite esta candidata")
                     continue
 
                 try:
                     items_directorio = os.listdir(chk_busqueda)
-                    print(f"  [6] {len(items_directorio)} elemento(s) en el directorio")
+                    #print(f"  [6] {len(items_directorio)} elemento(s) en el directorio")
 
                     # ¿Existe una subcarpeta que empiece con la clave? (ej. "3.02 Cat res")
                     for item in items_directorio:
@@ -3487,7 +3486,7 @@ def checarRuta(identificador_socio, secciones):
                             posible_sub_carpeta = os.path.join(ruta_final_busqueda, item)
                             chk_sub_carpeta = _to_unc(posible_sub_carpeta)
                             if os.path.isdir(chk_sub_carpeta):
-                                print(f"  [6] La clave corresponde a una subcarpeta: {item} -> se entra a ella")
+                                #print(f"  [6] La clave corresponde a una subcarpeta: {item} -> se entra a ella")
                                 ruta_final_busqueda = posible_sub_carpeta
                                 chk_busqueda = chk_sub_carpeta
                                 items_directorio = os.listdir(chk_busqueda)
@@ -3501,7 +3500,7 @@ def checarRuta(identificador_socio, secciones):
                         if not item_normalizado.startswith(clave_normalizada):
                             continue
 
-                        print(f"  [7] Elemento con la clave correcta: '{nombre_item}'")
+                        #print(f"  [7] Elemento con la clave correcta: '{nombre_item}'")
 
                         archivos_a_evaluar = []
                         chk_item = _to_unc(ruta_item)
@@ -3511,9 +3510,10 @@ def checarRuta(identificador_socio, secciones):
                                 sub_items = os.listdir(chk_item)
                                 for sub_item in sub_items:
                                     archivos_a_evaluar.append((sub_item, os.path.join(ruta_item, sub_item)))
-                                print(f"  [7] Es carpeta, contiene {len(sub_items)} archivo(s) a evaluar")
+                                #print(f"  [7] Es carpeta, contiene {len(sub_items)} archivo(s) a evaluar")
                             except Exception as e:
-                                print(f"  [7] \u2718 No se pudo listar subcarpeta: {e}")
+                                #print(f"  [7] \u2718 No se pudo listar subcarpeta: {e}")
+                                pass
                         else:
                             archivos_a_evaluar.append((nombre_item, ruta_item))
 
@@ -3523,7 +3523,7 @@ def checarRuta(identificador_socio, secciones):
                             if not arch_norm.startswith(clave_normalizada):
                                 continue
 
-                            print(f"    -> Evaluando archivo: '{nombre_arch}'")
+                            #print(f"    -> Evaluando archivo: '{nombre_arch}'")
 
                             # --- REGLA ESTRICTA: solo fecha O solo identificador, según es_fecha ---
                             if registro.es_fecha:
@@ -3532,36 +3532,35 @@ def checarRuta(identificador_socio, secciones):
                                 coincide = _match_identificador(registro, arch_norm)
 
                             if not coincide:
-                                print(f"    -> \u2718 Archivo descartado (sin fecha/identificador válido)")
+                                #print(f"    -> \u2718 Archivo descartado (sin fecha/identificador válido)")
                                 continue
 
                             try:
                                 chk_arch = _to_unc(ruta_arch)
                                 mtime = os.path.getmtime(chk_arch)
-                                print(f"    -> \u2714 Archivo válido, mtime={datetime.fromtimestamp(mtime)}")
+                                #print(f"    -> \u2714 Archivo válido, mtime={datetime.fromtimestamp(mtime)}")
                                 if mtime > mtime_maximo:
                                     mtime_maximo = mtime
                                     archivo_mas_reciente = ruta_arch
                             except Exception as e:
-                                print(f"    -> \u2718 No se pudo obtener mtime: {e}")
-
+                                #print(f"    -> \u2718 No se pudo obtener mtime: {e}")
+                                pass
                 except Exception as e:
-                    print(f"  [6] \u2718 EXCEPCIÓN escaneando {chk_busqueda}: {e}")
+                   # print(f"  [6] \u2718 EXCEPCIÓN escaneando {chk_busqueda}: {e}")
+                    
                     continue
 
             if archivo_mas_reciente:
-                print(f"  [8] \u2714 RESULTADO: archivo más reciente = {archivo_mas_reciente}")
+                #print(f"  [8] \u2714 RESULTADO: archivo más reciente = {archivo_mas_reciente}")
                 resultados[registro.id] = {
                     'clave': clave,
                     'ruta': archivo_mas_reciente,
                     'fecha_modificacion': datetime.fromtimestamp(mtime_maximo)
                 }
             else:
-                print(f"  [8] \u2718 RESULTADO: ningún archivo cumplió fecha/identificador estricto "
-                      f"-> registro {registro.id} sin ruta")
-
-    print(f"\n[FIN] Total de registros con archivo encontrado: {len(resultados)} de "
-          f"{sum(RegistroSeccion.objects.filter(seccion=s).count() for s in secciones)}")
+                #print(f"  [8] \u2718 RESULTADO: ningún archivo cumplió fecha/identificador estricto "                      f"-> registro {registro.id} sin ruta")
+                pass
+    #print(f"\n[FIN] Total de registros con archivo encontrado: {len(resultados)} de " f"{sum(RegistroSeccion.objects.filter(seccion=s).count() for s in secciones)}")
     return resultados
 
 
@@ -3820,13 +3819,38 @@ def _iniciales_posibles(nombre):
     return {todas, sin_particulas}
 
 
-def _cargar_obligados(expediente):
-    """{'JMHJ': [obligado, ...]}: si la lista tiene más de uno, hay ambigüedad."""
+def _mapa_iniciales(personas):
     mapa = {}
-    for ob in ObligadoSolidario.objects.filter(expedientes=expediente):
-        for ini in _iniciales_posibles(ob.nombre):
+    for p in personas:
+        for ini in _iniciales_posibles(p.nombre):
             if ini:
-                mapa.setdefault(ini, []).append(ob)
+                mapa.setdefault(ini, []).append(p)
+    return mapa
+
+
+def _cargar_personas(expediente):
+    """Claves 'C' = obligados solidarios, 'B' = representantes legales
+    (igual que SeccionesExpediente.tipoDeSeccion)."""
+    obligados = list(ObligadoSolidario.objects.filter(expedientes=expediente).distinct())
+    representantes = list(RepresentanteLegal.objects.filter(expedientes=expediente).distinct())
+    return {
+        'C': {'lista': obligados, 'mapa': _mapa_iniciales(obligados)},
+        'B': {'lista': representantes, 'mapa': _mapa_iniciales(representantes)},
+    }
+
+
+def _secciones_de_personas(secciones, personas):
+    """{('B'|'C', persona_id): [seccion_id, ...]} usando el título de la sección
+    ('Representante legal - Juan', 'Obligado solidario y garantes - Ana', ...)."""
+    mapa = {}
+    for s in secciones:
+        if s.tipoDeSeccion not in ('B', 'C'):
+            continue
+        titulo = (s.tituloSeccion or '').strip().lower()
+        for p in personas[s.tipoDeSeccion]['lista']:
+            if titulo.endswith(f" - {p.nombre.strip().lower()}"):
+                mapa.setdefault((s.tipoDeSeccion, p.id), []).append(s.id)
+                break
     return mapa
 def _normalizar_clave(clave):
     """'1.025' -> '1.02' ; '1.02.' -> '1.02'"""
@@ -3836,7 +3860,7 @@ def _normalizar_clave(clave):
     return '.'.join(partes)
 
 
-def _parsear_nombre(nombre, es_archivo=True, obligados=None):
+def _parsear_nombre(nombre, es_archivo=True, personas=None, tipos_clave=None):
     stem = os.path.splitext(nombre)[0] if es_archivo else nombre
     stem = re.sub(r'\s+', ' ', stem.strip())
 
@@ -3847,9 +3871,11 @@ def _parsear_nombre(nombre, es_archivo=True, obligados=None):
     clave = _normalizar_clave(m.group(2))
     resto = stem[m.end():].strip(' .')
 
-    # --- Detectar obligado por iniciales en cualquier parte del texto ---
-    obligado, ambiguo = None, False
-    if obligados and resto:
+    # --- Iniciales: solo si la clave es por persona, y solo entre su tipo ---
+    tipo = (tipos_clave or {}).get(clave)          # 'B', 'C' o None
+    persona, ambiguo = None, False
+    if tipo and personas and resto:
+        mapa = personas[tipo]['mapa']
         tokens = resto.split(' ')
         for i, tok in enumerate(tokens):
             # No confundir el mes ("may 26") con unas iniciales como MAY
@@ -3857,12 +3883,12 @@ def _parsear_nombre(nombre, es_archivo=True, obligados=None):
                       and re.fullmatch(r'\d{2}', tokens[i + 1]))
             if es_mes:
                 continue
-            candidatos = obligados.get(_sin_acentos(tok).upper())
+            candidatos = mapa.get(_sin_acentos(tok).upper())
             if candidatos:
                 if len(candidatos) > 1:
                     ambiguo = True
                 else:
-                    obligado = candidatos[0]
+                    persona = candidatos[0]
                 del tokens[i]                 # se quita para no contaminar fecha/número
                 resto = ' '.join(tokens)
                 break
@@ -3880,7 +3906,8 @@ def _parsear_nombre(nombre, es_archivo=True, obligados=None):
         numero = resto.split(' ')[-1].strip()
 
     return {'clave': clave, 'fecha': fecha, 'numero': numero,
-            'obligado': obligado, 'ambiguo': ambiguo}
+            'tipo_persona': tipo, 'persona': persona, 'ambiguo': ambiguo}
+
 def _ya_registrado(registros, fecha, numero, obligado_id=None):
     esperado = (numero or '').strip().lower()
     for r in registros:
@@ -3917,18 +3944,19 @@ def _es_archivo(ruta):
     return os.path.isfile(_to_unc(ruta))
 
 
-def _recolectar_items(carpeta_socio, expediente, obligados=None):   # <-- nuevo parámetro
+def _recolectar_items(carpeta_socio, expediente, personas=None, tipos_clave=None):
     """
     Recorre el servidor y devuelve la lista de elementos a evaluar:
-    {'nombre', 'ruta', 'info' (dict o None), 'omitir' (motivo o None)}
+    {'nombre', 'ruta', 'info' (dict o None), 'omitir' (motivo o None), 'linea_id'}
     """
     ruta_maestra = os.path.join(carpeta_socio, "Maestra")
     ruta_operativa = os.path.join(carpeta_socio, "Operativa")
 
-    # (prefijo, ruta de la carpeta de sección)
+    # (prefijo, ruta de la carpeta de sección, linea_id)
     secciones_ruta = []
     for prefijo in ("1", "2"):
         secciones_ruta.append((prefijo, os.path.join(ruta_maestra, SECCIONES_FS[prefijo][1]), None))
+
     if _es_dir(ruta_operativa):
         subdirs_op = os.listdir(_to_unc(ruta_operativa))
         lineas = Linea.objects.filter(expediente=expediente)
@@ -3950,16 +3978,16 @@ def _recolectar_items(carpeta_socio, expediente, obligados=None):   # <-- nuevo 
     def agregar_archivo(nombre, ruta, prefijo, linea_id):
         if nombre.lower() in ARCHIVOS_IGNORADOS or nombre.startswith("~$"):
             return
-        info = _parsear_nombre(nombre, es_archivo=True, obligados=obligados)   # <-- nuevo
+        info = _parsear_nombre(nombre, es_archivo=True, personas=personas, tipos_clave=tipos_clave)
         if not info:
-            items.append({'nombre': nombre, 'ruta': ruta, 'info': None,
+            items.append({'nombre': nombre, 'ruta': ruta, 'info': None, 'linea_id': linea_id,
                           'omitir': 'Sin clave en el nombre, no aplica'})
         elif info['clave'].split('.')[0] != prefijo:
-            items.append({'nombre': nombre, 'ruta': ruta, 'info': None,
+            items.append({'nombre': nombre, 'ruta': ruta, 'info': None, 'linea_id': linea_id,
                           'omitir': f"La clave {info['clave']} no corresponde a esta sección"})
         else:
             items.append({'nombre': nombre, 'ruta': ruta, 'info': info,
-                      'omitir': None, 'linea_id': linea_id})
+                          'omitir': None, 'linea_id': linea_id})
 
     for prefijo, ruta_seccion, linea_id in secciones_ruta:
         if not _es_dir(ruta_seccion):
@@ -3978,10 +4006,9 @@ def _recolectar_items(carpeta_socio, expediente, obligados=None):   # <-- nuevo 
                         if _es_archivo(ruta_sub):
                             agregar_archivo(sub, ruta_sub, prefijo, linea_id)
                 else:
-                    items.append({'nombre': item, 'ruta': ruta_item, 'info': None,
+                    items.append({'nombre': item, 'ruta': ruta_item, 'info': None, 'linea_id': linea_id,
                                   'omitir': 'Carpeta sin clave, no aplica'})
     return items
-
 
 def _emit(**kw):
     return json.dumps(kw, ensure_ascii=False, default=str) + "\n"
@@ -4010,8 +4037,23 @@ def detectarArchivos(request, id):
                 return
 
             yield _emit(tipo='estado', mensaje=f'Carpeta encontrada: {os.path.basename(carpeta_socio)}. Escaneando archivos...')
-            obligados = _cargar_obligados(expediente)
-            items = _recolectar_items(carpeta_socio, expediente, obligados)            
+
+            personas = _cargar_personas(expediente)
+            secciones_persona = _secciones_de_personas(secciones, personas)
+
+            # Registros existentes agrupados por (línea, clave) y tipo de sección de cada clave
+            mapeo = {}
+            tipos_por_clave = {}
+            for r in RegistroSeccion.objects.filter(seccion__in=secciones).select_related('apartado', 'seccion'):
+                clave_r = _normalizar_clave(r.apartado.clave)
+                mapeo.setdefault((r.seccion.linea_id, clave_r), []).append(r)
+                tipos_por_clave.setdefault(clave_r, set()).add(r.seccion.tipoDeSeccion)
+
+            # Clave "por persona": existe únicamente en secciones B (representante) o C (obligado)
+            tipos_clave = {c: next(iter(t)) for c, t in tipos_por_clave.items()
+                           if len(t) == 1 and next(iter(t)) in ('B', 'C')}
+
+            items = _recolectar_items(carpeta_socio, expediente, personas, tipos_clave)
             total = len(items)
             yield _emit(tipo='inicio', total=total)
 
@@ -4019,42 +4061,56 @@ def detectarArchivos(request, id):
                 yield _emit(tipo='fin', resumen=resumen, mensaje='No se encontraron archivos.')
                 return
 
-            # Registros existentes agrupados por clave normalizada
-            mapeo = {}
-            for r in RegistroSeccion.objects.filter(seccion__in=secciones).select_related('apartado', 'seccion'):
-                mapeo.setdefault((r.seccion.linea_id, _normalizar_clave(r.apartado.clave)), []).append(r)
-
             for i, it in enumerate(items, 1):
                 estado, mensaje = 'omitido', it['omitir'] or ''
                 try:
                     if not it['omitir']:
-                       
                         info = it['info']
-                        registros = mapeo.get((it['linea_id'], info['clave']))
-                        ob = info['obligado']
-                        ob_id = ob.id if ob else None
+                        clave = info['clave']
+                        tipo = info['tipo_persona']                  # 'B', 'C' o None
+                        persona = info['persona']
+                        lista_clave = mapeo.get((it['linea_id'], clave), [])
+                        lista_personas = personas[tipo]['lista'] if tipo else []
+                        etiqueta = 'representante legal' if tipo == 'B' else 'obligado solidario'
+
+                        # Sin iniciales pero único de su tipo en el expediente: se asigna solo
+                        if tipo and not persona and len(lista_personas) == 1:
+                            persona = lista_personas[0]
+
+                        # Renglones que le corresponden: los de la sección de esa persona
+                        if tipo:
+                            ids_secc = secciones_persona.get((tipo, persona.id), []) if persona else []
+                            registros = [r for r in lista_clave if r.seccion_id in ids_secc]
+                        else:
+                            registros = [r for r in lista_clave if r.seccion.tipoDeSeccion not in ('B', 'C')]
 
                         if info['ambiguo']:
-                            estado, mensaje = 'error', 'Las iniciales coinciden con más de un obligado'
+                            estado, mensaje = 'error', 'Las iniciales coinciden con más de una persona'
+                        elif tipo and not persona and len(lista_personas) > 1:
+                            estado, mensaje = 'error', (f"La clave {clave} es por {etiqueta} y hay "
+                                                        f"{len(lista_personas)} en el expediente: agrega las iniciales")
+                        elif tipo and not persona:
+                            estado, mensaje = 'omitido', f"No hay {etiqueta} registrado en el expediente"
                         elif not registros:
-                            estado, mensaje = 'omitido', f"No hay renglón en BD para la clave {info['clave']}"
-                        elif _ya_registrado(registros, info['fecha'], info['numero'], ob_id):
+                            estado, mensaje = 'omitido', (f"No hay renglón en BD para la clave {clave}"
+                                                          + (f" de {persona.nombre}" if persona else ""))
+                        elif _ya_registrado(registros, info['fecha'], info['numero']):
                             estado, mensaje = 'duplicado', 'Ya estaba registrado'
                         else:
                             with transaction.atomic():
-                                # Reutiliza un renglón vacío solo si no está ligado a otra persona
                                 vacio = next((r for r in registros if not r.estatus), None)
                                 if vacio:
                                     reg = vacio
                                 else:
                                     base = registros[0]
-                                    ultimo = max((r.secuencial or 1) for r in registros)
+                                    ultimo = max((r.secuencial or 1) for r in registros
+                                                 if r.seccion_id == base.seccion_id)
                                     reg = RegistroSeccion(
                                         seccion=base.seccion, apartado=base.apartado,
                                         secuencial=ultimo + 1, comentario=base.comentario,
                                         comentarioCredito=base.comentarioCredito, enviar=base.enviar,
                                     )
-                                    registros.append(reg)
+                                    lista_clave.append(reg)   # para que los siguientes archivos lo vean
 
                                 if info['fecha']:
                                     reg.es_fecha, reg.fecha, reg.numero = True, info['fecha'], None
@@ -4062,12 +4118,12 @@ def detectarArchivos(request, id):
                                 else:
                                     reg.es_fecha, reg.fecha, reg.numero = False, None, info['numero']
                                     detalle = f"identificador '{info['numero']}'" if info['numero'] else 'sin identificador'
-                                if ob:
-                                    detalle += f" · {ob.nombre}"
+                                if persona:
+                                    detalle += f" · {persona.nombre}"
                                 reg.estatus = "ok"
                                 reg.save()
                             estado, mensaje = 'creado', f"Registro creado ({detalle})"
-               
+
                 except Exception as e:
                     estado, mensaje = 'error', str(e)
 
@@ -4084,7 +4140,6 @@ def detectarArchivos(request, id):
     respuesta['Cache-Control'] = 'no-cache'
     respuesta['X-Accel-Buffering'] = 'no'  # evita buffering si hay nginx delante
     return respuesta
-
 
 # urls.py:
 # 

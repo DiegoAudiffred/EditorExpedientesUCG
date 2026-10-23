@@ -509,11 +509,13 @@
                         </span>
                         {% endif %}
                     </div>
-                    
+                    <div>
+<a href="{% url 'Index:editarLinea' linea.id %}"
+                    class="btn btn-sm btn-outline-tercero px-3 fw-bold rounded-2"> Editar linea</a>                    </div>
                     {% if request.user.roles == 'Administrador'%}
                       <form action="{% url 'Index:lineaEliminar' expediente.id linea.id %}" method="POST" class="m-0" onsubmit="return confirm('¿Estás seguro de eliminar esta línea? Se borrarán todos sus apartados asociados.');">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger px-3 fw-bold rounded-2">
+                        <button type="submit" class="btn btn-sm btn-outline-red px-3 fw-bold rounded-2">
                             Borrar
                         </button>
                     </form>
@@ -960,10 +962,8 @@ const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstra
             <a class="btn btn-cuarto mx-2 text-white" href="{% url 'Index:expediente_llenar' expediente.id %}">Llenar
                 valores vacios</a>
                             {% include 'Index/modalCargarArchivos.html' %}
-                {% if request.user.roles == 'Administrador' %}
                             {% include 'Index/modalDetectarArchivos.html' %}
 
-                {% endif %}
           
             <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>
 

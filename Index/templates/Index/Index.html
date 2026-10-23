@@ -227,7 +227,6 @@
 
 </div>
 
-{% if request.user.roles == 'Administrador'  %}
 <style>
   :root { --amarillo: #f2b705; }
   body { line-height: 1.6; }
@@ -292,7 +291,6 @@
         <ul class="mb-0">
           <li>Formato <code>x.xx</code>, por ejemplo <code>1.02</code> o <code>3.02</code>, seguida de un espacio.</li>
           <li>Debe ser lo primero del nombre. Solo puede ir antes un número de línea.</li>
-          <li>Si escribes tres decimales (<code>1.025</code>), el sistema usa los dos primeros (<code>1.02</code>).</li>
           <li>El primer número de la clave debe coincidir con la carpeta de sección donde está el archivo (1 y 2 en <em>Maestra</em>; 3 a 7 en <em>Operativa</em>). Si no coincide, se omite.</li>
           <li>Un archivo o carpeta sin clave (por ejemplo <code>validaciones.pdf</code>) no se toca.</li>
         </ul>
@@ -319,8 +317,8 @@
           <li>Si el nombre no termina en fecha, el identificador es la <strong>última palabra</strong> del nombre (sin contar las iniciales).</li>
           <li><code>1.02 Ejemplo1</code> guarda <code>Ejemplo1</code>; <code>1.02 Ejemplo2</code> guarda <code>Ejemplo2</code>. Son dos registros distintos.</li>
           <li>El identificador debe ser una sola palabra, sin espacios. Si pones <code>Contrato 123 A</code>, solo se guarda <code>A</code>.</li>
-          <li>Mayúsculas y minúsculas no importan: <code>ggpt</code> y <code>GGPT</code> son el mismo.</li>
-          <li>Ponlo siempre al final, después de las iniciales.</li>
+          <li>Mayúsculas y minúsculas no importan: <code>ABCD</code> y <code>abcd</code> son el mismo.</li>
+          <li>Siempre al final, después de las iniciales.</li>
         </ul>
       </div></div>
     </div>
@@ -361,17 +359,7 @@
       </div></div>
     </div>
 
-    <div class="accordion-item">
-      <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#r6">Detalles menores</button></h3>
-      <div id="r6" class="accordion-collapse collapse" data-bs-parent="#reglas"><div class="accordion-body">
-        <ul class="mb-0">
-          <li>La extensión (pdf, jpg, etc.) no importa.</li>
-          <li>Los espacios dobles se tratan como uno solo.</li>
-          <li><code>Thumbs.db</code>, <code>desktop.ini</code> y archivos temporales que empiezan con <code>~$</code> se ignoran.</li>
-          <li>Solo se leen archivos; las subcarpetas que no empiezan con clave se omiten.</li>
-        </ul>
-      </div></div>
-    </div>
+
   </div>
 
   <!-- ===== Carpetas ===== -->
@@ -403,12 +391,10 @@
       <tr><td class="nombre">1.02 Ejemplo1.pdf</td><td>Clave 1.02, identificador <code>Ejemplo1</code>.</td></tr>
       <tr><td class="nombre">1.02 Ejemplo2.pdf</td><td>Segundo registro de 1.02, identificador <code>Ejemplo2</code>.</td></tr>
       <tr><td class="nombre">1.01 conoce a tu socio may 26.pdf</td><td>Clave 1.01, fecha mayo 2026.</td></tr>
-      <tr><td class="nombre">1.01 conoce a tu socio may26.pdf</td><td>Igual que el anterior (el espacio es opcional).</td></tr>
       <tr><td class="nombre">1.16 Archivo JMHJ may 26.pdf</td><td>Clave 1.16, de José Mario Hugo Juárez, fecha mayo 2026.</td></tr>
       <tr><td class="nombre">1.16 jmhj Identificación ine.pdf</td><td>Clave 1.16, de José Mario Hugo Juárez, identificador <code>ine</code>.</td></tr>
       <tr><td class="nombre">1.16 Archivo AL ene 26.pdf</td><td>Clave 1.16, de Ana López, fecha enero 2026 (el mismo apartado puede tener un registro por persona).</td></tr>
       <tr><td class="nombre">12345 3.02 Estudio ene 26.pdf</td><td>Con número de línea antes de la clave; clave 3.02, fecha enero 2026.</td></tr>
-      <tr><td class="nombre">1.025 Comprobante 123.pdf</td><td>La clave se reduce a 1.02; identificador <code>123</code>.</td></tr>
     </tbody>
   </table></div>
 
@@ -420,29 +406,19 @@
       <tr><td class="nombre">validaciones.pdf</td><td><span class="badge text-bg-secondary">Omitido</span> sin clave</td><td>Está bien si no debe cargarse; si debe, anteponer la clave.</td></tr>
       <tr><td class="nombre">Identificación 1.02.pdf</td><td><span class="badge text-bg-secondary">Omitido</span> la clave no está al inicio</td><td><code>1.02 Identificación.pdf</code></td></tr>
       <tr><td class="nombre">2.01 Estado de cuenta.pdf<br><small class="text-body-secondary">(dentro de I. Identificación del Socio)</small></td><td><span class="badge text-bg-secondary">Omitido</span> clave de otra sección</td><td>Moverlo a la carpeta <em>II. Información Financiera</em>.</td></tr>
-      <tr><td class="nombre">1.01 doc aug 26.pdf</td><td><span class="badge text-bg-warning">Mal leído</span> se guarda <code>26</code> como identificador</td><td><code>1.01 doc ago 26.pdf</code></td></tr>
-      <tr><td class="nombre">1.01 doc mayo 26.pdf</td><td><span class="badge text-bg-warning">Mal leído</span> se guarda <code>26</code> como identificador</td><td><code>1.01 doc may 26.pdf</code></td></tr>
+      <tr><td class="nombre">1.01 doc mayo 26.pdf</td><td><span class="badge text-bg-red">Mal leído</span> tres digitos para mes</td><td><code>1.01 doc may 26.pdf</code></td></tr>
       <tr><td class="nombre">1.02 Ejemplo1.pdf<br><small class="text-body-secondary">(cargado por segunda vez)</small></td><td><span class="badge text-bg-secondary">Duplicado</span></td><td>No requiere acción.</td></tr>
-      <tr><td class="nombre">1.16 Archivo JMH may 26.pdf</td><td><span class="badge text-bg-warning">Sin persona</span> JMH no coincide con nadie; se crea sin asignar</td><td>Usar las iniciales completas: <code>JMHJ</code>.</td></tr>
-      <tr><td class="nombre">1.16 Archivo AB may 26.pdf<br><small class="text-body-secondary">(dos personas con AB)</small></td><td><span class="badge text-bg-danger">Error</span> iniciales ambiguas</td><td>Agregar una letra que las distinga, y registrarlas igual.</td></tr>
-      <tr><td class="nombre">1.02 Contrato 123 A.pdf</td><td><span class="badge text-bg-warning">Mal leído</span> solo se guarda <code>A</code></td><td><code>1.02 Contrato 123A.pdf</code></td></tr>
+      <tr><td class="nombre">1.16 Archivo ABC may 26.pdf</td><td><span class="badge text-bg-red">Sin persona</span> ABC no coincide con nadie; se crea sin asignar</td><td>Usar las iniciales completas: <code>ABCD</code>.</td></tr>
+      <tr><td class="nombre">1.16 Archivo AB may 26.pdf<br><small class="text-body-red">(dos personas con AB)</small></td><td><span class="badge text-bg-red">Error</span> iniciales ambiguas</td><td>Agregar una letra que las distinga, y registrarlas igual.</td></tr>
+      <tr><td class="nombre">1.02 Contrato 123 A.pdf</td><td><span class="badge text-bg-red">Mal leído</span> solo se guarda <code>A</code></td><td><code>1.02 Contrato 123A.pdf</code></td></tr>
     </tbody>
   </table></div>
 
-  <!-- ===== Lista rápida ===== -->
-  <h2>6. Lista rápida antes de guardar</h2>
-  <ul class="list-group mb-4">
-    <li class="list-group-item">¿El nombre empieza con la clave (<code>x.xx</code>)?</li>
-    <li class="list-group-item">¿La clave corresponde a la carpeta de sección donde lo guardé?</li>
-    <li class="list-group-item">¿Si es de una persona, incluí sus iniciales como palabra separada?</li>
-    <li class="list-group-item">¿Terminé con el mes en español (3 letras) y año de 2 dígitos, o con un identificador de una sola palabra?</li>
-    <li class="list-group-item">¿Si hay varios archivos de la misma clave (y persona), cada uno tiene un identificador o fecha distintos?</li>
-  </ul>
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-{% endif %}
+
 
 
 {% endblock %}

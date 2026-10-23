@@ -145,12 +145,12 @@ class Cita(models.Model):
     estatusCN = models.CharField(choices=listaEstatus,default='Pendiente')
        
 class RepresentanteLegal(models.Model):
-    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes")
+    nombre = models.CharField("Nombre", max_length=100, unique=True, null=True)
+    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes",null=True, blank=True)
     def __str__(self):
         return self.nombre
 class ObligadoSolidario(models.Model):
-    nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
+    nombre = models.CharField("Nombre", max_length=100, unique=True, null=True)
     expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados",null=True, blank=True)
     tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
     representante = models.ForeignKey(RepresentanteLegal, on_delete=models.CASCADE, null=True, blank=True)
@@ -269,6 +269,7 @@ class RegistroSeccion(models.Model):
     enviar = models.BooleanField(default=False)
     obligado = models.ForeignKey('ObligadoSolidario', on_delete=models.SET_NULL,
                              null=True, blank=True, related_name='registros')
+    
     class Meta:
         unique_together = ('seccion', 'apartado', 'secuencial')
 
