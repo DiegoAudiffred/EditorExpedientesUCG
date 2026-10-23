@@ -260,7 +260,7 @@ class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.CASCADE)
     fecha = models.DateField(null=True, blank=True)
-    numero = models.CharField(max_length=20,null=True, blank=True)
+    numero = models.CharField(max_length=30,null=True, blank=True)
     estatus = models.CharField(max_length=20, null=True, blank=True)
     comentario = models.TextField(null=True, blank=True)
     comentarioCredito = models.TextField(null=True, blank=True)
