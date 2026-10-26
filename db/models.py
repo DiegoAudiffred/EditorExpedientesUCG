@@ -1,6 +1,3 @@
-from django.db import models
-
-# Create your models here.
 from datetime import datetime, timezone
 import decimal
 import math
@@ -14,19 +11,14 @@ from django.db.models import Q
 from django.utils import timezone
 from colorfield.fields import ColorField
 
-
-
-from django.contrib.auth.models import BaseUserManager
-
 class UserManager(BaseUserManager):
     """Define a model manager for User model with no username field."""
 
     use_in_migrations = True
 
-    def _create_user(self,  password, **extra_fields):
+    def _create_user(self, password, **extra_fields):
         """Create and save a User with the given email and password."""
-
-        user = self.model( **extra_fields)
+        user = self.model(**extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -35,7 +27,7 @@ class UserManager(BaseUserManager):
         """Create and save a regular User with the given email and password."""
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
-        return self._create_user( password, **extra_fields)
+        return self._create_user(password, **extra_fields)
 
     def create_superuser(self, password, **extra_fields):
         """Create and save a SuperUser with the given email and password."""
@@ -49,59 +41,53 @@ class UserManager(BaseUserManager):
 
         return self._create_user(password, **extra_fields)
 
+
 TipoPersona = (
-        ("F","F"),
-        ("M","M")
-    )
+    ("F", "F"),
+    ("M", "M")
+)
 
 class User(AbstractUser):
     ROLES = (
-        ('Ejecutivo de Negocios', 'Ejecutivo de Negocios'), #Sonia,Omar etc
-        ('Ejecutivo de Servicios', 'Ejecutivo de Servicios'), #Andres,Maru
-        ('Administrador', 'Administrador'), #Servilleta 
-        ('Credito', 'Credito'), #Pao,etc
-        ('Gerente de Credito', 'Gerente de Credito'),
-        ('Gerente Centro de Negocios', 'Gerente Centro de Negocios')
+    ('Ejecutivo de Negocios', 'Ejecutivo de Negocios'),
+    ('Ejecutivo de Servicios', 'Ejecutivo de Servicios'),
+    ('Administrador', 'Administrador'),
+    ('Credito', 'Credito'),
+    ('Gerente de Credito', 'Gerente de Credito'),
+    ('Gerente Centro de Negocios', 'Gerente Centro de Negocios')
     )
 
-
-    username = models.CharField('Usuario',max_length=20, unique=True, blank=False, null=False,default="Nuevo")
-    nombreCompleto = models.CharField('NombreCompleto',max_length=100, blank=True, null=True)
+    username = models.CharField('Usuario', max_length=20, unique=True, blank=False, null=False, default="Nuevo")
+    nombreCompleto = models.CharField('NombreCompleto', max_length=100, blank=True, null=True)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = [] 
-    roles = models.CharField(max_length=30, choices = ROLES, null=True,default='Administrador')
-    #canEdit = models.BooleanField('Habilitar Usuario',default=False) #Sedara solo permisos a ejecutivos como Pao,Brisa
+    roles = models.CharField(max_length=30, choices=ROLES, null=True, default='Administrador')
     objects = UserManager()
-    is_active= models.BooleanField('Habilitar Usuario',default=True)
+    is_active = models.BooleanField('Habilitar Usuario', default=True)
 
     def __str__(self):
         return self.username
-    
+
+
 class Socio(models.Model):
-    #id por default
     nombre = models.CharField("Nombre", max_length=50, unique=True, null=True)
-    #apellidoP
-    #apellidoM
-    tipoPersona = models.CharField("Tipo",max_length=1,null=True,choices=TipoPersona)
-    is_socio = models.BooleanField("Socio",default=True)
-    #is_obligado = models.BooleanField("Obligado Solidario",default=False)
-    #is_representante = models.BooleanField("Representante Legal",default=False)
-    numeroKepler = models.CharField("Numero en Kepler",default="",null=True,blank=True)
+    tipoPersona = models.CharField("Tipo", max_length=1, null=True, choices=TipoPersona)
+    is_socio = models.BooleanField("Socio", default=True)
+    numeroKepler = models.CharField("Numero en Kepler", default="", null=True, blank=True)
+
     def __str__(self):
         return self.nombre
 
 
-  
-    
 class Estado(models.Model):
-    nombre = models.CharField("Nombre", max_length=30,  null=True)
-    
+    nombre = models.CharField("Nombre", max_length=30, null=True)
     color = ColorField(
-        default='#FFFFFF', 
-        verbose_name="Color de Identificación" 
+    default='#FFFFFF',
+    verbose_name="Color de Identificación"
     )
     valor = models.IntegerField(default=0)
     descripcion = models.CharField("descripcion", max_length=100, blank=True, null=True)
+
     def __str__(self):
         return self.nombre
 
@@ -114,60 +100,69 @@ class Expediente(models.Model):
     usuarioArchivo = models.ForeignKey(User, related_name='Archivado', blank=True, null=True, on_delete=models.CASCADE)
     fechaCreacion = models.DateField(auto_now_add=True, blank=True)
     usuarioNegocios = models.ForeignKey(User, related_name='negocios', blank=True, null=True, on_delete=models.CASCADE)
-    fechaArchivado = models.DateField(null=True,blank=True)
+    fechaArchivado = models.DateField(null=True, blank=True)
     expedienteResagado = models.BooleanField(default=False)
     eliminado = models.BooleanField(default=False)
     contemplado = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.socio}"
+
     def tiene_registros_pendientes(self):   
         return RegistroSeccion.objects.filter(
-        seccion__expediente=self, 
-        estatus='pendiente'
-    ).exists()
+            seccion__expediente=self, 
+            estatus='pendiente'
+        ).exists()
+
+
 class EstadosFechas(models.Model):
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
     estado = models.ForeignKey(Estado, on_delete=models.CASCADE)
     fecha = models.DateField(null=True, blank=True)
-    hora = models.TimeField(auto_now_add=True, blank=True,null=True)
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, blank=True,null=True)
+    hora = models.TimeField(auto_now_add=True, blank=True, null=True)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
+
     def __str__(self):
         return f"{self.expediente} - {self.estado} - {self.usuario}"
 
+
 class Cita(models.Model):
-    listaEstatus = (('Aceptada','Aceptada'),('Rechazada','Rechazada'),('Pendiente','Pendiente'))
+    listaEstatus = (('Aceptada', 'Aceptada'), ('Rechazada', 'Rechazada'), ('Pendiente', 'Pendiente'))
     dia = models.DateField(null=True, blank=True)
     hora = models.TimeField(null=True, blank=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Citas")
+    expedientes = models.ManyToManyField(Expediente, related_name="Expedientes_Citas")
     usuario = models.ForeignKey(User, related_name='usuario', blank=True, null=True, on_delete=models.CASCADE)
-    estatusCR = models.CharField(choices=listaEstatus,default='Pendiente')
-    estatusCN = models.CharField(choices=listaEstatus,default='Pendiente')
-       
+    estatusCR = models.CharField(choices=listaEstatus, default='Pendiente')
+    estatusCN = models.CharField(choices=listaEstatus, default='Pendiente')
+
 class RepresentanteLegal(models.Model):
     nombre = models.CharField("Nombre", max_length=100, unique=True, null=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Representantes",null=True, blank=True)
+    expedientes = models.ManyToManyField(Expediente, related_name="Expedientes_Representantes", null=True, blank=True)
+
     def __str__(self):
         return self.nombre
+
+
 class ObligadoSolidario(models.Model):
     nombre = models.CharField("Nombre", max_length=100, unique=True, null=True)
-    expedientes = models.ManyToManyField(Expediente,related_name="Expedientes_Obligados",null=True, blank=True)
-    tipoPersona = models.CharField("Tipo",choices=TipoPersona,max_length=1,null=True)
+    expedientes = models.ManyToManyField(Expediente, related_name="Expedientes_Obligados", null=True, blank=True)
+    tipoPersona = models.CharField("Tipo", choices=TipoPersona, max_length=1, null=True)
     representante = models.ForeignKey(RepresentanteLegal, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.nombre
-    
+
+
 class Garantia(models.Model):
     garantias = (
-        ("Hipotecaria","Hipotecaria"),
-        ("Prendaria","Prendaria"),
-        ("Colateral","Colateral"),
-        ("Avales","Avales"),
-        ("Fiduciaria","Fiduciaria"),
-        ("Sin garantia","Sin garantia")
+    ("Hipotecaria", "Hipotecaria"),
+    ("Prendaria", "Prendaria"),
+    ("Colateral", "Colateral"),
+    ("Avales", "Avales"),
+    ("Fiduciaria", "Fiduciaria"),
+    ("Sin garantia", "Sin garantia")
     )
-    nombre = models.CharField(choices=garantias,blank=False,default="Cuenta Corriente", max_length=50,unique=True, null=False)
+    nombre = models.CharField(choices=garantias, blank=False, default="Cuenta Corriente", max_length=50, unique=True, null=False)
 
     def __str__(self):
         return self.nombre
@@ -175,78 +170,92 @@ class Garantia(models.Model):
 
 class Linea(models.Model):
     tipoLinea = (
-        ("Cuenta Corriente","Cuenta Corriente"),
-        ("Simple","Simple"),
-        ("Habilitacion","Habilitacion"),
-        ("Refaccionario","Refaccionario"),
-        ("Factoraje", "Factoraje"),
-        ("Quirografario","Quirografario"),
-        ("Linea de descuento","Linea de descuento"),
-        ("Arrendamiento Puro","Arrendamiento Puro"),
-        ("Arrendamietn Financiero","Arrendamietn Financiero"),
-    )    
-    
+    ("Cuenta Corriente", "Cuenta Corriente"),
+    ("Simple", "Simple"),
+    ("Habilitacion", "Habilitacion"),
+    ("Refaccionario", "Refaccionario"),
+    ("Factoraje", "Factoraje"),
+    ("Quirografario", "Quirografario"),
+    ("Linea de descuento", "Linea de descuento"),
+    ("Arrendamiento Puro", "Arrendamiento Puro"),
+    ("Arrendamietn Financiero", "Arrendamietn Financiero"),
+    )
+
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE, null=False, blank=False)
     numero = models.CharField("Numero", max_length=10, blank=False, null=False)
-    monto = models.DecimalField(default=0.0, blank=False, null=False,max_digits=12, decimal_places=2)  
+    monto = models.DecimalField(default=0.0, blank=False, null=False, max_digits=12, decimal_places=2)  
     vigente = models.BooleanField(default=True)
     tipoLinea = models.CharField(choices=tipoLinea, blank=False, default="Cuenta Corriente", max_length=50)
     tipoGarantia = models.ManyToManyField(Garantia, blank=True, related_name="lineas")
-    abreviacion = models.CharField(max_length=10,blank=True,null=True)
-    fecha = models.DateField(blank=True,null=True)
+    abreviacion = models.CharField(max_length=10, blank=True, null=True)
+    fecha = models.DateField(blank=True, null=True)
+
     def delete(self, *args, **kwargs):
         secciones_asociadas = self.secciones.all()
         RegistroSeccion.objects.filter(seccion__in=secciones_asociadas).delete()
         secciones_asociadas.delete()
         super().delete(*args, **kwargs)
-        
+
     def __str__(self):
         return self.numero
-    
+
+
 class SeccionesExpediente(models.Model):
     SECCIONES = [
-        ('A', 'Solicitante'),
-        ('B', 'Representante legal'),
-        ('C', 'Obligado solidario y garantes'),
-        ('I', 'Actividades vulnerables'),
-        ('II','Información Financiera'),
-        ('III','Estudio de Crédito'),
-        ('IV','Información de Garantias'),
-        ('V','Contratos'),
-        ('VI','Seguimiento'),
-        ('VII','Correspondencia')
+    ('A', 'Solicitante'),
+    ('B', 'Representante legal'),
+    ('C', 'Obligado solidario y garantes'),
+    ('I', 'Actividades vulnerables'),
+    ('II', 'Información Financiera'),
+    ('III', 'Estudio de Crédito'),
+    ('IV', 'Información de Garantias'),
+    ('V', 'Contratos'),
+    ('VI', 'Seguimiento'),
+    ('VII', 'Correspondencia')
     ]
 
     expediente = models.ForeignKey(Expediente, on_delete=models.CASCADE)
     linea = models.ForeignKey(Linea, on_delete=models.CASCADE, null=True, blank=True, related_name="secciones")
     tipoDeSeccion = models.CharField(max_length=3, choices=SECCIONES)
     tituloSeccion = models.CharField(max_length=100, null=True, blank=True)
+    obligado = models.ForeignKey('ObligadoSolidario', on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name='secciones')
+    representante = models.ForeignKey('RepresentanteLegal', on_delete=models.SET_NULL,
+                                      null=True, blank=True, related_name='secciones')
 
     def save(self, *args, **kwargs):
         if not self.tituloSeccion:
             base_titulo = dict(self.SECCIONES).get(self.tipoDeSeccion, '')
             if self.linea:
-                self.tituloSeccion = f"{base_titulo} - Línea: {self.linea.numero}"
+                self.tituloSeccion = f"{base_titulo} Línea: {self.linea.numero}"
             else:
                 self.tituloSeccion = base_titulo
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.tituloSeccion}"
-    
+    @property
+    def titulo_dinamico(self):
+        """Mantiene el prefijo guardado ('Rep. Legal Obligado', etc.) pero usa el nombre actual."""
+        base = self.tituloSeccion or dict(self.SECCIONES).get(self.tipoDeSeccion, '')
+        persona = self.obligado or self.representante
+        if persona and persona.nombre:
+            return f"{base.split(' - ')[0]} - {persona.nombre}"
+        return base
 
-    
-class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del renglon
+    def __str__(self):
+        return f"{self.expediente.socio} - {self.tipoDeSeccion} - {self.titulo_dinamico}"
+
+
+class ApartadoCatalogo(models.Model):
     SECCIONES = [
-        ('A', 'A'), ('B', 'B'), ('C', 'C'), ('I', 'I'),
-        ('II','II'), ('III','III'), ('IV','IV'), ('V','V'), ('VI','VI'), ('VII','VII')
+    ('A', 'A'), ('B', 'B'), ('C', 'C'), ('I', 'I'),
+    ('II', 'II'), ('III', 'III'), ('IV', 'IV'), ('V', 'V'), ('VI', 'VI'), ('VII', 'VII')
     ]
-    AREAS = [('Fisicas','Fisicas'),('Ambas','Ambas'),('Morales','Morales')] 
-    
+    AREAS = [('Fisicas', 'Fisicas'), ('Ambas', 'Ambas'), ('Morales', 'Morales')]
+
     tipoDeSeccion = models.CharField(max_length=7, choices=SECCIONES)
     clave = models.CharField(max_length=10)
     descripcion = models.TextField()
-    nombreArchivo = models.TextField(null=True,blank=True)
+    nombreArchivo = models.TextField(null=True, blank=True)
     areaDondeAplica = models.CharField(max_length=8, choices=AREAS, null=True, blank=True) 
 
     class Meta:
@@ -254,25 +263,24 @@ class ApartadoCatalogo(models.Model):#Los Apartados que existen la info del reng
         ordering = ['tipoDeSeccion', 'clave']
 
     def __str__(self):
-        return f"{self.tipoDeSeccion} - {self.clave}"
-    
+        return f"{self.tipoDeSeccion} {self.clave}"
+
+
 class RegistroSeccion(models.Model):
     seccion = models.ForeignKey(SeccionesExpediente, on_delete=models.CASCADE)
     apartado = models.ForeignKey(ApartadoCatalogo, on_delete=models.CASCADE)
     fecha = models.DateField(null=True, blank=True)
-    numero = models.CharField(max_length=30,null=True, blank=True)
+    numero = models.CharField(max_length=30, null=True, blank=True)
     estatus = models.CharField(max_length=20, null=True, blank=True)
     comentario = models.TextField(null=True, blank=True)
     comentarioCredito = models.TextField(null=True, blank=True)
     es_fecha = models.BooleanField(default=True)
     secuencial = models.IntegerField(null=True, blank=True, default=1)
     enviar = models.BooleanField(default=False)
-    obligado = models.ForeignKey('ObligadoSolidario', on_delete=models.SET_NULL,
-                             null=True, blank=True, related_name='registros')
-    
+    obligado = models.ForeignKey('ObligadoSolidario', on_delete=models.SET_NULL, null=True, blank=True, related_name='registros')
+
     class Meta:
         unique_together = ('seccion', 'apartado', 'secuencial')
 
     def __str__(self):
-        return f"{self.seccion.tipoDeSeccion} - {self.apartado.clave} ({self.secuencial}) {self.seccion.expediente.socio}"
-
+        return f"{self.seccion.tipoDeSeccion} {self.apartado.clave} ({self.secuencial}) {self.seccion.expediente.socio}"

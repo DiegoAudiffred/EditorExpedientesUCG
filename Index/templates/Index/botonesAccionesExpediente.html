@@ -1,0 +1,47 @@
+      <div class="d-flex justify-content-end">
+            {% if request.user.roles == 'Administrador' %}             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
+            
+            <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered ">
+                    <div class="modal-content">
+                        <div class="modal-header bg-tercero text-white">
+                            <h5 class="modal-title" id="deleteModalLabel">Confirmar eliminación</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body text-center fw-bold">
+                            No podra crear otro expediente con el mismo socio a menos que se contacte con
+                            sistemas para darlo de alta de nuevo.                             ¿Estás seguro de que deseas borrar el expediente #{{ expediente.pk }} ? 
+
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <button type="button" class="btn btn-tercero text-white"
+                                data-bs-dismiss="modal">Cancelar</button>
+                            <a href="{% url 'Index:expediente_eliminar' expediente.id %}"
+                                class="btn btn-red">Eliminar Expediente</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+ {% endif %}
+
+             {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}           
+
+                
+                            {% include 'Index/modalExportarPDF.html' %}
+                            {% include 'Index/modalExportarExcel.html' %}
+                            {% include 'Index/modalLlenarValores.html' %}
+
+                            {% include 'Index/modalCargarArchivos.html' %}
+                            {% include 'Index/modalDetectarArchivos.html' %}
+                            {% include 'Index/modalNotificarFaltantes.html' %}
+          
+
+
+            <button class="btn btn-primary ms-2" type="submit" id="save-button">Guardar</button>
+        {% endif%}
+          {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}           
+    <button class="btn btn-primary ms-2" type="submit" name="guardar_credito" id="save-credit-button">Guardar comentarios de crédito</button>
+{% endif %}
+        </div>

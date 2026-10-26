@@ -1,0 +1,23 @@
+<button type="button" class="btn btn-green mx-2 text-white" data-bs-toggle="modal" data-bs-target="#modalExportarExcel">
+    Exportar a Excel
+</button>
+
+
+<div class="modal fade" id="modalExportarExcel" tabindex="-1" aria-labelledby="modalExportarExcelLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="modalExportarExcelLabel">Confirmar Exportación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 text-center">
+                <i class="bi bi-file-earmark-excel fs-1 text-success mb-3 d-block"></i>
+                <p class="mb-0 text-secondary">¿Estás seguro de que deseas exportar los datos de este expediente a formato <strong>Excel</strong>?</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-secondary px-4 rounded-2" data-bs-dismiss="modal">Cancelar</button>
+                <a href="{% url 'Index:exportarExcel' expediente.id %}" target="_blank" class="btn btn-success px-4 text-white rounded-2">Sí, exportar</a>
+            </div>
+        </div>
+    </div>
+</div>

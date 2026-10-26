@@ -1,0 +1,138 @@
+<!-- Barra superior de botones colapsables -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm py-2 d-flex align-items-center" type="button"
+        data-bs-toggle="collapse" data-bs-target="#collapseLineas" aria-expanded="false">
+        <i class="bi bi-list-ul me-2 fs-5"></i>Lista de líneas
+        <span class="badge bg-white text-quinto ms-2 px-2 py-1 rounded-pill">{{ lineasLista|length }}</span>
+    </button>
+
+    <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm py-2 d-flex align-items-center" type="button"
+        data-bs-toggle="collapse" data-bs-target="#collapseObligados" aria-expanded="false">
+        <i class="bi bi-people me-2 fs-5"></i>Obligados Solidarios
+        <span class="badge bg-white text-quinto ms-2 px-2 py-1 rounded-pill">{{ lista_obls|length }}</span>
+    </button>
+
+    <button class="btn btn-quinto fw-bold border-3 px-4 shadow-sm py-2 d-flex align-items-center" type="button"
+        data-bs-toggle="collapse" data-bs-target="#collapseRepresentantes" aria-expanded="false">
+        <i class="bi bi-person-badge me-2 fs-5"></i>Representantes Legales
+        <span class="badge bg-white text-quinto ms-2 px-2 py-1 rounded-pill">{{ lista_reps|length }}</span>
+    </button>
+</div>
+
+<!-- Sección: Líneas -->
+<div class="collapse mb-4" id="collapseLineas">
+    <div class="card card-body border-2 border-primary shadow-sm p-0 overflow-hidden rounded-4 border border-quinto">
+        <div class="p-3 bg-primary">
+            <h6 class="mb-0 fw-bold text-white">Lista de Lineas</h6>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for linea in lineasLista %}
+            <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center py-3 px-4 gap-3">
+                <div class="text-start" style="flex: 1; min-width: 130px;">
+                    <span class="text-secondary small d-block">Número de línea</span>
+                    <span class="fw-bold h6 mb-0">{{ linea.numero }}</span>
+                </div>
+
+                <div style="flex: 1; min-width: 100px;">
+                    <span class="text-secondary small d-block">Monto</span>
+                    <span class="fw-bold text-dark">${{ linea.monto }}</span>
+                </div>
+
+                <div style="flex: 1; min-width: 120px;">
+                    <span class="text-secondary small d-block">Tipo</span>
+                    <span class="fw-bold text-dark">{{ linea.tipoLinea }}</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-end gap-3" style="flex: 1; min-width: 200px;">
+                    <div>
+                        {% if linea.vigente %}
+                        <span class="badge rounded-pill bg-primary-subtle text-tercero border border-primary px-3 py-2">
+                            Vigente
+                        </span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-red-subtle text-red border border-red px-3 py-2">
+                            Vencida
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{% url 'Index:editarLinea' linea.id %}"
+                            class="btn btn-sm btn-outline-tercero px-3 fw-bold rounded-2">Editar</a>
+                    </div>
+                    {% if request.user.roles == 'Administrador'%}
+                    <form action="{% url 'Index:lineaEliminar' expediente.id linea.id %}" method="POST" class="m-0"
+                        onsubmit="return confirm('¿Estás seguro de eliminar esta línea? Se borrarán todos sus apartados asociados.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-red px-3 fw-bold rounded-2">
+                            Borrar
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay líneas registradas
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Sección: Obligados Solidarios -->
+<div class="collapse mb-4" id="collapseObligados">
+    <div class="card card-body border-2 border-primary  shadow-sm p-0 overflow-hidden rounded-4 border border-quinto">
+        <div class="p-3 bg-primary">
+            <h6 class="mb-0 fw-bold text-white">Lista de Obligados Solidarios del Expediente</h6>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for linea in lista_obls %}
+            <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div>
+                    <span class="text-secondary small d-block">Nombre del Obligado</span>
+                    <span class="fw-bold h6 mb-0 text-dark">{{ linea.nombre }}</span>
+                </div>
+                {% if request.user.roles == 'Administrador' %}
+                <div>
+                    <a href="{% url 'Index:eliminarObligado' linea.id expediente.id %}"
+                        class="btn btn-sm btn-outline-red px-3 fw-bold rounded-2">
+                        Eliminar Obligado
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay obligados solidarios registrados
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Sección: Representantes Legales -->
+<div class="collapse mb-4" id="collapseRepresentantes">
+    <div class="card card-body border-2 border-primary  shadow-sm p-0 overflow-hidden rounded-4 border border-quinto">
+        <div class="p-3 bg-primary">
+            <h6 class="mb-0 fw-bold text-white">Lista de Representantes Legales del Expediente</h6>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for linea in lista_reps %}
+            <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div>
+                    <span class="text-secondary small d-block">Nombre del Representante</span>
+                    <span class="fw-bold h6 mb-0 text-dark">{{ linea.nombre }}</span>
+                </div>
+                <div>
+                    <a href="{% url 'Index:eliminarRepresentante' linea.id expediente.id %}"
+                        class="btn btn-sm btn-outline-red px-3 fw-bold rounded-2">Eliminar Representante</a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item text-center text-muted py-4">
+                No hay representantes legales registrados
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

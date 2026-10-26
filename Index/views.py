@@ -1957,11 +1957,12 @@ def filtrar_representantes_ajax(request):
 def editarLinea(request, id):
     linea = get_object_or_404(Linea, pk=id)
     exito = False
-
     if request.method == "POST":
         form = LineaCrearForm(request.POST, instance=linea)
         if form.is_valid():
-            form.save()
+            instancia = form.save(commit=False)
+            instancia.expediente = linea.expediente # Mantiene el expediente original
+            instancia.save()
             messages.success(request, f"Línea de {linea.expediente.socio.nombre} actualizada.")
             exito = True
         else:
@@ -1971,7 +1972,7 @@ def editarLinea(request, id):
     else:
         form = LineaCrearForm(instance=linea)
     
-    context = {'form': form, 'exito': exito}
+    context = {'form': form, 'exito': exito ,'linea':linea}
     return render(request, 'Index/editarLinea.html', context)
 
 

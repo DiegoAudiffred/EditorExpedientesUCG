@@ -1,0 +1,21 @@
+<button type="button" class="btn btn-cuarto mx-2 text-white" data-bs-toggle="modal" data-bs-target="#modalLlenarValores">
+    Llenar valores vacios
+</button>
+<div class="modal fade" id="modalLlenarValores" tabindex="-1" aria-labelledby="modalLlenarValoresLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-cuarto text-white">
+                <h5 class="modal-title fw-bold" id="modalLlenarValoresLabel">Rellenar Valores Vacíos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 text-center">
+                <i class="bi bi-pencil-square fs-1 text-cuarto mb-3 d-block"></i>
+                <p class="mb-0 text-secondary">Esta acción completará automáticamente los valores que estén pendientes o vacíos en el expediente. ¿Deseas continuar?</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-secondary px-4 rounded-2" data-bs-dismiss="modal">Cancelar</button>
+                <a href="{% url 'Index:expediente_llenar' expediente.id %}" class="btn btn-cuarto px-4 text-white rounded-2">Continuar</a>
+            </div>
+        </div>
+    </div>
+</div>
