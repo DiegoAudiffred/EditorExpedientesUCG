@@ -1,6 +1,9 @@
-      <div class="d-flex justify-content-end">
-            {% if request.user.roles == 'Administrador' %}             <a class="btn btn-error mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
+      <div class="row ">
+            {% if request.user.roles == 'Administrador' %}             
+            <div class="col-2">
+ <a class="btn btn-error mx-2 w-100 my-2" data-bs-toggle="modal" data-bs-target="#deleteModal">Eliminar Expediente</a>
             
+            </div>
             <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel"
                 aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered ">
@@ -28,20 +31,42 @@
 
              {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Ejecutivo de Servicios' %}           
 
-                
+                    <div class="col-2">
                             {% include 'Index/modalExportarPDF.html' %}
+
+                    </div>
+                    <div class="col-2">
                             {% include 'Index/modalExportarExcel.html' %}
+
+                    </div>
+                     <div class="col-2">
+                            {% include 'Index/modalNotificarFaltantes.html' %}
+
+                    </div>
+                     <div class="col-2">
+                            {% include 'Index/modalCargarArchivos.html' %}
+
+                    </div>
+                     <div class="col-2">
+                            {% include 'Index/modalDetectarArchivos.html' %}
+
+                    </div>
+                     <div class="col-3">
                             {% include 'Index/modalLlenarValores.html' %}
 
-                            {% include 'Index/modalCargarArchivos.html' %}
-                            {% include 'Index/modalDetectarArchivos.html' %}
-                            {% include 'Index/modalNotificarFaltantes.html' %}
+                    </div>
+                    <div class="col-2">
+            <button class="btn btn-primary  w-100 my-2" type="submit" id="save-button">Guardar</button>
+
+                    </div>
           
 
 
-            <button class="btn btn-primary ms-2" type="submit" id="save-button">Guardar</button>
         {% endif%}
           {% if request.user.roles == 'Administrador' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Credito' %}           
-    <button class="btn btn-primary ms-2" type="submit" name="guardar_credito" id="save-credit-button">Guardar comentarios de crédito</button>
-{% endif %}
+                <div class="col-4">
+    <button class="btn btn-primary mx-2 w-100 my-2" type="submit" name="guardar_credito" id="save-credit-button">Guardar comentarios de crédito</button>
+
+                </div>
+          {% endif %}
         </div>

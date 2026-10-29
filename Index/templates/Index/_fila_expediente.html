@@ -1,0 +1,142 @@
+         {% with apartado=fila.apartado registro=fila.registro %}
+<tr data-seccion="{{ item.seccion.pk }}" data-apartado="{{ apartado.pk }}" data-secuencial="{{ registro.secuencial }}"
+    class="{% if registro.estatus == 'rechazado' %}bg-yellow{% endif %} {% if registro.estatus == 'pendiente' %}bg-corporateOrange500{% endif %}">{% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+
+<td class="align-middle">
+  <div class="m-3">
+{% if registro.secuencial == 1 %}
+    <button type="button"
+            class="btn btn-primary btn-add-row d-inline-flex align-items-center justify-content-center p-0"
+            style="width:30px;height:30px"
+            data-url="{% url 'Index:agregarRenglonExpediente' expediente.id item.seccion.pk apartado.pk %}"
+            data-seccion="{{ item.seccion.pk }}" data-apartado="{{ apartado.pk }}">+</button>
+{% else %}
+    <button type="button"
+            class="btn btn-secondary btn-del-row d-inline-flex align-items-center justify-content-center p-0 text-white"
+            style="width:30px;height:30px"
+            data-url="{% url 'Index:eliminarRenglonExpediente' expediente.id item.seccion.pk apartado.pk %}"
+            data-seccion="{{ item.seccion.pk }}" data-apartado="{{ apartado.pk }}">-</button>
+{% endif %}
+  </div>
+</td>
+{% endif %}                         
+ <td class="align-middle">{{ apartado.clave }}{% if registro.secuencial != 1 %} -  {{ registro.secuencial }} {% endif %}</td>
+                               
+<td class="align-middle">
+{% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+
+    <input type="checkbox" 
+           class="mi-clase" 
+           id="checkbox-{{ fila.apartado.pk }}-{{ registro.secuencial }}" 
+           data-seccion="{{ item.seccion.pk }}" 
+           data-apartado="{{ fila.apartado.pk }}" 
+           data-secuencial="{{ registro.secuencial }}"
+           {% if registro.enviar %}checked{% endif %}>
+    {% endif %}
+</td>
+
+<td class="align-middle ">
+    {% if fila.archivo_url %}
+        <a href="{% url 'Index:servirArchivo' %}?ruta={{ fila.archivo_url|urlencode }}"
+           target="_blank" 
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top"
+           title="{% if apartado.tipoDeSeccion == 'VII' %}{{ registro.comentario|default:apartado.descripcion }}{% else %}{{ apartado.descripcion }}{% endif %}"
+           style="text-decoration: none; color: #0d6efd; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">
+            {% if apartado.tipoDeSeccion == 'VII' %}
+                {{ registro.comentario|default:apartado.descripcion }}
+            {% else %}
+                {{ apartado.descripcion }}
+            {% endif %}
+        </a> 
+    {% else %}  
+        {% if apartado.tipoDeSeccion == 'VII' %}
+            <textarea class="form-control border border-3 border-primary my-1 form-control-sm"
+                      name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-descripcion_libre"
+                      rows="4"
+                      data-bs-toggle="tooltip"
+                      title="{{ registro.comentario|default_if_none:'' }}"
+                      placeholder="Escribe la descripción aquí...">{{ registro.comentario|default_if_none:'' }}</textarea>
+        {% else %}
+            <div data-bs-toggle="tooltip" 
+                 data-bs-placement="top"
+                 title="{{ apartado.descripcion }}"
+                 style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">
+                {{ apartado.descripcion }}
+            </div>
+        {% endif %}
+    {% endif %}
+</td>
+<script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+</script>
+                            <td class="align-middle">
+    {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' %}
+        <div class="d-flex align-items-center gap-1 container-alternar-fecha">
+            <input type="hidden" 
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-es_fecha" 
+                   class="input-es-fecha d-inline-flex align-items-center justify-content-center" 
+                   value="{% if registro.es_fecha %}true{% else %}false{% endif %}">
+
+            <input type="date" 
+                   class="form-control form-control-sm input-fecha-date {% if not registro.es_fecha %}d-none{% endif %}"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha_date"
+                   value="{% if registro.es_fecha %}{{ fila.fecha_html }}{% endif %}">
+
+            <input type="text" 
+                   class="form-control form-control-sm input-fecha-number {% if registro.es_fecha %}d-none{% endif %}"
+                   name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-fecha_num"
+                   value="{% if not registro.es_fecha %}{{ fila.fecha_html }}{% endif %}" 
+                   placeholder="Número">
+
+            <button type="button" class="btn btn-outline-secondary btn-sm btn-alternar-tipo" title="Alternar entre Fecha / Número">
+                <i class="bi bi-arrow-left-right"></i>
+            </button>
+        </div>
+    {% else %}
+        {% if registro.es_fecha %}
+            {{ fila.fecha_html }}
+        {% else %}
+            {{ registro.numero|default:"" }}
+        {% endif %}
+    {% endif %}
+</td>
+                                        {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
+                                        <td class="align-middle">
+
+                                            <select class="form-select form-select-sm"
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-estatus">
+                                                <option value="" {% if not registro or registro.estatus == '' %}selected{% endif %}>--</option>
+                                                <option value="ok" {% if registro and registro.estatus == 'ok' %}selected{% endif %}>ok</option>
+                                                <option value="pendiente" {% if registro and registro.estatus == 'pendiente' %}selected{% endif %}>pendiente
+                                                </option>
+                                                <option value="rechazado" {% if registro and registro.estatus == 'rechazado' %}selected{% endif %}>rechazado
+                                                </option>
+                                                <option value="N/A" {% if registro and registro.estatus == 'N/A' %}selected{% endif %}>N/A</option>
+                                            </select>
+                                        </td>
+                                        {% endif %}
+
+                                     
+                                            {% if request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' or request.user.roles == 'Administrador' %}
+                                               <td class="align-middle">
+                                            <input class="form-control form-control-sm" type="text"
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-comentario"
+                                                value="{{ registro.comentario|default_if_none:'' }}"></td>
+                                            {% else %}
+                                                <td class="align-middle">{{ registro.comentario }}</td>
+                                            {% endif %}
+                                            
+                                            {% if expediente.estatus.nombre != 'Nuevo'%}
+
+                                            {% if request.user.roles == 'Credito' or request.user.roles == 'Gerente de Credito' or request.user.roles == 'Administrador' %}
+                                             <td class="align-middle"><input class="form-control form-control-sm" type="text"
+                                                name="registro-{{ item.seccion.pk }}-{{ apartado.pk }}-{{ registro.secuencial }}-comentarioCredito"
+                                                value="{{ registro.comentarioCredito|default_if_none:'' }}"></td> 
+                                            {% else %}
+                                                <td class="align-middle" >{{ registro.comentarioCredito|default_if_none:''  }} </td>
+                                            {% endif %}
+                                         {% endif %}
+                                    </tr>
+                                    {% endwith %}

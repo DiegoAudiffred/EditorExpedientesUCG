@@ -1,16 +1,36 @@
-<div class="row d-flex align-items-end justify-content-end border border-3 rounded-4 shadow-lg border-primary my-3 p-3"
+<div class="row d-flex  border border-3 rounded-4 shadow-lg border-primary my-3 p-3"
     id="filtros-expedientes" data-url="{% url 'Index:filtrar_expedientes_ajax' %}">
 
-    <div class="col-lg-2 col-6">
-        <div class="fnSuperiorRegularTitle3 text-quinto">Estatus</div>
-        <select name="estatus" id="estatus-select"
-            class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
-            <option value="0">Todos</option>
+<div class="col-lg-2 col-6">
+    <div class="fnSuperiorRegularTitle3 text-quinto">Estatus</div>
+    
+    <input type="hidden" id="estatus-select" value="0">
+
+    <div class="dropdown w-100">
+        <button class="btn w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero d-flex align-items-center justify-content-between dropdown-toggle bg-white" 
+                type="button" 
+                id="dropdownEstatus" 
+                data-bs-toggle="dropdown" 
+                aria-expanded="false">
+            <span id="selected-option-estatus" class="d-flex align-items-center gap-2">Todos</span>
+        </button>
+        <ul class="dropdown-menu w-100" aria-labelledby="dropdownEstatus">
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2" href="javascript:void(0)" onclick="seleccionarEstatus('0', 'Todos', '')">
+                    Todos
+                </a>
+            </li>
             {% for option in estatus %}
-            <option value="{{option.id}}">{{option.nombre}}</option>
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2" href="javascript:void(0)" onclick="seleccionarEstatus('{{option.id}}', '{{option.nombre}}', '{{option.color}}')">
+                    <div style="background-color: {{option.color}}; width: 20px; height: 20px;" class="border border-2 border-quinto rounded-circle pe-3"></div>
+                    <span class="text-break text-truncate">{{option.nombre}}</span>
+                </a>
+            </li>
             {% endfor %}
-        </select>
+        </ul>
     </div>
+</div>
 
     <div class="col-lg-2 col-6">
         <div class="fnSuperiorRegularTitle3 text-quinto">E.Servicios</div>
@@ -64,13 +84,13 @@
             class="w-100 filtro-input rounded rounded-4 py-1 px-2 border border-2 border-tercero">
     </div>
  <div class="col-lg-2 col-6">
-    <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
+    <div class="fnSuperiorRegularTitle3 text-white"> . </div>
     <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-archivado-datos-faltantes">
         <i class="fa fa-file-text px-2 my-auto" style="color: #FF0000;"></i> Faltantes
     </button>
 </div>
     <div class="col-lg-2 col-6">
-                <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
+                <div class="fnSuperiorRegularTitle3 text-white"> . </div>
 
         <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-atrasados-datos">
             
@@ -79,22 +99,45 @@
     </div>
 
     <div class="col-lg-2 col-6">
-                <div class="fnSuperiorRegularTitle3 text-quinto"> . </div>
+                <div class="fnSuperiorRegularTitle3 text-white"> . </div>
 
         <button class="btn w-100 rounded rounded-4 p-1 border border-2 border-tercero" id="boton-analizar-datos">
             <i class="fa fa-bar-chart" aria-hidden="true" style="color: #27ae60;"></i> A Analizar
         </button>
     </div>
 
+
+
     <div class="col-lg-2 col-6">
-        <button id="boton-reset-datos" class="btn bg-quinto text-white rounded rounded-4 py-1 w-100">
+                        <div class="fnSuperiorRegularTitle3 text-white"> . </div>
+
+        <button id="boton-reset-datos" class="btn btn-quinto w-100 rounded rounded-4 p-1" id="boton-analizar-datos">
             Reiniciar
         </button>
     </div>
-</div>
+
+
+
+
+ </div>
 
 
 <script>
+    function seleccionarEstatus(id, nombre, color) {
+    const inputEstatus = document.getElementById('estatus-select');
+    const containerText = document.getElementById('selected-option-estatus');
+    
+    inputEstatus.value = id;
+    
+    if (color) {
+        containerText.innerHTML = `<div style="background-color: ${color}; width: 20px; height: 20px;" class="border border-2 border-quinto rounded-circle"></div> <span>${nombre}</span>`;
+    } else {
+        containerText.innerHTML = nombre;
+    }
+
+    inputEstatus.dispatchEvent(new Event('change'));
+}
+
 $(document).ready(function () {
     const filtrosContainer = document.getElementById('filtros-expedientes');
     if (!filtrosContainer) return;
@@ -155,6 +198,7 @@ $(document).ready(function () {
 
     function resetearFiltros() {
         estatusSelect.value = "0";
+        document.getElementById('selected-option-estatus').innerHTML = "Todos";
         usuariosSelect.value = "0";
         if (usuariosNegociosSelect) usuariosNegociosSelect.value = "0";
         usuariosCreditoSelect.value = "0";

@@ -36,6 +36,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
+from xhtml2pdf import pisa
 #LOS STATUS DEBEN SER 1="Nuevo" y 2="Completado" por temas de compatiblidad
 def is_admin(user):
     return user.roles == 'Administrador'
@@ -1252,8 +1254,7 @@ def exportarExcel(request, id):
 def exportarPDF(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     
-    from django.template.loader import render_to_string
-    from xhtml2pdf import pisa
+
     
     try:
         secciones_data = []
@@ -2577,25 +2578,22 @@ def enviarCorreoCitaAceptada(cita, expediente):
         print("Error al enviar correo de aceptación:", e)
          
 @login_required(login_url='/login/')
-
 def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
-    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID)
+    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID, expediente=expediente)
     apartado_origen = get_object_or_404(ApartadoCatalogo, pk=apartadoID)
-    
+
     registros_existentes = RegistroSeccion.objects.filter(
-        seccion=seccion_actual, 
+        seccion=seccion_actual,
         apartado=apartado_origen
     )
-    
+
     registro_origen = registros_existentes.first()
-    
     if not registro_origen:
-        return redirect('Index:editarExpediente', expedienteID)
-        
+        return JsonResponse({'ok': False, 'error': 'No hay un renglón base para este apartado.'}, status=400)
+
     max_secuencial = registros_existentes.aggregate(models.Max('secuencial'))['secuencial__max'] or 0
-    nuevo_secuencial = max_secuencial + 1
-    
+
     nuevo_registro = RegistroSeccion.objects.create(
         seccion=seccion_actual,
         apartado=apartado_origen,
@@ -2603,31 +2601,46 @@ def agregarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
         comentario=registro_origen.comentario,
         comentarioCredito=registro_origen.comentarioCredito,
         es_fecha=registro_origen.es_fecha,
-        secuencial=nuevo_secuencial
+        secuencial=max_secuencial + 1
     )
-    
-    return redirect('Index:editarExpediente', expedienteID)
-@login_required(login_url='/login/')
 
+    fila = {
+        'apartado': apartado_origen,
+        'registro': nuevo_registro,
+        'fecha_html': '',
+        'archivo_url': None,
+    }
+    html = render_to_string(
+        'Index/_fila_expediente.html',
+        {
+            'fila': fila,
+            'item': {'seccion': seccion_actual},
+            'expediente': expediente,
+        },
+        request=request
+    )
+    return JsonResponse({'ok': True, 'html': html})
+
+
+@login_required(login_url='/login/')
 def eliminarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
-    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID)
+    seccion_actual = get_object_or_404(SeccionesExpediente, pk=seccionID, expediente=expediente)
     apartado_origen = get_object_or_404(ApartadoCatalogo, pk=apartadoID)
-    
+
     ultimo_registro = RegistroSeccion.objects.filter(
         seccion=seccion_actual,
         apartado=apartado_origen
     ).order_by('-secuencial').first()
-    
+
     if ultimo_registro and ultimo_registro.secuencial > 1:
         ultimo_registro.delete()
-        messages.success(request, 'Renglón extra eliminado con éxito.')
-    else:
-        messages.error(request, 'No es posible eliminar el renglón principal del apartado.')
-        
-    return redirect('Index:editarExpediente', expedienteID)
+        return JsonResponse({'ok': True})
 
-
+    return JsonResponse(
+        {'ok': False, 'error': 'No es posible eliminar el renglón principal del apartado.'},
+        status=400
+    )
 @login_required(login_url='/login/')
 def revisionExpediente(request, expedienteID,observaciones):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
@@ -3665,7 +3678,7 @@ def correoArchivado(expediente, porcentajeLlenado):
             <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
                 <h2 style="color: #2c3e50;">Expediente Archivado</h2>
                 <p>Estimado usuario,</p>
-                <p>Le informamos que el expediente <strong>{expediente.id}</strong> correspondiente al socio <strong>{expediente.socio.nombre}</strong> ha sido archivado exitosamente.</p>
+                <p>Le informamos que el expediente <strong>{expediente.numeroKepler}</strong> correspondiente al socio <strong>{expediente.socio.nombre}</strong> ha sido archivado exitosamente.</p>
                 
                 <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 8px; text-align: center;">
                     <span style="font-size: 0.9em; color: #6c757d; font-weight: bold; display: block;">PORCENTAJE DE COMPLETADO</span>

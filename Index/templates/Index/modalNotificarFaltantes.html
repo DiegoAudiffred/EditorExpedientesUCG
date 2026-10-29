@@ -1,1 +1,22 @@
-            <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero mx-2 text-white" >Notificar faltantes</a>
+<button type="button" class="btn btn-tercero mx-2 text-white w-100 my-2" data-bs-toggle="modal" data-bs-target="#modalNotificarFaltantes">
+    Notificar faltantes
+</button>
+
+<div class="modal fade" id="modalNotificarFaltantes" tabindex="-1" aria-labelledby="modalNotificarFaltantesLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-tercero text-white">
+                <h5 class="modal-title fw-bold" id="modalNotificarFaltantesLabel">Notificar Faltantes</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 text-center">
+                <i class="bi bi-bell-fill fs-1 text-tercero mb-3 d-block"></i>
+                <p class="mb-0 text-dark">¿Estás seguro de que deseas enviar la notificación de documentos o datos faltantes correspondientes a este expediente?</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-secondary px-4 rounded-2" data-bs-dismiss="modal">Cancelar</button>
+                <a href="{% url 'Index:notificarFaltantes' expediente.id %}" class="btn btn-tercero px-4 text-white rounded-2">Sí, notificar</a>
+            </div>
+        </div>
+    </div>
+</div>
