@@ -103,7 +103,8 @@ def cargar_apartados_default(sender, **kwargs):
                     clave=str(clave_str),
                     defaults={
                         'descripcion': data['descripcion'],
-                        'areaDondeAplica': data['area_aplicacion']
+                        'areaDondeAplica': data['area_aplicacion'],
+                        "nombreArchivo":data['nombreArchivo']
                     }
                 )
     #Estado.objects.get_or_create(nombre="Nuevo", color="#FFFFFF")    

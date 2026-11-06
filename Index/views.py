@@ -274,10 +274,15 @@ def agregarObligados(request, id):
 def editarExpediente(request, id):
     expediente = get_object_or_404(Expediente, pk=id)
     lineasLista = Linea.objects.filter(expediente=expediente)
-    secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+    secciones = (
+        SeccionesExpediente.objects
+        .filter(expediente=expediente)
+        .select_related('linea')
+        .order_by('tipoDeSeccion', 'pk')
+    )
     estados = Estado.objects.all()
     usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Gerente Centro de Negocios'])
-    usuariosCreditos = User.objects.filter(roles__in=['Credito','Gerente de Credito'])
+    usuariosCreditos = User.objects.filter(roles__in=['Credito', 'Gerente de Credito'])
     usuariosNegocios = User.objects.filter(roles__in=['Ejecutivo de Negocios'])
     rep_form = CrearRepresentante()
     obl_form = CrearObligado()
@@ -290,28 +295,28 @@ def editarExpediente(request, id):
     citasDisponibles = Cita.objects.filter(
         Q(dia__gt=hoy) |
         Q(dia=hoy, hora__gte=hora_actual)
-    ).order_by('dia', 'hora')    
+    ).order_by('dia', 'hora')
 
     citaAsignada = Cita.objects.filter(
         Q(expedientes=expediente),
-    ).order_by('dia', 'hora').last()    
-   
+    ).order_by('dia', 'hora').last()
+
     if request.method == "POST":
         post = request.POST
         datos_agrupados = {}
-        
+
         es_solo_credito = "guardar_credito" in post
 
         for key, value in post.items():
             if not key.startswith("registro-"):
                 continue
-           
+
             parts = key.split('-', 4)
             if len(parts) != 5:
                 continue
-           
+
             _, seccion_id_s, apartado_id_s, secuencial_s, field = parts
-           
+
             try:
                 ids_tuple = (int(seccion_id_s), int(apartado_id_s), int(secuencial_s))
             except ValueError:
@@ -329,10 +334,10 @@ def editarExpediente(request, id):
                 apartado__id=apartado_id,
                 secuencial=secuencial
             ).first()
-           
+
             if not registro:
                 continue
-            
+
             if es_solo_credito:
                 if 'comentarioCredito' in campos:
                     registro.comentarioCredito = campos['comentarioCredito']
@@ -348,7 +353,7 @@ def editarExpediente(request, id):
 
                 if 'comentarioCredito' in campos:
                     registro.comentarioCredito = campos['comentarioCredito']
-               
+
                 if 'es_fecha' in campos:
                     registro.es_fecha = campos['es_fecha'].lower() == 'true'
 
@@ -376,7 +381,7 @@ def editarExpediente(request, id):
                                 registro.numero = None
                         else:
                             registro.numero = None
-               
+
                 registro.save()
 
         messages.success(request, 'Datos guardados con éxito.')
@@ -388,7 +393,7 @@ def editarExpediente(request, id):
     else:
         stringSocio = str(num_kepler).strip()
 
-    archivos_encontrados = checarRuta(stringSocio, secciones)    
+    archivos_encontrados = checarRuta(stringSocio, secciones)
     print(stringSocio)
 
     registrosConComentarios = []
@@ -415,7 +420,7 @@ def editarExpediente(request, id):
         'usuariosNegocios': usuariosNegocios,
         'registrosConComentarios': registrosConComentarios,
     }
-   
+
     totalRegistros = 0
     totalRegistrosLlenos = 0
     totalRegistrosNA = 0
@@ -424,7 +429,12 @@ def editarExpediente(request, id):
     estatus_recepcion = expediente.estatus.nombre == "Completo"
 
     for seccion in secciones:
-        registros_existentes = RegistroSeccion.objects.filter(seccion=seccion).select_related('apartado').order_by('apartado__clave', 'secuencial')
+        registros_existentes = (
+            RegistroSeccion.objects
+            .filter(seccion=seccion)
+            .select_related('apartado')
+            .order_by('apartado__clave', 'secuencial')
+        )
 
         filas = []
         for registro in registros_existentes:
@@ -435,7 +445,6 @@ def editarExpediente(request, id):
             elif registro.numero or registro.fecha:
                 totalRegistrosLlenos += 1
             else:
-                #print(registro)
                 totalRegistrosVacios += 1
 
             fecha_html = ""
@@ -460,6 +469,30 @@ def editarExpediente(request, id):
             'filas': filas,
         })
 
+    # ---------- Agrupar secciones de OPERATIVA por línea ----------
+    SECCIONES_OPERATIVA = ['III', 'IV', 'V', 'VI', 'VII']
+    grupos_dict = {}
+
+    for item in context['secciones']:
+        sec = item['seccion']
+        if sec.tipoDeSeccion not in SECCIONES_OPERATIVA:
+            continue
+
+        clave = sec.linea_id or 0  # 0 = sin línea
+        if clave not in grupos_dict:
+            grupos_dict[clave] = {
+                'linea': sec.linea,  # None si no tiene línea
+                'items': [],
+            }
+        grupos_dict[clave]['items'].append(item)
+
+    # Líneas ordenadas por número, "Sin línea" al final
+    context['operativa_por_linea'] = sorted(
+        grupos_dict.values(),
+        key=lambda g: (g['linea'] is None, g['linea'].numero if g['linea'] else '')
+    )
+    # --------------------------------------------------------------
+
     if totalRegistros != (totalRegistrosLlenos + totalRegistrosVacios + totalRegistrosNA):
         context['mensajeInfo'] = "Los registros no coinciden con los status"
 
@@ -468,15 +501,13 @@ def editarExpediente(request, id):
     context['totalRegistrosNA'] = totalRegistrosNA
     context['totalRegistrosVacios'] = totalRegistrosVacios
 
-
-
     total_util = totalRegistrosLlenos + totalRegistrosVacios
-    
+
     if total_util > 0:
         porcentaje = (totalRegistrosLlenos / total_util) * 100
     else:
         porcentaje = 0
-    
+
     context['porcentajeLlenado'] = round(porcentaje, 2)
 
     context['rep_form'] = rep_form
@@ -488,7 +519,6 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
-
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
     print(f"[DEBUG] Inicio de lineaCrear. Request method: {request.method}, ID expediente: {id}")

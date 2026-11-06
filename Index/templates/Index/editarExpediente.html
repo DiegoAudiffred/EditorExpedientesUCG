@@ -497,7 +497,7 @@
         </div>
     </div>
 
-    <div class="accordion-item my-2">
+        <div class="accordion-item my-2">
         <h2 class="accordion-header" id="headingOperativa">
             <button class="accordion-button collapsed fw-bold text-primary fs-5 border border-3 border-cuarto" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOperativa" aria-expanded="false" aria-controls="collapseOperativa">
                 Operativa
@@ -505,22 +505,55 @@
         </h2>
         <div id="collapseOperativa" class="accordion-collapse collapse" aria-labelledby="headingOperativa" data-bs-parent="#acordeonSecciones">
             <div class="accordion-body border border-3 border-cuarto">
-                <ul class="nav nav-pills flex-wrap gap-1" id="pillsOperativa" role="tablist">
-                    {% for item in secciones %}
-                        {% if item.seccion.tipoDeSeccion != 'A' and item.seccion.tipoDeSeccion != 'B' and item.seccion.tipoDeSeccion != 'C' and item.seccion.tipoDeSeccion != 'I' and item.seccion.tipoDeSeccion != 'II' %}
-                            <li class="nav-item border border-primary border-2 bg-secondary fw-bold rounded-3" role="presentation">
-                                <button class="nav-link"
-                                    id="tab-{{ item.seccion.pk }}" 
-                                    data-bs-toggle="tab" 
-                                    data-bs-target="#seccion-{{ item.seccion.pk }}"
-                                    type="button" 
-                                    role="tab">
-                                    {{ item.seccion.tituloSeccion }} ({{ item.seccion.tipoDeSeccion }}) 
-                                </button>
-                            </li>
-                        {% endif %}
+
+                <div class="accordion " id="acordeonLineas">
+                    {% for grupo in operativa_por_linea %}
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header" id="headingLinea{{ forloop.counter }}">
+                            <button class="accordion-button collapsed fw-bold border border-primary my-2" type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseLinea{{ forloop.counter }}"
+                                    aria-expanded="false"
+                                    aria-controls="collapseLinea{{ forloop.counter }}">
+                                {% if grupo.linea %}
+                                    Línea {{ grupo.linea.numero }} - {{ grupo.linea.tipoLinea }}
+                                    {% if grupo.linea.monto %}
+                                        <span class="badge bg-secondary ms-2">${{ grupo.linea.monto|floatformat:2 }}</span>
+                                    {% endif %}
+                                    {% if not grupo.linea.vigente %}
+                                        <span class="badge bg-danger ms-2">No vigente</span>
+                                    {% endif %}
+                                {% else %}
+                                    Sin línea
+                                {% endif %}
+                            </button>
+                        </h2>
+                        <div id="collapseLinea{{ forloop.counter }}" class="accordion-collapse collapse"
+                             aria-labelledby="headingLinea{{ forloop.counter }}"
+                             data-bs-parent="#acordeonLineas">
+                            <div class="accordion-body">
+                                <ul class="nav nav-pills flex-wrap gap-1" id="pillsLinea{{ forloop.counter }}" role="tablist">
+                                    {% for item in grupo.items %}
+                                    <li class="nav-item border border-primary border-2 bg-secondary fw-bold rounded-3" role="presentation">
+                                        <button class="nav-link"
+                                            id="tab-{{ item.seccion.pk }}"
+                                            data-bs-toggle="tab"
+                                            data-bs-target="#seccion-{{ item.seccion.pk }}"
+                                            type="button"
+                                            role="tab">
+                                            {{ item.seccion.get_tipoDeSeccion_display }} ({{ item.seccion.tipoDeSeccion }})
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted mb-0">No hay secciones operativas.</p>
                     {% endfor %}
-                </ul>
+                </div>
+
             </div>
         </div>
     </div>
@@ -579,7 +612,9 @@
                                         <th style="width: 80px;">Clave</th>
                                         <th style="width: 30px;"></th>
                                         <th style="width: 400px;">Descripción</th>
-                                        <th style="width: 120px;">Fecha o Numero</th>
+                                        <!--                                         <th>Subir</th>
+ -->
+                                        <th style="width: 120px;">Fecha o Texto</th>
                                         {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios'%}
 
                                         <th style="width: 100px;">Estatus</th>
@@ -696,6 +731,16 @@
             successModal.show();
         }
     });
+    document.addEventListener('show.bs.tab', function (e) {
+    const nuevo = e.target;
+    const destino = document.querySelector(nuevo.dataset.bsTarget);
+
+    document.querySelectorAll('#main-edit-form .nav-link.active[data-bs-toggle="tab"]')
+        .forEach(b => { if (b !== nuevo) b.classList.remove('active'); });
+
+    document.querySelectorAll('#main-edit-form .tab-content > .tab-pane.active')
+        .forEach(p => { if (p !== destino) p.classList.remove('show', 'active'); });
+});
 </script>
 <!-- Agrega las librerias al principio o final de tu archivo -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />

@@ -54,7 +54,8 @@ class User(AbstractUser):
     ('Administrador', 'Administrador'),
     ('Credito', 'Credito'),
     ('Gerente de Credito', 'Gerente de Credito'),
-    ('Gerente Centro de Negocios', 'Gerente Centro de Negocios')
+    ('Gerente Centro de Negocios', 'Gerente Centro de Negocios'),
+    ('Jurídico', 'Jurídico')
     )
 
     username = models.CharField('Usuario', max_length=20, unique=True, blank=False, null=False, default="Nuevo")
@@ -189,6 +190,7 @@ class Linea(models.Model):
     tipoGarantia = models.ManyToManyField(Garantia, blank=True, related_name="lineas")
     abreviacion = models.CharField(max_length=10, blank=True, null=True)
     fecha = models.DateField(blank=True, null=True)
+    contemplar = models.BooleanField(default=True)
 
     def delete(self, *args, **kwargs):
         secciones_asociadas = self.secciones.all()

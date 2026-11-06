@@ -1,9 +1,9 @@
 <table class="table">
     <thead>
         <tr>
-            <th>ID</th>
             <th>Linea</th>
             <th>Socio</th>
+            <th>Estatus</th>
             <th>Num Expediente</th>
             <th>Monto</th>
             <th>Editar</th>
@@ -12,16 +12,19 @@
     </thead>
     <tbody>
         {% for linea in lineas %}
-        <tr class="{% if linea.vigente %} bg-green {% else %} bg-red  {% endif %} ">
-            <td>{{ linea.id }}</td>
+        <tr>
             <td>{{ linea.numero }}</td>
             <td>{{ linea.expediente.socio.nombre }}</td>
-            <td>{{ linea.expediente.id }}</td>
+            <td>{% if linea.vigente %}                     <div style="background-color: green; min-width: 35px; width: 35px; height: 35px;" class="border border-3 border-quinto rounded rounded-5"></div>
+
+ {% else %}                     <div style="background-color: red; min-width: 35px; width: 35px; height: 35px;" class="border border-3 border-quinto rounded rounded-5"></div>
+
+  {% endif %}</td>
             <td>{{ linea.tipoLinea }}</td>
             <td>{{ linea.monto }}</td>
             {% if request.user.roles == 'Administrador' or request.user.roles == 'Ejecutivo de Servicios' or request.user.roles == 'Gerente Centro de Negocios' %}
             <td><a href="{% url 'Index:editarLinea' linea.id %}"
-                    class="btn  rounded rounded-4 bg-tercero text-white"> Editar linea</a></td>
+                    class="btn  rounded rounded-4 bg-tercero text-white"> Editar</a></td>
             {% endif %}
 
         </tr>

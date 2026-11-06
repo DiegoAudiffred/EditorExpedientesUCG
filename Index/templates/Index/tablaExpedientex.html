@@ -1,4 +1,4 @@
-<div class="table-responsive p-0 rounded-4 overflow-hidden border border-3 border-quinto">
+<div class="table-responsive p-0 rounded-4 overflow-hidden border border-3 border-quinto mb-5">
     <table class="table align-middle mb-0" style="border-color: #000000 !important;">
         <thead class="bg-primary text-white fw-bold">
             <tr>
@@ -60,7 +60,7 @@
             Sin asignar
             {% endif %}
         </td>
-        <td class="text-center">
+        <td class="text-center p-0">
             <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm rounded-pill bg-tercero text-white text-nowrap px-3">Editar</a>
         </td>
     </tr>
@@ -73,8 +73,8 @@
     </table>
 </div>
 {% if paginator.num_pages > 1 %}
-<nav aria-label="Navegación de páginas" class="mt-4">
-    <ul class="pagination justify-content-center shadow-sm">
+<nav aria-label="Navegación de páginas border-0" class="mt-4">
+    <ul class="pagination justify-content-center ">
         {% if page_obj.has_previous %}
         <li class="page-item">
             <a class="page-link paginar rounded-start-pill px-3" data-page="{{ page_obj.previous_page_number }}" style="cursor: pointer;">Anterior</a>
