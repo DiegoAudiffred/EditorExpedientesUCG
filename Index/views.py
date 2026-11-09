@@ -2307,7 +2307,7 @@ def enviarInvitacionCita(cita, expediente, usuario_accion=None, esCancelacion=Fa
     USUARIO = "informacion@ucg.com.mx"
     CONTRASENA = "UcG911_@!#"
     
-    destinatariosCredito = ['portiz@ucg.com.mx', 'dcorrea@ucg.com.mx', 'mrubio@ucg.com.mx'] 
+    destinatariosCredito = ['portiz@ucg.com.mx', 'dcorrea@ucg.com.mx', 'mrubio@ucg.com.mx','BVillanueva@ucg.com.mx'] 
     destinatariosRaw = [
         getattr(getattr(expediente, 'usuarioCredito', None), 'email', None),
         getattr(getattr(expediente, 'usuario', None), 'email', None),

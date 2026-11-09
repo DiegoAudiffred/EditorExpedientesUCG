@@ -5,10 +5,10 @@
                 <th style="width: 15px;">Exp</th>
                 <th style="min-width: 250px;">Socio</th>
                 <th class="text-center">Acciones</th>
-                <th>Estatus</th>
-                <th>Número</th>
-                <th>Ejecutivo de Servicio</th>
-                <th>Credito</th>
+                <th class="text-center">Estatus</th>
+                <th class="text-center">Número</th>
+                <th class="text-center">Ejecutivo de Servicio</th>
+                <th class="text-center">Credito</th>
                 <th class="text-center"></th>
             </tr>
         </thead>
@@ -39,29 +39,34 @@
         <td class="text-center align-middle">
             <div style="background-color: {{expediente.estatus.color}};" class="border border-3 border-quinto rounded rounded-5 mx-auto text-white fw-bold px-3 w-100">{{expediente.estatus.nombre}}</div>
         </td>
-        <td class="text-nowrap">
+        <td class="text-nowrap text-center">
             {% if expediente.socio.numeroKepler %}
             {{ expediente.socio.numeroKepler }}
             {% else %}
             0000
             {% endif %}
         </td>
-        <td class="text-break">
+        <td class="text-break text-center">
             {% if expediente.usuario %}
             {{ expediente.usuario.nombreCompleto }}
             {% else %}
             Sin asignar
             {% endif %}
         </td>
-        <td class="text-break">
+        <td class="text-break text-center">
             {% if expediente.usuarioCredito %}
             {{ expediente.usuarioCredito.nombreCompleto }}
             {% else %}
             Sin asignar
             {% endif %}
         </td>
-        <td class="text-center p-0">
-            <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm rounded-pill bg-tercero text-white text-nowrap px-3">Editar</a>
+        <td class="text-center p-0 bg-tercero">
+            {% if expediente.estatus.nombre == 'Archivado' %}
+            <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm bg-green text-white text-nowrap py-3 w-100">Actualizar</a>
+
+            {% else %}
+            <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm bg-tercero text-white text-nowrap py-3 w-100">Editar</a>
+            {% endif %}
         </td>
     </tr>
     {% empty %}
