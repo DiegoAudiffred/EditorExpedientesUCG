@@ -1,80 +1,81 @@
-<div class="table-responsive p-0 rounded-4 overflow-hidden border border-3 border-quinto mb-5">
-    <table class="table align-middle mb-0" style="border-color: #000000 !important;">
-        <thead class="bg-primary text-white fw-bold">
+<div class="table-responsive p-0 rounded-4 border border-3 border-quinto mb-5" style=" overflow-y: auto; overflow-x: auto;">
+    <table class="table align-middle mb-0" style="border-color: #000000 !important; min-width: 1100px;">
+        <thead class="bg-primary text-white fw-bold sticky-top" style="z-index: 1;">
             <tr>
-                <th style="width: 15px;">Exp</th>
+                <th style="width: 50px;">Exp</th>
                 <th style="min-width: 250px;">Socio</th>
-                <th class="text-center">Acciones</th>
-                <th class="text-center">Estatus</th>
-                <th class="text-center">Número</th>
-                <th class="text-center">Ejecutivo de Servicio</th>
-                <th class="text-center">Credito</th>
-                <th class="text-center"></th>
+                <th class="text-center" style="min-width: 180px;">Acciones</th>
+                <th class="text-center" style="min-width: 150px;">Estatus</th>
+                <th class="text-center" style="min-width: 100px;">Número</th>
+                <th class="text-center" style="min-width: 200px;">Ejecutivo de Servicio</th>
+                <th class="text-center" style="min-width: 200px;">Credito</th>
+                <th class="text-center" style="min-width: 120px;"></th>
             </tr>
         </thead>
-<tbody>
-    {% for expediente in expedientes %}
-    <tr style="min-height: 55px; height: 55px;">
-        <th>{{ expediente.id }}</th> 
-        <td class="text-break">{{ expediente.socio.nombre }}</td>
-        <td class="text-nowrap">
-            <div class="d-flex align-items-center justify-content-center gap-1">
-                {% if expediente.estatus.nombre == 'Archivado' and expediente.tiene_registros_pendientes %}
-                    <i class="fa fa-file-text px-3 mx-2" style="color: #FF0000;" title="Contiene registros pendientes"></i>
-                {% else %}
-                    <i class="fa fa-file-text px-3 mx-2" style="color: #289706;" title="Contiene registros pendientes"></i>
-                {% endif %}
-                <button type="button" 
-                        value="{% url 'Index:cambiarAtrasado' expediente.id %}" 
-                        class="btn btn-sm text-decoration-none btn-resagado px-3 mx-2">
-                    <i class="fa fa-hourglass" aria-hidden="true" style="{% if expediente.expedienteResagado %}color: #e67e22;{% endif %}"></i>
-                </button>
-                <button type="button" 
-                        value="{% url 'Index:cambiarAnalizar' expediente.id %}" 
-                        class="btn btn-sm text-decoration-none btn-contemplado px-3 mx-2">
-                    <i class="fa fa-bar-chart" aria-hidden="true" style="{% if expediente.contemplado %}color: #27ae60;{% endif %}"></i>
-                </button>
-            </div>
-        </td>
-        <td class="text-center align-middle">
-            <div style="background-color: {{expediente.estatus.color}};" class="border border-3 border-quinto rounded rounded-5 mx-auto text-white fw-bold px-3 w-100">{{expediente.estatus.nombre}}</div>
-        </td>
-        <td class="text-nowrap text-center">
-            {% if expediente.socio.numeroKepler %}
-            {{ expediente.socio.numeroKepler }}
-            {% else %}
-            0000
-            {% endif %}
-        </td>
-        <td class="text-break text-center">
-            {% if expediente.usuario %}
-            {{ expediente.usuario.nombreCompleto }}
-            {% else %}
-            Sin asignar
-            {% endif %}
-        </td>
-        <td class="text-break text-center">
-            {% if expediente.usuarioCredito %}
-            {{ expediente.usuarioCredito.nombreCompleto }}
-            {% else %}
-            Sin asignar
-            {% endif %}
-        </td>
-        <td class="text-center p-0 bg-tercero">
-            {% if expediente.estatus.nombre == 'Archivado' %}
-            <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm bg-green text-white text-nowrap py-3 w-100">Actualizar</a>
-
-            {% else %}
-            <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm bg-tercero text-white text-nowrap py-3 w-100">Editar</a>
-            {% endif %}
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="8" class="text-center">No se encontraron expedientes.</td>
-    </tr>
-    {% endfor %}
-</tbody>
+        <tbody>
+        {% for expediente in expedientes %}
+            <tr style="height: 65px; max-height: 65px;" class=" fw-semibold">
+                <td class="align-middle fw-bold" style="height: 65px; overflow: hidden;">{{ expediente.id }}</td> 
+                <td class="text-truncate align-middle" style="max-width: 250px; height: 65px;" title="{{ expediente.socio.nombre }}">
+                    {{ expediente.socio.nombre }}
+                </td>
+                <td class="text-nowrap align-middle" style="height: 65px;">
+                    <div class="d-flex align-items-center justify-content-center gap-1">
+                        {% if expediente.estatus.nombre == 'Archivado' and expediente.tiene_registros_pendientes %}
+                            <i class="fa fa-file-text px-3 mx-2" style="color: #FF0000;" title="Contiene registros pendientes"></i>
+                        {% else %}
+                            <i class="fa fa-file-text px-3 mx-2" style="color: #289706;" title="Contiene registros pendientes"></i>
+                        {% endif %}
+                        <button type="button" 
+                                value="{% url 'Index:cambiarAtrasado' expediente.id %}" 
+                                class="btn btn-sm text-decoration-none btn-resagado px-3 mx-2">
+                            <i class="fa fa-hourglass" aria-hidden="true" style="{% if expediente.expedienteResagado %}color: #e67e22;{% endif %}"></i>
+                        </button>
+                        <button type="button" 
+                                value="{% url 'Index:cambiarAnalizar' expediente.id %}" 
+                                class="btn btn-sm text-decoration-none btn-contemplado px-3 mx-2">
+                            <i class="fa fa-bar-chart" aria-hidden="true" style="{% if expediente.contemplado %}color: #27ae60;{% endif %}"></i>
+                        </button>
+                    </div>
+                </td>
+                <td class="text-center align-middle" style="height: 65px;">
+                    <div style="background-color: {{expediente.estatus.color}};" class="border border-3 border-quinto rounded rounded-5 mx-auto text-white fw-bold px-3 w-100">{{expediente.estatus.nombre}}</div>
+                </td>
+                <td class="text-nowrap text-center align-middle" style="height: 65px;">
+                    {% if expediente.socio.numeroKepler %}
+                    {{ expediente.socio.numeroKepler }}
+                    {% else %}
+                    0000
+                    {% endif %}
+                </td>
+                <td class="text-center align-middle" style="height: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {% if expediente.usuario %}
+                    {{ expediente.usuario.nombreCompleto }}
+                    {% else %}
+                    Sin asignar
+                    {% endif %}
+                </td>
+                <td class="text-center align-middle" style="height: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {% if expediente.usuarioCredito %}
+                    {{ expediente.usuarioCredito.nombreCompleto }}
+                    {% else %}
+                    Sin asignar
+                    {% endif %}
+                </td>
+                <td class="text-center p-0 bg-tercero align-middle" style="height: 65px;">
+                    {% if expediente.estatus.nombre == 'Archivado' %}
+                    <a href="{% url 'Index:actualizarExpediente' expediente.id %}" class="btn btn-sm bg-green text-white text-nowrap w-100 h-100 d-flex align-items-center justify-content-center">Actualizar</a>
+                    {% else %}
+                    <a href="{% url 'Index:editarExpediente' expediente.id %}" class="btn btn-sm bg-tercero text-white text-nowrap w-100 h-100 d-flex align-items-center justify-content-center fw-bold" >Editar</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8" class="text-center">No se encontraron expedientes.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
     </table>
 </div>
 {% if paginator.num_pages > 1 %}

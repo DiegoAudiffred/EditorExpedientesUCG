@@ -507,6 +507,7 @@
             <div class="accordion-body border border-3 border-cuarto">
 
                 <div class="accordion " id="acordeonLineas">
+                   
                     {% for grupo in operativa_por_linea %}
                     <div class="accordion-item border-0">
                         <h2 class="accordion-header" id="headingLinea{{ forloop.counter }}">
@@ -818,7 +819,7 @@ $(document).on('change', '.mi-clase', function(event) {
         return;
     }
 
-    const url = `/expediente/${seccion}/${apartado}/${secuencial}/`;
+    const url = `/expediente/${seccion}/${apartado}/${secuencial}/`; //checkBoxChange
 
     $.ajax({
         url: url,

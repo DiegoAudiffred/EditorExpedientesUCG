@@ -3,16 +3,16 @@
 
 {% block body %}
 
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-8">
-            <h1 class="fnSuperiorRegularTitle2 text-secondary">Panel de Administración</h1>
+<div class="container my-5">
+    <div class="row ">
+        <div class="col-12 col-lg-8">
+            <h1 class="fnSuperiorRegularTitle2 text-secondary border-bottom border-primary border-end border-4  pb-2">Administración</h1>
 
         </div>
 
-        <div class="col-2 my-auto">
-            <a href="" class="btn btn-primary rounded rounded-pill px-3 w-100" data-bs-toggle="modal"
-                data-bs-target="#userModal">Crear Usuario</a>
+        <div class="col-6 col-lg-2 my-2 ">
+            <button class="btn btn-primary rounded rounded-pill px-3 w-100" data-bs-toggle="modal"
+                data-bs-target="#userModal">Crear Usuario</button>
             <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
                 <form action="{% url 'Index:alta_usuario' %}" method="post">
                     {% csrf_token %}
@@ -57,10 +57,8 @@
             </div>
 
         </div>
-        <div class="col-2 my-auto">
+        <div class="col-6 col-lg-2 my-2">
             <a href="{% url 'Index:generarLista' %}" class="btn btn-primary rounded rounded-pill px-3 w-100" >Lista Expedientes</a>
-           
-
         </div>
 
     </div>
@@ -74,47 +72,24 @@
 
     <table class="table table-striped">
         <thead>
-            <tr>
+            <tr >
                 <th>Usuario</th>
                 <th>Correo</th>
                 <th>Rol</th>
-                <th>Último Login</th>
-                <th>Estatus</th>
+         
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for user in usuarios %}
-            <tr
+            <tr style="height: 120px; max-height: 120px;"
                 class="{% if user.is_active %} {% if current_user_id == user.id %}  bg-quinto {% else %}  bg-tercero {% endif %} {% else %} bg-corporateGray900 {% endif %}">
-                <td class="text-white fw-bold text-truncate">{{ user.username }} </td>
-                <td class="text-white fw-bold text-truncate">{{ user.email }} </td>
-                <td><span class="badge bg-primary">{{ user.roles }}</span></td>
+                <td class="text-white fw-bold text-truncate align-middle">{{ user.username }} </td>
+                <td class="text-white fw-bold text-truncate align-middle">{{ user.email }} </td>
+                <td class="align-middle"><span class="badge bg-primary">{{ user.roles }}</span></td>
 
-                <td class="text-white fw-bold">
-                    {% if user.last_login %}
-                    {{ user.last_login|date:"d M Y H:i" }}
-
-                    {% if user.last_login > "now"|date:"Y-m-d H:i"|add:"-60 minutes" and user.id != current_user_id %}
-                    <span class="badge bg-warning text-dark">Conectado (Reciente)</span>
-                    {% endif %}
-                    {% else %}
-                    Nunca
-                    {% endif %}
-                </td>
-                <td class=" fw-bold 
-                    {% if user.is_active %}
-                    text-green
-                    {% else %}
-                    text-red
-                    {% endif %}">
-                    {% if user.is_active %}
-                    Activo
-                    {% else %}
-                    Inactivo
-                    {% endif %}
-                </td>
-                <td>
+         
+                <td class="align-middle">
                     <a href="{% url 'Index:editar_usuario' user.id %}"
                         class="btn btn-sm btn-secondary me-2 text-primary w-100 fw-bold border border-3 border-quinto">Editar</a>
 

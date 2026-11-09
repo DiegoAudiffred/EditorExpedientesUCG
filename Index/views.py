@@ -53,13 +53,7 @@ def index(request):
         'estados':estados,
     }
     return render(request, 'Index/index.html',context)
-def preguntasIndex(request):
-    estados = Estado.objects.all()
-    context = {
-   
-        'estados':estados,
-    }
-    return render(request, 'Index/preguntasIndex.html',context)
+
 
 @login_required(login_url='/login/')
 def expedientesLayout(request):
@@ -163,18 +157,19 @@ def agregarRepresentantes(request, id):
                 rep_nombre = rep_data.get('nombre', '').strip()
 
                 if rep_id:
-                    representante = RepresentanteLegal.objects.get(id=rep_id)
+                    representanteL = RepresentanteLegal.objects.get(id=rep_id)
                 else:
-                    representante, created_rep = RepresentanteLegal.objects.get_or_create(
+                    representanteL, created_rep = RepresentanteLegal.objects.get_or_create(
                         nombre=rep_nombre
                     )
                 
-                representante.expedientes.add(expediente)
+                representanteL.expedientes.add(expediente)
                 
                 nueva, created_sec = SeccionesExpediente.objects.get_or_create(
                     expediente=expediente,
                     tipoDeSeccion='B',
-                    tituloSeccion=f"Representante legal - {representante.nombre}"
+                    tituloSeccion=f"Representante legal - {representanteL.nombre}",
+                    representante = representanteL,
                 )
                 
                 if created_sec:
@@ -215,24 +210,25 @@ def agregarObligados(request, id):
                 representante = None
 
                 if id_existente:
-                    obligado = ObligadoSolidario.objects.get(id=id_existente)
-                    obligado.expedientes.add(expediente)
-                    tipo_persona = getattr(obligado, 'tipoPersona', tipo_persona)
-                    nombre = obligado.nombre
+                    obligadoS = ObligadoSolidario.objects.get(id=id_existente)
+                    obligadoS.expedientes.add(expediente)
+                    tipo_persona = getattr(obligadoS, 'tipoPersona', tipo_persona)
+                    nombre = obligadoS.nombre
                     
-                    if tipo_persona == 'M' and getattr(obligado, 'representante', None):
-                        representante = obligado.representante
+                    if tipo_persona == 'M' and getattr(obligadoS, 'representante', None):
+                        representante = obligadoS.representante
                 else:
-                    obligado, created_obl = ObligadoSolidario.objects.get_or_create(
+                    obligadoS, created_obl = ObligadoSolidario.objects.get_or_create(
                         nombre=nombre,
                         defaults={'tipoPersona': tipo_persona}
                     )
-                    obligado.expedientes.add(expediente)
+                    obligadoS.expedientes.add(expediente)
 
                 nueva, created_sec = SeccionesExpediente.objects.get_or_create(
                     expediente=expediente,
                     tipoDeSeccion='C',
-                    tituloSeccion=f"Obligado solidario y garantes - {nombre}"
+                    tituloSeccion=f"Obligado solidario y garantes - {nombre}",
+                    obligado = obligadoS
                 )
                 
                 if created_sec:
@@ -249,8 +245,8 @@ def agregarObligados(request, id):
 
                     if representante:
                         representante.expedientes.add(expediente)
-                        obligado.representante = representante
-                        obligado.save()
+                        obligadoS.representante = representante
+                        obligadoS.save()
 
                         nombre_rep = representante.nombre if hasattr(representante, 'nombre') else nombre_rep_input
                         
@@ -519,6 +515,8 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
+
+
 @login_required(login_url='/login/')
 def lineaCrear(request, id):
     print(f"[DEBUG] Inicio de lineaCrear. Request method: {request.method}, ID expediente: {id}")
@@ -2675,6 +2673,10 @@ def eliminarRenglonExpediente(request, expedienteID, seccionID, apartadoID):
 def revisionExpediente(request, expedienteID,observaciones):
     expediente = get_object_or_404(Expediente, pk=expedienteID)
     
+    destinatario = [expediente.usuario.email] #expediente.usuarioCredito.email
+        #destinatario = ["daudiffred@ucg.com.mx"]    
+    dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
+    url_final = f"{dominio}{expediente.id}/"
   
     if observaciones == "S":
         getEstado = Estado.objects.get(nombre='En revisión')
@@ -2751,11 +2753,11 @@ def revisionExpediente(request, expedienteID,observaciones):
                             'comentario': str(registro.comentarioCredito)
                         })
 
-        destinatario = [expediente.usuario.email] #expediente.usuarioCredito.email
-        #destinatario = ["daudiffred@ucg.com.mx"]    
-        dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
-        url_final = f"{dominio}{expediente.id}/"
-        #asunto = f"RECHAZO EN RECEPCIÓN: Expediente {expediente.id} - {expediente.socio.nombre}"
+        #destinatario = [expediente.usuario.email] #expediente.usuarioCredito.email
+        ##destinatario = ["daudiffred@ucg.com.mx"]    
+        #dominio = "http://192.168.0.29:8000/expedientes/editarExpediente/"
+        #url_final = f"{dominio}{expediente.id}/"
+        ##asunto = f"RECHAZO EN RECEPCIÓN: Expediente {expediente.id} - {expediente.socio.nombre}"
 
         comentarios_texto = ""
         for item in seccionesConComentarios:
@@ -4187,6 +4189,255 @@ def detectarArchivos(request, id):
 
 # urls.py:
 # 
+@login_required(login_url='/login/')
+def actualizarExpediente(request, id):
+    expediente = get_object_or_404(Expediente, pk=id)
+    lineasLista = Linea.objects.filter(expediente=expediente)
+    secciones = (
+        SeccionesExpediente.objects
+        .filter(expediente=expediente)
+        .select_related('linea')
+        .order_by('tipoDeSeccion', 'pk')
+    )
+    estados = Estado.objects.all()
+    usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Gerente Centro de Negocios'])
+    usuariosCreditos = User.objects.filter(roles__in=['Credito', 'Gerente de Credito'])
+    usuariosNegocios = User.objects.filter(roles__in=['Ejecutivo de Negocios'])
+    rep_form = CrearRepresentante()
+    obl_form = CrearObligado()
+    lin_form = LineaCrearForm(expedienteInstance=expediente)
+    cita_form = CitaForm(user=request.user)
+    ahora_local = timezone.localtime(timezone.now())
+    hoy = ahora_local.date()
+    hora_actual = ahora_local.time()
+
+    citasDisponibles = Cita.objects.filter(
+        Q(dia__gt=hoy) |
+        Q(dia=hoy, hora__gte=hora_actual)
+    ).order_by('dia', 'hora')
+
+    citaAsignada = Cita.objects.filter(
+        Q(expedientes=expediente),
+    ).order_by('dia', 'hora').last()
+
+    if request.method == "POST":
+        post = request.POST
+        datos_agrupados = {}
+
+        es_solo_credito = "guardar_credito" in post
+
+        for key, value in post.items():
+            if not key.startswith("registro-"):
+                continue
+
+            parts = key.split('-', 4)
+            if len(parts) != 5:
+                continue
+
+            _, seccion_id_s, apartado_id_s, secuencial_s, field = parts
+
+            try:
+                ids_tuple = (int(seccion_id_s), int(apartado_id_s), int(secuencial_s))
+            except ValueError:
+                continue
+
+            if ids_tuple not in datos_agrupados:
+                datos_agrupados[ids_tuple] = {}
+
+            datos_agrupados[ids_tuple][field] = value.strip()
+
+        for (seccion_id, apartado_id, secuencial), campos in datos_agrupados.items():
+            registro = RegistroSeccion.objects.filter(
+                seccion__id=seccion_id,
+                seccion__expediente=expediente,
+                apartado__id=apartado_id,
+                secuencial=secuencial
+            ).first()
+
+            if not registro:
+                continue
+
+            if es_solo_credito:
+                if 'comentarioCredito' in campos:
+                    registro.comentarioCredito = campos['comentarioCredito']
+                    registro.save()
+            else:
+                if registro.seccion.tipoDeSeccion == 'VII' and 'descripcion_libre' in campos:
+                    registro.comentario = campos['descripcion_libre']
+                elif 'comentario' in campos:
+                    registro.comentario = campos['comentario']
+
+                if 'estatus' in campos:
+                    registro.estatus = campos['estatus']
+
+                if 'comentarioCredito' in campos:
+                    registro.comentarioCredito = campos['comentarioCredito']
+
+                if 'es_fecha' in campos:
+                    registro.es_fecha = campos['es_fecha'].lower() == 'true'
+
+                if registro.es_fecha:
+                    registro.numero = None
+                    if 'fecha_date' in campos:
+                        val_fecha = campos['fecha_date']
+                        if val_fecha:
+                            try:
+                                registro.fecha = datetime.strptime(val_fecha, "%Y-%m-%d").date()
+                            except ValueError:
+                                registro.fecha = None
+                        else:
+                            registro.fecha = None
+                    else:
+                        registro.fecha = None
+                else:
+                    registro.fecha = None
+                    if 'fecha_num' in campos:
+                        val_numero = campos['fecha_num']
+                        if val_numero:
+                            try:
+                                registro.numero = val_numero
+                            except ValueError:
+                                registro.numero = None
+                        else:
+                            registro.numero = None
+
+                registro.save()
+
+        messages.success(request, 'Datos guardados con éxito.')
+        return redirect(reverse('Index:actualizarExpediente', args=[expediente.pk]))
+
+    num_kepler = expediente.socio.numeroKepler
+    if num_kepler is None or str(num_kepler).strip() == "" or str(num_kepler).strip() == "0000" or str(num_kepler).strip() == "0":
+        stringSocio = f"0000 {expediente.socio.nombre}"
+    else:
+        stringSocio = str(num_kepler).strip()
+
+    archivos_encontrados = checarRuta(stringSocio, secciones)
+    print(stringSocio)
+
+    registrosConComentarios = []
+    for seccion in secciones:
+        apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+        for apartado in apartados:
+            reg = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado).first()
+            if reg is not None and reg.comentarioCredito:
+                registrosConComentarios.append({
+                    'nombreSeccion': str(seccion.tituloSeccion),
+                    'claveApartado': str(apartado.clave),
+                    'comentarioCredito': str(reg.comentarioCredito)
+                })
+
+    context = {
+        'estados': estados,
+        'usuarios': usuarios,
+        'expediente': expediente,
+        'lineasLista': lineasLista,
+        'secciones': [],
+        'citasDisponibles': citasDisponibles,
+        'citaAsignada': citaAsignada,
+        'usuariosCreditos': usuariosCreditos,
+        'usuariosNegocios': usuariosNegocios,
+        'registrosConComentarios': registrosConComentarios,
+    }
+
+    totalRegistros = 0
+    totalRegistrosLlenos = 0
+    totalRegistrosNA = 0
+    totalRegistrosVacios = 0
+    es_credito = request.user.roles in ['Credito', 'Gerente de Credito']
+    estatus_recepcion = expediente.estatus.nombre == "Completo"
+
+    for seccion in secciones:
+        registros_existentes = (
+            RegistroSeccion.objects
+            .filter(seccion=seccion)
+            .select_related('apartado')
+            .order_by('apartado__clave', 'secuencial')
+        )
+
+        filas = []
+        for registro in registros_existentes:
+            totalRegistros += 1
+
+            if registro.estatus == "N/A":
+                totalRegistrosNA += 1
+            elif registro.numero or registro.fecha:
+                totalRegistrosLlenos += 1
+            else:
+                totalRegistrosVacios += 1
+
+            fecha_html = ""
+            if registro.es_fecha:
+                if registro.fecha:
+                    fecha_html = registro.fecha.strftime("%Y-%m-%d")
+            else:
+                if registro.numero is not None:
+                    fecha_html = str(registro.numero)
+
+            info_archivo = archivos_encontrados.get(registro.id)
+
+            filas.append({
+                'apartado': registro.apartado,
+                'registro': registro,
+                'fecha_html': fecha_html,
+                'archivo_url': info_archivo['ruta'] if info_archivo else None,
+            })
+
+        context['secciones'].append({
+            'seccion': seccion,
+            'filas': filas,
+        })
+
+    # ---------- Agrupar secciones de OPERATIVA por línea ----------
+    SECCIONES_OPERATIVA = ['III', 'IV', 'V', 'VI', 'VII']
+    grupos_dict = {}
+
+    for item in context['secciones']:
+        sec = item['seccion']
+        if sec.tipoDeSeccion not in SECCIONES_OPERATIVA:
+            continue
+
+        clave = sec.linea_id or 0  # 0 = sin línea
+        if clave not in grupos_dict:
+            grupos_dict[clave] = {
+                'linea': sec.linea,  # None si no tiene línea
+                'items': [],
+            }
+        grupos_dict[clave]['items'].append(item)
+
+    # Líneas ordenadas por número, "Sin línea" al final
+    context['operativa_por_linea'] = sorted(
+        grupos_dict.values(),
+        key=lambda g: (g['linea'] is None, g['linea'].numero if g['linea'] else '')
+    )
+    # --------------------------------------------------------------
+
+    if totalRegistros != (totalRegistrosLlenos + totalRegistrosVacios + totalRegistrosNA):
+        context['mensajeInfo'] = "Los registros no coinciden con los status"
+
+    context['totalRegistros'] = totalRegistros
+    context['totalRegistrosLlenos'] = totalRegistrosLlenos
+    context['totalRegistrosNA'] = totalRegistrosNA
+    context['totalRegistrosVacios'] = totalRegistrosVacios
+
+    total_util = totalRegistrosLlenos + totalRegistrosVacios
+
+    if total_util > 0:
+        porcentaje = (totalRegistrosLlenos / total_util) * 100
+    else:
+        porcentaje = 0
+
+    context['porcentajeLlenado'] = round(porcentaje, 2)
+
+    context['rep_form'] = rep_form
+    context["obl_form"] = obl_form
+    context["lin_form"] = lin_form
+    context['cita_form'] = cita_form
+    lista_reps = RepresentanteLegal.objects.filter(expedientes=expediente)
+    lista_obls = ObligadoSolidario.objects.filter(expedientes=expediente)
+    context['lista_reps'] = lista_reps
+    context["lista_obls"] = lista_obls
+    return render(request, 'Index/actualizarExpediente.html', context)
 
 
 
