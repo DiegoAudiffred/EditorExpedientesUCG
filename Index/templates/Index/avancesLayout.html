@@ -10,7 +10,87 @@
     <a  class="btn btn-primary" href="{% url 'Index:avancesMovimientos' %}">Avances por expedientes</a>
     <a href="{% url 'Index:exportarEjecutivos' %}" class="btn btn-secondary text-white">
   Reporte Excel por Ejecutivo
-</a>    <button class="btn btn-tercero text-white"> Reporte Expedientes Faltantes y Progreso </button>
+</a>  
+
+<!-- Botón (reemplaza el <a> actual) -->
+<button type="button" class="btn btn-tercero text-white"
+        data-bs-toggle="modal" data-bs-target="#modalReporteExpedientes">
+  Reporte Expedientes Faltantes y Progreso
+</button>
+
+<!-- Modal (ponlo al final del template, fuera de cualquier <form>) -->
+<div class="modal fade" id="modalReporteExpedientes" tabindex="-1"
+     aria-labelledby="modalReporteExpedientesLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="formReporteExpedientes" method="get"
+            action="{% url 'Index:reporte_control_expedientes' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalReporteExpedientesLabel">Generar reporte</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">Selecciona el mes de cierre que quieres consultar.</p>
+          <div class="row g-3">
+            <div class="col-7">
+              <label for="repMes" class="form-label">Mes</label>
+              <select id="repMes" name="mes" class="form-select" required>
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8">Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+              </select>
+            </div>
+            <div class="col-5">
+              <label for="repAnio" class="form-label">Año</label>
+              <input type="number" id="repAnio" name="anio" class="form-control"
+                     min="2000" max="2100" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-tercero text-white">Generar PDF</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var modalEl = document.getElementById('modalReporteExpedientes');
+    var form = document.getElementById('formReporteExpedientes');
+
+    // Por defecto: el mes y año actuales
+    modalEl.addEventListener('show.bs.modal', function () {
+      var hoy = new Date();
+      if (!document.getElementById('repAnio').value) {
+        document.getElementById('repMes').value = hoy.getMonth() + 1;
+        document.getElementById('repAnio').value = hoy.getFullYear();
+      }
+    });
+
+    // El PDF se descarga sin salir de la página; cerramos el modal al enviar
+    form.addEventListener('submit', function () {
+      setTimeout(function () {
+        bootstrap.Modal.getInstance(modalEl).hide();
+      }, 300);
+    });
+  })();
+</script>
+
+
+
+
 
     </div>
     <div class="card shadow-sm mb-4">

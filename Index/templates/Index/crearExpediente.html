@@ -23,43 +23,43 @@
             <div class="fnSuperiorRegularTitle text-quinto ">Datos del expediente</div>
             <div class=" row  border border-3 border-quinto  rounded rounded-4">
 
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Socio Existente</label>
                     {{ exp_form.socio }}
                     {% if exp_form.socio.errors %}<div class="text-danger small">{{ exp_form.socio.errors }}</div>
                     {% endif %}
                 </div>
 
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">O escribir nuevo nombre</label>
                     {{ exp_form.socio_manual_nombre }}
                     {% if exp_form.socio_manual_nombre.errors %}<div class="text-danger small">{{
                         exp_form.socio_manual_nombre.errors }}</div>{% endif %}
                 </div>
 
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Tipo de Persona (F/M)</label>
                     {{ exp_form.socio_manual_tipo }}
                     {% if exp_form.socio_manual_tipo.errors %}<div class="text-danger small">{{
                         exp_form.socio_manual_tipo.errors }}</div>{% endif %}
                 </div>
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Numero Kepler</label>
                     {{ exp_form.socio_manual_numero }}
                     {% if exp_form.socio_manual_numero.errors %}<div class="text-danger small">{{
                         exp_form.socio_manual_numero.errors }}</div>{% endif %}
                 </div>
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Ejecutivo de Servicios</label>
                     {{ exp_form.usuario }}
                 </div>
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Ejecutivo de Negocios</label>
                     {{ exp_form.usuarioNegocios }}
                 </div>
 
 
-                <div class="col-md-4 my-3">
+                <div class="col-6 col-lg-4 my-3">
                     <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Estatus</label>
                     <input type="text" class="form-control bg-grayBorder" value="Nuevo" disabled>
                 </div>

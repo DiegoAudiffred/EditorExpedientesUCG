@@ -50,8 +50,14 @@
 
                                <div class="form-check form-switch ms-5 ">
                     {{ form.vigente }}
-                    {% if form.vigente.errors %}<div class="text-danger small">{{
-                        form.vigente.errors }}</div>{% endif %}
+                    {% if form.vigente.errors %}<div class="text-danger small">{{form.vigente.errors }}</div>{% endif %}
+            </div>
+                </div>         <div class="col-md-4 my-auto">
+        <label class="form-label fnSuperiorRegularTitle3 m-0 text-primary">Contemplar</label>
+
+                               <div class="form-check form-switch ms-5 ">
+                    {{ form.contemplar }}
+                    {% if form.contemplar.errors %}<div class="text-danger small">{{form.contemplar.errors }}</div>{% endif %}
             </div>
                 </div>
             </div>

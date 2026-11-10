@@ -232,13 +232,15 @@ class CrearRepresentante(forms.ModelForm):
 class LineaCrearForm(forms.ModelForm):
     class Meta:
         model = Linea
-        fields = ['expediente', 'numero', 'monto', 'tipoLinea', 'vigente', 'tipoGarantia'] 
+        fields = ['expediente', 'numero', 'monto', 'tipoLinea', 'vigente', 'tipoGarantia','contemplar'] 
         widgets = {
             'expediente': forms.Select(attrs={'class': 'form-control'}),
             'numero': forms.TextInput(attrs={'class': 'form-control'}),
             'monto': forms.NumberInput(attrs={'class': 'form-control'}),
             'tipoLinea': forms.Select(attrs={'class': 'form-control'}),
             'tipoGarantia': forms.Select(attrs={'class': 'form-control'}),
+          
+
         }
         
     def __init__(self, *args, **kwargs):
@@ -246,7 +248,8 @@ class LineaCrearForm(forms.ModelForm):
         super(LineaCrearForm, self).__init__(*args, **kwargs)
         check_style = 'form-check-input fs-2 my-0'
         self.fields['vigente'].widget.attrs.update({'class': check_style})
-        
+        self.fields['contemplar'].widget.attrs.update({'class': check_style})
+
         # Bloqueamos el campo para que no se pueda modificar visualmente
         self.fields['expediente'].disabled = True
         
