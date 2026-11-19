@@ -4,12 +4,23 @@
 
 <div class="container py-4">
     {% if expediente.eliminado == False %}
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ message|safe }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
     <div class="row">
         <div class="col-11 fnSuperiorRegularTitle text-truncate">
 
             <b class="text-tercero ">{{expediente.socio}}</b> - 
 
         </div>
+        
         <div class="col-1 fnSuperiorRegularTitle text-end">
             {% if expediente.socio.numeroKepler %}
                             {{expediente.socio.numeroKepler}}

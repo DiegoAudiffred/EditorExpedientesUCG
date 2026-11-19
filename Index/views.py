@@ -276,6 +276,7 @@ def editarExpediente(request, id):
         .select_related('linea')
         .order_by('tipoDeSeccion', 'pk')
     )
+    
     estados = Estado.objects.all()
     usuarios = User.objects.filter(roles__in=['Ejecutivo de Servicios', 'Gerente Centro de Negocios'])
     usuariosCreditos = User.objects.filter(roles__in=['Credito', 'Gerente de Credito'])
@@ -465,7 +466,6 @@ def editarExpediente(request, id):
             'filas': filas,
         })
 
-    # ---------- Agrupar secciones de OPERATIVA por línea ----------
     SECCIONES_OPERATIVA = ['III', 'IV', 'V', 'VI', 'VII']
     grupos_dict = {}
 
@@ -474,20 +474,18 @@ def editarExpediente(request, id):
         if sec.tipoDeSeccion not in SECCIONES_OPERATIVA:
             continue
 
-        clave = sec.linea_id or 0  # 0 = sin línea
+        clave = sec.linea_id or 0  
         if clave not in grupos_dict:
             grupos_dict[clave] = {
-                'linea': sec.linea,  # None si no tiene línea
+                'linea': sec.linea,  
                 'items': [],
             }
         grupos_dict[clave]['items'].append(item)
 
-    # Líneas ordenadas por número, "Sin línea" al final
     context['operativa_por_linea'] = sorted(
         grupos_dict.values(),
         key=lambda g: (g['linea'] is None, g['linea'].numero if g['linea'] else '')
     )
-    # --------------------------------------------------------------
 
     if totalRegistros != (totalRegistrosLlenos + totalRegistrosVacios + totalRegistrosNA):
         context['mensajeInfo'] = "Los registros no coinciden con los status"
@@ -515,6 +513,88 @@ def editarExpediente(request, id):
     context['lista_reps'] = lista_reps
     context["lista_obls"] = lista_obls
     return render(request, 'Index/editarExpediente.html', context)
+
+
+@login_required(login_url='/login/')
+
+def enviarExpediente(request, expedienteID,reenviado):
+    expediente = get_object_or_404(Expediente, pk=expedienteID)
+    if reenviado == 'True':
+        correoParaRevision(expediente,reenviado)
+        getEstado = Estado.objects.get(nombre='Recepción')
+        expediente.estatus = getEstado
+        expediente.save()
+    elif reenviado == 'False':
+
+        registrosRequeridos = ["2.01", "2.02", "2.03", "3.01", "3.02", "3.03", "3.04", "3.05", "3.09"]
+        faltantes = []
+        claves_validadas = set()
+        
+        secciones = SeccionesExpediente.objects.filter(expediente=expediente).order_by('tipoDeSeccion', 'pk')
+        
+        for seccion in secciones:
+            apartados = ApartadoCatalogo.objects.filter(tipoDeSeccion=seccion.tipoDeSeccion).order_by('clave')
+            for apartado in apartados:
+                clave = str(apartado.clave)
+                if clave not in registrosRequeridos:
+                    continue
+                
+                registros = RegistroSeccion.objects.filter(seccion=seccion, apartado=apartado)
+        
+                if not registros.exists():
+                    faltantes.append({
+                        'nombreSeccion': str(seccion.tituloSeccion),
+                        'claveApartado': clave,
+                        'comentario': 'Sin registros creados'
+                    })
+                    continue
+                
+                todos_validos = True
+                for registro in registros:
+                    if not registro.numero and not registro.fecha:
+                        todos_validos = False
+                        faltantes.append({
+                            'nombreSeccion': str(seccion.tituloSeccion),
+                            'claveApartado': clave,
+                            'comentario': f'Secuencial {registro.secuencial} incompleto'
+                        })
+                        registro.estatus = '--'
+                        registro.save()
+        
+                if todos_validos:
+                    claves_validadas.add(clave)
+        
+        cumple_todos = len(faltantes) == 0 and set(registrosRequeridos).issubset(claves_validadas)
+        
+        if cumple_todos:
+            correoParaRevision(expediente, reenviado)
+            getEstado = Estado.objects.get(nombre='Completo')
+            expediente.estatus = getEstado
+            expediente.save()
+            darAlta(expediente, getEstado.nombre, request.user)
+            
+            return redirect('Index:editarExpediente', expediente.id)
+      
+        else:
+            mensaje_html = (
+                '<div class="mb-2"><strong>No se puede enviar el expediente.</strong> Se encontraron los siguientes registros obligatorios faltantes o incompletos:</div>'
+                '<ul class="mb-0 ps-3 text-start" style="max-height: 200px; overflow-y: auto;">'
+            )
+            for item in faltantes:
+                mensaje_html += (
+                    f'<li class="mb-1">'
+                    f'<b>{item["nombreSeccion"]}</b> '
+                    f'<span class="badge bg-secondary">Apt. {item["claveApartado"]}</span> — '
+                    f'<span class="text-danger">{item["comentario"]}</span>'
+                    f'</li>'
+                )
+            mensaje_html += '</ul>'
+            
+            messages.error(request, mensaje_html)
+            return redirect('Index:editarExpediente', expediente.id)
+    
+
+
 
 
 @login_required(login_url='/login/')
@@ -2080,25 +2160,6 @@ def eliminarJunta(request, cita):
         Cita.objects.filter(id=cita).delete()
         return redirect('Index:juntasIndex')
     
-@login_required(login_url='/login/')
-
-def enviarExpediente(request, expedienteID,reenviado):
-    expediente = get_object_or_404(Expediente, pk=expedienteID)
-    if reenviado == 'True':
-        correoParaRevision(expediente,reenviado)
-        getEstado = Estado.objects.get(nombre='Recepción')
-        expediente.estatus = getEstado
-        expediente.save()
-    elif reenviado == 'False':
-        correoParaRevision(expediente,reenviado)
-        getEstado = Estado.objects.get(nombre='Completo')
-        expediente.estatus = getEstado
-        expediente.save()
-
-    darAlta(expediente,getEstado.nombre,request.user)
-    print("Alta dada")
-    return redirect('Index:editarExpediente', expediente.id)
-
 
 @login_required(login_url='/login/')
 def cambiarUsuarioNegocios(request, id):
@@ -4440,493 +4501,28 @@ def actualizarExpediente(request, id):
     return render(request, 'Index/actualizarExpediente.html', context)
 
 
+""" Aqui"""
 
-"""
-reportes.py
------------
-Reporte mensual "Expedientes pendientes de entrega a Crédito".
-
-Dependencias:  pip install reportlab matplotlib
-
-Uso:
-    from .reportes import controlExpedientesPDF
-
-    # Devuelve un BytesIO (ideal para una vista de Django)
-    buffer = controlExpedientesPDF(9, 2026)
-    return FileResponse(buffer, as_attachment=True,
-                        filename="Reporte_Control_Expedientes_Septiembre_2026.pdf")
-
-    # También acepta date/datetime o "YYYY-MM", y puede guardar a disco
-    controlExpedientesPDF("2026-09", salida="/tmp/reporte.pdf")
-
-Si pegas esto dentro de models.py, borra el import de ".models".
-"""
-import calendar
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date
 from functools import partial
 from io import BytesIO
 from xml.sax.saxutils import escape
 
 import matplotlib
-
-matplotlib.use("Agg")  # backend sin ventana (servidor)
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from django.db.models import Count, Q
-from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle as PS
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
-from reportlab.platypus import (
-    Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
-)
+from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
-# --------------------------------------------------------------------------
-# Configuración
-# --------------------------------------------------------------------------
-ESTATUS_ARCHIVADO = "Archivado"   # nombre del Estado que significa "ya entregado"
-TITULO = "Expedientes pendientes de entrega a Crédito"
-ENCABEZADO = "CENTRO DE NEGOCIOS / CONTROL DE EXPEDIENTES"
-
-MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio",
-         "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-
-AZUL_HEX = "#12508A"
-NARANJA_HEX = "#F5A843"
-AZUL = colors.HexColor(AZUL_HEX)
-FONDO_KPI = colors.HexColor("#F6F8FB")
-BORDE = colors.HexColor("#D3DDEA")
-FONDO_TOTAL = colors.HexColor("#EEF2F8")
-GRIS = colors.HexColor("#6B7280")
-TEXTO = colors.HexColor("#222222")
-
-ANCHO_UTIL = 6.9 * inch  # carta (8.5") menos márgenes de 0.8"
-
-
-# --------------------------------------------------------------------------
-# Utilidades
-# --------------------------------------------------------------------------
-def _normalizar_periodo(mes, anio=None):
-    """Acepta (9, 2026), date/datetime, o "2026-09". Devuelve (mes, anio)."""
-    if isinstance(mes, (date, datetime)):
-        return mes.month, mes.year
-    if isinstance(mes, str) and "-" in mes:
-        a, m = mes.split("-")[:2]
-        return int(m), int(a)
-    mes = int(mes)
-    if not 1 <= mes <= 12:
-        raise ValueError("El mes debe estar entre 1 y 12")
-    return mes, int(anio or timezone.localdate().year)
-
-
-def _es_archivado(nombre_estado):
-    return (nombre_estado or "").strip().casefold() == ESTATUS_ARCHIVADO.casefold()
-
-
-def _fecha_creacion(exp):
-    """Fecha que define el 'Año de Estudio' del expediente."""
-    # Si le agregan el campo fechaOriginalCreacion al modelo Expediente,
-    # descomenten la siguiente línea y borren la de abajo:
-    # return exp.fechaOriginalCreacion or exp.fechaCreacion
-    return exp.fechaCreacion
-
-
-def _unir(lista):
-    """['A', 'B', 'C'] -> 'A, B y C'"""
-    lista = list(lista)
-    if len(lista) <= 1:
-        return "".join(lista)
-    return ", ".join(lista[:-1]) + " y " + lista[-1]
-
-
-def _signo(n):
-    return f"+{n}" if n > 0 else str(n)  # +9, 0, -2
-
-
-def _pct(parte, total):
-    return f"{(parte / total * 100) if total else 0:.1f}%"
-
-
-# --------------------------------------------------------------------------
-# 1) Recolección de datos (única parte que toca la base de datos)
-# --------------------------------------------------------------------------
-def _recolectar_datos(mes, anio):
-    inicio = date(anio, mes, 1)
-    fin = date(anio, mes, calendar.monthrange(anio, mes)[1])
-    corte_anterior = inicio - timedelta(days=1)
-    mes_ant = corte_anterior.month
-
-    # Socio == Expediente. Cada expediente con el número de líneas contempladas.
-    expedientes = list(
-        Expediente.objects.filter(contemplado=True, eliminado=False)
-        .select_related("socio", "estatus", "usuarioNegocios")
-        .annotate(n_lineas=Count("linea", filter=Q(linea__contemplar=True)))
-    )
-
-    # Historial de estatus ordenado cronológicamente, por expediente.
-    historial = defaultdict(list)
-    cambios = (
-        EstadosFechas.objects.filter(expediente__contemplado=True, fecha__isnull=False)
-        .order_by("fecha", "hora", "id")
-        .values_list("expediente_id", "fecha", "estado__nombre")
-    )
-    for exp_id, fecha, nombre in cambios:
-        historial[exp_id].append((fecha, nombre))
-
-    def existe_al(exp, corte):
-        creado = _fecha_creacion(exp)
-        return creado is None or creado <= corte
-
-    def archivado_al(exp, corte):
-        """Estatus vigente en la fecha 'corte', reconstruido con EstadosFechas."""
-        ultimo = None
-        for fecha, nombre in historial.get(exp.id, ()):
-            if fecha > corte:
-                break
-            ultimo = nombre
-        if ultimo is not None:
-            return _es_archivado(ultimo)
-        # Sin historial: recurrir a fechaArchivado / estatus actual
-        return _es_archivado(exp.estatus.nombre) and (
-            exp.fechaArchivado is None or exp.fechaArchivado <= corte
-        )
-
-    por_anio = defaultdict(lambda: {"ini": 0, "ent": 0, "nue": 0, "fin": 0})
-    por_ejec = defaultdict(lambda: {"ops": 0, "socios": set()})
-    entregados, nuevos = [], []
-    operaciones_base = 0
-    socios_pendientes = set()
-
-    for exp in expedientes:
-        if not existe_al(exp, fin):
-            continue  # todavía no existía al cierre del mes
-        operaciones_base += exp.n_lineas
-        if exp.n_lineas == 0:
-            continue  # sin operaciones contempladas no hay nada que entregar
-
-        en_fin = not archivado_al(exp, fin)
-        en_ini = existe_al(exp, corte_anterior) and not archivado_al(exp, corte_anterior)
-        creado = _fecha_creacion(exp)
-        anio_estudio = creado.year if creado else 0
-        n = exp.n_lineas
-        u = exp.usuarioNegocios
-        ejecutivo = (u.nombreCompleto or u.username) if u else "Sin asignar"
-
-        if en_ini:
-            por_anio[anio_estudio]["ini"] += n
-        if en_fin:
-            por_anio[anio_estudio]["fin"] += n
-            por_ejec[ejecutivo]["ops"] += n
-            por_ejec[ejecutivo]["socios"].add(exp.socio_id)
-            socios_pendientes.add(exp.socio_id)
-        if en_ini and not en_fin:
-            por_anio[anio_estudio]["ent"] -= n
-            entregados.append((str(exp.socio), ejecutivo, n))
-        if en_fin and not en_ini:
-            por_anio[anio_estudio]["nue"] += n
-            nuevos.append((str(exp.socio), ejecutivo, n))
-
-    filas_anio = [
-        dict(anio=a, etiqueta=str(a) if a else "S/F", **v)
-        for a, v in sorted(por_anio.items())
-        if v["ini"] or v["fin"] or v["ent"] or v["nue"]
-    ]
-    filas_ejec = sorted(
-        ({"nombre": k, "ops": v["ops"], "socios": len(v["socios"])} for k, v in por_ejec.items()),
-        key=lambda f: (-f["ops"], f["nombre"]),
-    )
-
-    return {
-        "mes": mes, "anio": anio,
-        "nombre_mes": MESES[mes - 1], "nombre_mes_ant": MESES[mes_ant - 1],
-        "operaciones_base": operaciones_base,
-        "total_pendientes": sum(f["fin"] for f in filas_anio),
-        "total_ini": sum(f["ini"] for f in filas_anio),
-        "total_ent": sum(f["ent"] for f in filas_anio),
-        "total_nue": sum(f["nue"] for f in filas_anio),
-        "socios_unicos": len(socios_pendientes),
-        "filas_anio": filas_anio,
-        "filas_ejec": filas_ejec,
-        "entregados": entregados,
-        "nuevos": nuevos,
-    }
-
-
-# --------------------------------------------------------------------------
-# 2) Gráficos
-# --------------------------------------------------------------------------
-def _estilo_matplotlib():
-    plt.rcParams.update({
-        "font.family": "serif",
-        "font.serif": ["Times New Roman", "Liberation Serif", "DejaVu Serif"],
-        "font.size": 7,
-    })
-
-
-def _fig_a_imagen(fig, ancho_in, alto_in):
-    buf = BytesIO()
-    fig.savefig(buf, format="png")
-    plt.close(fig)
-    buf.seek(0)
-    return Image(buf, width=ancho_in * inch, height=alto_in * inch)
-
-
-def _grafico_anios(filas):
-    _estilo_matplotlib()
-    fig, ax = plt.subplots(figsize=(3.4, 2.5), dpi=220)
-    etiquetas = [f["etiqueta"] for f in filas]
-    valores = [f["fin"] for f in filas]
-    barras = ax.bar(etiquetas, valores, color=AZUL_HEX, width=0.7)
-    ax.bar_label(barras, fontsize=6.5, padding=1.5)
-    ax.set_title("Pendientes por año", fontsize=8, fontweight="bold")
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.set_ylim(0, max(valores + [1]) * 1.15)
-    fig.tight_layout()
-    return _fig_a_imagen(fig, 3.4, 2.5)
-
-
-def _grafico_ejecutivos(filas):
-    _estilo_matplotlib()
-    alto = min(max(2.5, 0.3 * len(filas) + 0.8), 4.2)
-    fig, ax = plt.subplots(figsize=(3.4, alto), dpi=220)
-    y = list(range(len(filas)))
-    h = 0.36
-    b_soc = ax.barh([i - h / 2 for i in y], [f["socios"] for f in filas], height=h,
-                    color=NARANJA_HEX, edgecolor="black", linewidth=0.6, label="Socios únicos")
-    b_ops = ax.barh([i + h / 2 for i in y], [f["ops"] for f in filas], height=h,
-                    color=AZUL_HEX, edgecolor="black", linewidth=0.6, label="Operaciones")
-    ax.bar_label(b_soc, fontsize=6, padding=1.5)
-    ax.bar_label(b_ops, fontsize=6, padding=1.5)
-    ax.set_yticks(y)
-    ax.set_yticklabels([f["nombre"] for f in filas])
-    ax.invert_yaxis()  # el de mayor carga arriba
-    ax.set_title("Operaciones y socios por ejecutivo", fontsize=8, fontweight="bold")
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.set_xlim(0, max([f["ops"] for f in filas] + [1]) * 1.15)
-    ax.legend(fontsize=6, frameon=False, loc="lower right")
-    fig.tight_layout()
-    return _fig_a_imagen(fig, 3.4, alto)
-
-
-# --------------------------------------------------------------------------
-# 3) Encabezado / pie con "Página X de Y"
-# --------------------------------------------------------------------------
-class _CanvasNumerado(canvas.Canvas):
-    def __init__(self, *args, fuente="", **kwargs):
-        super().__init__(*args, **kwargs)
-        self._fuente = fuente
-        self._estados = []
-
-    def showPage(self):
-        self._estados.append(dict(self.__dict__))
-        self._startPage()
-
-    def save(self):
-        total = len(self._estados)
-        for estado in self._estados:
-            self.__dict__.update(estado)
-            self._marco(total)
-            super().showPage()
-        super().save()
-
-    def _marco(self, total):
-        ancho, alto = letter
-        izq, der = 0.8 * inch, ancho - 0.8 * inch
-        self.setStrokeColor(BORDE)
-        self.setLineWidth(0.6)
-        self.setFillColor(GRIS)
-        self.setFont("Helvetica", 7.5)
-        # Encabezado
-        self.drawString(izq, alto - 0.55 * inch, ENCABEZADO)
-        self.line(izq, alto - 0.65 * inch, der, alto - 0.65 * inch)
-        # Pie
-        self.line(izq, 0.62 * inch, der, 0.62 * inch)
-        self.drawString(izq, 0.45 * inch, self._fuente)
-        self.drawRightString(der, 0.45 * inch, f"Página {self._pageNumber} de {total}")
-
-
-# --------------------------------------------------------------------------
-# 4) Construcción del PDF (no toca la base de datos)
-# --------------------------------------------------------------------------
-def _estilos():
-    base = dict(fontName="Helvetica", textColor=TEXTO)
-    return {
-        "titulo": ParagraphStyle("titulo", fontName="Helvetica-Bold", fontSize=26, leading=30,
-                                 textColor=AZUL, spaceAfter=6),
-        "subtitulo": ParagraphStyle("subtitulo", fontSize=10.5, leading=14, textColor=GRIS,
-                                    fontName="Helvetica", spaceAfter=14),
-        "seccion": ParagraphStyle("seccion", fontName="Helvetica-Bold", fontSize=13, leading=16,
-                                  textColor=AZUL, spaceBefore=18, spaceAfter=7),
-        "subseccion": ParagraphStyle("subseccion", fontName="Helvetica-Bold", fontSize=10,
-                                     leading=13, textColor=TEXTO, spaceBefore=4, spaceAfter=8),
-        "bullet": ParagraphStyle("bullet", fontSize=9, leading=13, leftIndent=14, bulletIndent=4,
-                                 spaceAfter=3, **base),
-        "kpi_num": ParagraphStyle("kpi_num", fontName="Helvetica-Bold", fontSize=22, leading=26,
-                                  textColor=AZUL, alignment=TA_CENTER),
-        "kpi_lbl": ParagraphStyle("kpi_lbl", fontName="Helvetica-Bold", fontSize=6.5, leading=9,
-                                  textColor=GRIS, alignment=TA_CENTER),
-        "th": ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=9, leading=11,
-                             textColor=colors.white, alignment=TA_CENTER),
-        "nota": ParagraphStyle("nota", fontName="Helvetica-Oblique", fontSize=7.5, leading=11,
-                               textColor=GRIS, spaceBefore=6),
-    }
-
-
-def _tabla(encabezados, filas, fila_total, anchos, st):
-    datos = [[Paragraph(h, st["th"]) for h in encabezados]] + filas + [fila_total]
-    t = Table(datos, colWidths=anchos, repeatRows=1)
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), AZUL),
-        ("BACKGROUND", (0, -1), (-1, -1), FONDO_TOTAL),
-        ("FONTNAME", (0, 1), (-1, -2), "Helvetica"),
-        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 1), (-1, -1), 9),
-        ("TEXTCOLOR", (0, 1), (-1, -1), TEXTO),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("GRID", (0, 0), (-1, -1), 0.5, BORDE),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-    ]))
-    return t
-
-
-def _construir_pdf(d, salida):
-    st = _estilos()
-    story = []
-    nm, anio = d["nombre_mes"], d["anio"]
-    total = d["total_pendientes"]
-
-    suma_cruzada = sum(f["socios"] for f in d["filas_ejec"])
-    hay_nota = suma_cruzada != d["socios_unicos"]
-    n_ejecutivos = len([f for f in d["filas_ejec"] if f["nombre"] != "Sin asignar"])
-
-    # --- Título y KPIs ---------------------------------------------------
-    story.append(Paragraph(TITULO, st["titulo"]))
-    story.append(Paragraph(
-        f"Resumen Ejecutivo | Cierre correspondiente al mes de <b>{nm} de {anio}</b>.",
-        st["subtitulo"]))
-
-    kpis = [
-        (d["operaciones_base"], "OPERACIONES EN LA BASE"),
-        (total, "PENDIENTES DE ENTREGA"),
-        (str(d["socios_unicos"]) + ("*" if hay_nota else ""), "SOCIOS ÚNICOS" + ("*" if hay_nota else "")),
-        (n_ejecutivos, "EJECUTIVOS"),
-    ]
-    t = Table([[Paragraph(str(v), st["kpi_num"]) for v, _ in kpis],
-               [Paragraph(l, st["kpi_lbl"]) for _, l in kpis]],
-              colWidths=[ANCHO_UTIL / 4] * 4)
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), FONDO_KPI),
-        ("BOX", (0, 0), (-1, -1), 0.6, BORDE),
-        ("LINEAFTER", (0, 0), (-2, -1), 0.6, BORDE),
-        ("TOPPADDING", (0, 0), (-1, 0), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
-        ("BOTTOMPADDING", (0, 1), (-1, 1), 10),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ]))
-    story += [t, Spacer(1, 14)]
-
-    # --- Gráficos -----------------------------------------------------------
-    if total:
-        graficos = Table([[_grafico_anios(d["filas_anio"]), _grafico_ejecutivos(d["filas_ejec"])]],
-                         colWidths=[ANCHO_UTIL / 2] * 2)
-        graficos.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
-                                      ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                                      ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
-        story.append(graficos)
-
-    # --- Puntos relevantes ---------------------------------------------------
-    story.append(Paragraph("PUNTOS RELEVANTES DEL MES", st["seccion"]))
-    puntos = []
-    if total:
-        top = max(d["filas_anio"], key=lambda f: f["fin"])
-        puntos.append(
-            f"<b>Concentración en {top['etiqueta']}:</b> El año {top['etiqueta']} concentra la mayor "
-            f"cantidad de rezago institucional con {top['fin']} operaciones pendientes, lo que "
-            f"representa el {_pct(top['fin'], total)} del total global.")
-        top3 = d["filas_ejec"][:3]
-        if top3:
-            suma3 = sum(f["ops"] for f in top3)
-            puntos.append(
-                f"<b>Estructura por Ejecutivo:</b> Los ejecutivos "
-                f"{escape(_unir([f['nombre'] for f in top3]))} acumulan de forma conjunta {suma3} "
-                f"operaciones pendientes, agrupando el {_pct(suma3, total)} de la carga total.")
-    else:
-        puntos.append("No hay operaciones pendientes de entrega al cierre del mes.")
-    for titulo, texto in d.get("observaciones_extra", []):
-        puntos.append(f"<b>{escape(titulo)}:</b> {escape(texto)}")
-    for p in puntos:
-        story.append(Paragraph(p, st["bullet"], bulletText="•"))
-
-    # --- Conciliación ----------------------------------------------------------
-    story.append(Paragraph("CONCILIACIÓN Y OBSERVACIONES", st["seccion"]))
-    if d["entregados"]:
-        ops_ent = sum(n for _, _, n in d["entregados"])
-        det = [f"{escape(s)} de {escape(e)}" for s, e, _ in d["entregados"]]
-        resto = len(det) - 6
-        detalle = _unir(det[:6]) + (f" y {resto} más" if resto > 0 else "")
-        story.append(Paragraph(
-            f"<b>Ajuste por Entregas:</b> Se restaron {ops_ent} operaciones de "
-            f"{len(d['entregados'])} expediente(s) recibido(s) de la base anterior ({detalle}).",
-            st["bullet"], bulletText="•"))
-    else:
-        story.append(Paragraph("<b>Ajuste por Entregas:</b> No se recibieron expedientes durante el mes.",
-                               st["bullet"], bulletText="•"))
-    story.append(Paragraph(
-        f"<b>Nuevas Operaciones:</b> Se integraron de forma independiente las {d['total_nue']} nuevas "
-        f"operaciones del mes de {nm.lower()}, logrando un balance neto de {total} operaciones totales "
-        f"({d['total_ini']} - {abs(d['total_ent'])} + {d['total_nue']} = {total}).",
-        st["bullet"], bulletText="•"))
-
-    # --- Tablas -----------------------------------------------------------------
-    filas = [[f["etiqueta"], f["ini"], _signo(f["ent"]), _signo(f["nue"]), f["fin"], _pct(f["fin"], total)]
-             for f in d["filas_anio"]]
-    tot = ["Total Global", d["total_ini"], _signo(d["total_ent"]), _signo(d["total_nue"]), total,
-           "100%" if total else "0%"]
-    tabla_anio = _tabla(
-        ["Año de Estudio", f"Corte {d['nombre_mes_ant']}", "Entregas", f"Nuevos {nm}",
-         "Total General", "% del Total"],
-        filas, tot, [ANCHO_UTIL / 6] * 6, st)
-    # El título de sección viaja junto a la primera tabla (evita títulos huérfanos)
-    story.append(KeepTogether([
-        Paragraph("TABLAS CONSOLIDADAS DE CONTROL", st["seccion"]),
-        Paragraph("Distribución de Expedientes Pendientes por Año", st["subseccion"]), tabla_anio]))
-    story.append(Spacer(1, 16))
-
-    filas = [[f["nombre"], f["ops"], f["socios"], _pct(f["ops"], total)] for f in d["filas_ejec"]]
-    tot = ["Total General", total, f"{d['socios_unicos']}" + ("*" if hay_nota else ""),
-           "100%" if total else "0%"]
-    tabla_ejec = _tabla(["Ejecutivo", "Operaciones", "Socios Únicos", "% del Total Oper."],
-                        filas, tot, [ANCHO_UTIL / 4] * 4, st)
-    bloque = [Paragraph("Estatus de Cartera y Socios por Ejecutivo", st["subseccion"]), tabla_ejec]
-    if hay_nota:
-        bloque.append(Paragraph(
-            f"*Nota metodológica: La suma cruzada de socios únicos por ejecutivo es de {suma_cruzada} "
-            f"debido a carteras compartidas, no obstante, el universo real neto consolidado en la "
-            f"institución es de {d['socios_unicos']} socios únicos.", st["nota"]))
-    story.append(KeepTogether(bloque))
-    story.append(Paragraph(
-        "Nota: el corte anterior y las entregas se reconstruyen con el historial de estatus "
-        "(EstadosFechas); las operaciones se cuentan con las líneas contempladas actuales de cada "
-        "expediente. El año de estudio corresponde a la fecha de creación del expediente.", st["nota"]))
-
-    doc = SimpleDocTemplate(
-        salida, pagesize=letter,
-        leftMargin=0.8 * inch, rightMargin=0.8 * inch, topMargin=0.95 * inch, bottomMargin=0.85 * inch,
-        title=f"{TITULO} - {nm} {anio}", author="Centro de Negocios")
-    fuente = f"Fuente: base «{nm} resumen» — Confidencial"
-    doc.build(story, canvasmaker=partial(_CanvasNumerado, fuente=fuente))
-
-
-@login_required
-def reporte_control_expedientes(request):
-    """Descarga el PDF del mes/año recibidos por GET (?mes=9&anio=2026)."""
+def controlExpedientesPDF(request):
     try:
         mes = int(request.GET.get("mes"))
         anio = int(request.GET.get("anio"))
@@ -4934,36 +4530,250 @@ def reporte_control_expedientes(request):
             raise ValueError
     except (TypeError, ValueError):
         return HttpResponseBadRequest("Mes o año inválido.")
- 
-    buffer = controlExpedientesPDF(mes, anio)
-    return FileResponse(
-        buffer,
-        as_attachment=True,
-        filename=f"Reporte_Control_Expedientes_{MESES[mes - 1]}_{anio}.pdf",
-        content_type="application/pdf",
-    )
 
-def controlExpedientesPDF(mes, anio=None, salida=None, observaciones_extra=None):
-    """
-    Genera el reporte del mes indicado.
+    MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio",
+             "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    AZUL_HEX, NARANJA_HEX = "#12508A", "#F5A843"
+    AZUL = colors.HexColor(AZUL_HEX)
+    BORDE = colors.HexColor("#D3DDEA")
+    GRIS = colors.HexColor("#6B7280")
+    TEXTO = colors.HexColor("#222222")
+    FONDO = colors.HexColor("#F6F8FB")
+    FONDO_TOTAL = colors.HexColor("#EEF2F8")
+    ANCHO = 6.9 * inch
+    nm, nm_ant = MESES[mes - 1], MESES[mes - 2]
+    limpiar = lambda s: str(s).replace("&", "&amp;").replace("<", "&lt;")
+    idx = lambda d: d.year * 12 + d.month if d else None
+    corte, previo = anio * 12 + mes, anio * 12 + mes - 1
 
-    mes: int (1-12) junto con `anio`, un date/datetime, o un texto "YYYY-MM".
-    salida: ruta opcional donde guardar el PDF. Si se omite, no se escribe a disco.
-    observaciones_extra: lista opcional de (título, texto) que se agrega a
-        "Puntos relevantes del mes" (p. ej. reasignaciones de cartera, que
-        no quedan registradas en la base).
+    totalExpedientes = (Expediente.objects.filter(contemplado=True, eliminado=False)
+          .select_related("socio", "estatus", "usuarioNegocios")
+          .annotate(n=Count("linea", filter=Q(linea__contemplar=True))))
 
-    Devuelve un BytesIO con el PDF.
-    """
-    mes, anio = _normalizar_periodo(mes, anio)
-    datos = _recolectar_datos(mes, anio)
-    datos["observaciones_extra"] = observaciones_extra or []
+    # por_anio[a] = [corte anterior, entregas, nuevos, pendientes, hay_expedientes]
+    # por_ejec[nombre] = [operaciones pendientes, expedientes pendientes (= socios)]
+    base, por_anio, por_ejec, entregados, ejec_ids = 0, {}, {}, [], set()
+    for e in totalExpedientes:
+        creado = e.fechaOriginalCreacion or e.fechaCreacion
+        ic = idx(creado) or 0
+        if ic > corte:
+            continue  # aún no existía al cierre del mes
+
+        base += e.n  # operaciones en la base: todos los expedientes, sin importar estatus
+
+        archivado = (e.estatus.nombre or "").strip().lower() == "Archivado"
+        ie = (idx(e.fechaArchivado) or 0) if archivado else None  # archivado sin fecha = ya estaba fuera
+
+        u = e.usuarioNegocios
+        nombre = (u.nombreCompleto or u.username) if u else "Sin asignar"
+
+        en_previo = ic <= previo and (ie is None or ie > previo)
+        en_actual = ie is None or ie > corte          # pendiente de entrega = no archivado
+        entrega_mes = en_previo and ie == corte
+        nuevo = en_actual and ic == corte
+
+        r = por_anio.setdefault(creado.year if creado else 0, [0, 0, 0, 0, 0])
+        if en_previo:
+            r[0] += e.n
+        if entrega_mes:
+            r[1] += e.n
+            entregados.append(f"{e.socio.nombre} de {nombre}")
+        if nuevo:
+            r[2] += e.n
+        if en_actual:
+            r[3] += e.n
+            x = por_ejec.setdefault(nombre, [0, 0])
+            x[0] += e.n
+            x[1] += 1
+            if u:
+                ejec_ids.add(u.pk)
+        if en_previo or entrega_mes or nuevo or en_actual:
+            r[4] += 1
+
+    # (etiqueta, corte anterior, entregas, nuevos, total)
+    anios = [(str(a) if a else "S/F", *r[:4]) for a, r in sorted(por_anio.items()) if r[4]]
+    ejec = sorted(((k, v[0], v[1]) for k, v in por_ejec.items()), key=lambda x: (-x[1], x[0]))
+    total = sum(x[4] for x in anios)           # operaciones de expedientes pendientes (no archivados)
+    prev_t, ent_t, nue_t = (sum(x[i] for x in anios) for i in (1, 2, 3))
+    socios = sum(x[2] for x in ejec)           # len() de expedientes pendientes (1 expediente = 1 socio)
+    pct = lambda n: f"{n / total * 100:.1f}%" if total else "0%"
+    pct_total = "100%" if total else "0%"
+    fmt_ent = lambda n: f"-{n}" if n else "0"
+    fmt_nue = lambda n: f"+{n}" if n else "0"
+
+    def imagen(fig, alto):
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        plt.close(fig)
+        buf.seek(0)
+        return Image(buf, width=3.4 * inch, height=alto * inch)
+
+    def graf_anios():
+        plt.rcParams.update({"font.family": "serif", "font.serif": ["Times New Roman", "Liberation Serif", "DejaVu Serif"], "font.size": 7})
+        datos = [(x[0], x[4]) for x in anios if x[4]]
+        fig, ax = plt.subplots(figsize=(3.4, 2.5), dpi=220)
+        vals = [n for _, n in datos]
+        ax.bar_label(ax.bar([a for a, _ in datos], vals, color=AZUL_HEX, width=0.7), fontsize=6.5, padding=1.5)
+        ax.set_title("Pendientes por año", fontsize=8, fontweight="bold")
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.set_ylim(0, max(vals) * 1.15)
+        fig.tight_layout()
+        return imagen(fig, 2.5)
+
+    def graf_ejec():
+        alto = min(max(2.5, 0.3 * len(ejec) + 0.8), 4.2)
+        fig, ax = plt.subplots(figsize=(3.4, alto), dpi=220)
+        y, h = range(len(ejec)), 0.36
+        kw = dict(height=h, edgecolor="black", linewidth=0.6)
+        soc = ax.barh([i - h / 2 for i in y], [x[2] for x in ejec], color=NARANJA_HEX, label="Socios únicos", **kw)
+        ops = ax.barh([i + h / 2 for i in y], [x[1] for x in ejec], color=AZUL_HEX, label="Operaciones", **kw)
+        ax.bar_label(soc, fontsize=6, padding=1.5)
+        ax.bar_label(ops, fontsize=6, padding=1.5)
+        ax.set_yticks(list(y))
+        ax.set_yticklabels([x[0] for x in ejec])
+        ax.invert_yaxis()
+        ax.set_title("Operaciones y socios por ejecutivo", fontsize=8, fontweight="bold")
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.set_xlim(0, max(max(x[1] for x in ejec), max(x[2] for x in ejec)) * 1.15)
+        ax.legend(fontsize=6, frameon=False, loc="lower right")
+        fig.tight_layout()
+        return imagen(fig, alto)
+
+    class NumCanvas(canvas.Canvas):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            self.estados = []
+
+        def showPage(self):
+            self.estados.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            for est in self.estados:
+                self.__dict__.update(est)
+                w, h = letter
+                self.setStrokeColor(BORDE)
+                self.setFillColor(GRIS)
+                self.setFont("Helvetica", 7.5)
+                self.drawString(0.8 * inch, h - 0.55 * inch, "CENTRO DE NEGOCIOS / CONTROL DE EXPEDIENTES")
+                self.line(0.8 * inch, h - 0.65 * inch, w - 0.8 * inch, h - 0.65 * inch)
+                self.line(0.8 * inch, 0.62 * inch, w - 0.8 * inch, 0.62 * inch)
+                self.drawRightString(w - 0.8 * inch, 0.45 * inch, f"Página {self._pageNumber} de {len(self.estados)}")
+                super().showPage()
+            super().save()
+
+    st = {
+        "titulo": PS("t", fontName="Helvetica-Bold", fontSize=26, leading=30, textColor=AZUL, spaceAfter=6),
+        "sub": PS("s", fontName="Helvetica", fontSize=10.5, leading=14, textColor=GRIS, spaceAfter=14),
+        "sec": PS("c", fontName="Helvetica-Bold", fontSize=13, leading=16, textColor=AZUL, spaceBefore=18, spaceAfter=7),
+        "subsec": PS("u", fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=TEXTO, spaceBefore=4, spaceAfter=8),
+        "li": PS("l", fontName="Helvetica", fontSize=9, leading=13, leftIndent=14, bulletIndent=4, spaceAfter=3, textColor=TEXTO),
+        "num": PS("n", fontName="Helvetica-Bold", fontSize=22, leading=26, textColor=AZUL, alignment=TA_CENTER),
+        "lbl": PS("b", fontName="Helvetica-Bold", fontSize=6.5, leading=9, textColor=GRIS, alignment=TA_CENTER),
+        "th": PS("h", fontName="Helvetica-Bold", fontSize=9, leading=11, textColor=colors.white, alignment=TA_CENTER),
+    }
+
+    def tabla(enc, filas, tot):
+        t = Table([[Paragraph(h, st["th"]) for h in enc]] + filas + [tot], colWidths=[ANCHO / len(enc)] * len(enc))
+        t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), AZUL), ("BACKGROUND", (0, -1), (-1, -1), FONDO_TOTAL),
+            ("FONTNAME", (0, 1), (-1, -2), "Helvetica"), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 1), (-1, -1), 9), ("TEXTCOLOR", (0, 1), (-1, -1), TEXTO),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("GRID", (0, 0), (-1, -1), 0.5, BORDE), ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
+        return t
+
+    story = [Paragraph("Expedientes pendientes de entrega a Crédito", st["titulo"]),
+             Paragraph(f"Resumen Ejecutivo | Cierre correspondiente al mes de <b>{nm} de {anio}</b>.", st["sub"])]
+    kpis = [(base, "OPERACIONES EN LA BASE"), (total, "PENDIENTES DE ENTREGA"), (socios, "SOCIOS ÚNICOS"),
+            (len(ejec_ids), "EJECUTIVOS")]
+    k = Table([[Paragraph(str(v), st["num"]) for v, _ in kpis], [Paragraph(l, st["lbl"]) for _, l in kpis]], colWidths=[ANCHO / 4] * 4)
+    k.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), FONDO), ("BOX", (0, 0), (-1, -1), 0.6, BORDE),
+                           ("LINEAFTER", (0, 0), (-2, -1), 0.6, BORDE), ("TOPPADDING", (0, 0), (-1, 0), 12),
+                           ("BOTTOMPADDING", (0, 0), (-1, 0), 2), ("BOTTOMPADDING", (0, 1), (-1, 1), 10)]))
+    story += [k, Spacer(1, 14)]
+
+    # Gráficas y puntos relevantes
+    if total:
+        g = Table([[graf_anios(), graf_ejec()]], colWidths=[ANCHO / 2] * 2)
+        g.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
+        story.append(g)
+        top = max(anios, key=lambda x: x[4])
+        top3 = ejec[:3]
+        s3 = sum(x[1] for x in top3)
+        nombres = limpiar(", ".join(x[0] for x in top3[:-1]) + (" y " if len(top3) > 1 else "") + top3[-1][0])
+        puntos = [
+            f"<b>Concentración en {top[0]}:</b> El año {top[0]} concentra la mayor cantidad de rezago institucional con {top[4]} operaciones pendientes, lo que representa el {pct(top[4])} del total global.",
+            f"<b>Estructura por Ejecutivo:</b> {'Los ejecutivos' if len(top3) > 1 else 'El ejecutivo'} {nombres} acumula{'n de forma conjunta' if len(top3) > 1 else ''} {s3} operaciones pendientes, agrupando el {pct(s3)} de la carga total."]
+    else:
+        puntos = ["No hay operaciones pendientes de entrega al cierre del mes."]
+    nota = limpiar(request.GET.get("nota", "")).strip()[:500]  # opcional: ?nota=texto de reasignación de cartera
+    if nota:
+        puntos.append(f"<b>Reasignación de Cartera:</b> {nota}")
+    story.append(Paragraph("PUNTOS RELEVANTES DEL MES", st["sec"]))
+    story += [Paragraph(p, st["li"], bulletText="•") for p in puntos]
+
+    # Conciliación
+    if ent_t:
+        c1 = (f"<b>Ajuste por Entregas:</b> Se restaron correctamente los {len(entregados)} expedientes recibidos de la base anterior "
+              f"({limpiar('; '.join(entregados))}).")
+    else:
+        c1 = "<b>Ajuste por Entregas:</b> No se registraron entregas durante el mes."
+    c2 = (f"<b>Nuevas Operaciones:</b> Se integraron de forma independiente las {nue_t} nuevas operaciones del mes de {nm.lower()}, "
+          f"logrando un balance neto de {total} operaciones totales ({prev_t} - {ent_t} + {nue_t}).")
+    story.append(Paragraph("CONCILIACIÓN Y OBSERVACIONES", st["sec"]))
+    story += [Paragraph(p, st["li"], bulletText="•") for p in (c1, c2)]
+
+    # Tablas consolidadas (siempre se generan)
+    filas1 = [[a, p, fmt_ent(en), fmt_nue(nu), t, pct(t)] for a, p, en, nu, t in anios] or [["—", 0, "0", "0", 0, "0%"]]
+    t1 = tabla(["Año de Estudio", f"Corte {nm_ant}", "Entregas", f"Nuevos {nm}", "Total General", "% del Total"],
+               filas1, ["Total Global", prev_t, fmt_ent(ent_t), fmt_nue(nue_t), total, pct_total])
+    story.append(KeepTogether([Paragraph("TABLAS CONSOLIDADAS DE CONTROL", st["sec"]),
+                               Paragraph("Distribución de Expedientes Pendientes por Año", st["subsec"]), t1]))
+    story.append(Spacer(1, 16))
+    filas2 = [[n, o, s, pct(o)] for n, o, s in ejec] or [["—", 0, 0, "0%"]]
+    t2 = tabla(["Ejecutivo", "Operaciones", "Socios Únicos", "% del Total Oper."],
+               filas2, ["Total General", total, socios, pct_total])
+    story.append(KeepTogether([Paragraph("Estatus de Cartera y Socios por Ejecutivo", st["subsec"]), t2]))
 
     buffer = BytesIO()
-    _construir_pdf(datos, buffer)
+    SimpleDocTemplate(buffer, pagesize=letter, leftMargin=0.8 * inch, rightMargin=0.8 * inch, topMargin=0.95 * inch,
+                      bottomMargin=0.85 * inch, title=f"Control de Expedientes - {nm} {anio}").build(story, canvasmaker=NumCanvas)
     buffer.seek(0)
-    if salida:
-        with open(salida, "wb") as f:
-            f.write(buffer.getvalue())
-        buffer.seek(0)
-    return buffer
+    return FileResponse(buffer, as_attachment=True, filename=f"Reporte_Control_Expedientes_{MESES[mes - 1]}_{anio}.pdf",
+                        content_type="application/pdf")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

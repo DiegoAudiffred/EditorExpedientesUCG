@@ -63,7 +63,6 @@ urlpatterns = [
         path('avancesMovimientos/', views.avancesMovimientos, name='avancesMovimientos'),
         path('exportarEjecutivos/', views.exportarEjecutivos, name='exportarEjecutivos'),
         path("reportes/controlExpedientesPDF/", views.controlExpedientesPDF, name="controlExpedientesPDF"),
-        path("reportes/control-expedientes/", views.reporte_control_expedientes,name="reporte_control_expedientes"),
     #Admin
         path('admin-usuarios/', views.administrador, name='administrador'),
         path('admin-usuarios/alta/', views.alta_usuario, name='alta_usuario'),
